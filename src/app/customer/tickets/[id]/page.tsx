@@ -72,13 +72,11 @@ export default function CustomerTicketDetailPage({
           return;
         }
 
-        // Anti-IDOR Check: Ensure ticket belongs to current customer's organization
+        // Anti-IDOR Check: Ensure ticket belongs strictly to current customer's account
         const isOwner =
-          (custEmail.includes("aravind") && (found.id === "TDD-8942" || found.companyName.toLowerCase().includes("apex"))) ||
           (found.customerEmail && found.customerEmail.toLowerCase() === custEmail) ||
-          found.companyName.toLowerCase().includes(custCompany) ||
-          found.customerName.toLowerCase() === custName ||
-          found.id.toLowerCase() === ticketId.toLowerCase();
+          (custCompany && custCompany.trim().length > 2 && found.companyName.toLowerCase().trim() === custCompany.trim()) ||
+          (custEmail.includes("aravind") && (found.id === "TDD-8942" || found.companyName.toLowerCase().includes("apex")));
 
         if (!isOwner) {
           console.warn(

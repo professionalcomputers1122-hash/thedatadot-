@@ -29,20 +29,18 @@ export default function CustomerTicketsPage() {
 
     async function load() {
       try {
-        const all = await fetchTicketsFromSupabase();
+        const all = await fetchTicketsFromSupabase(userEmail);
         const myTickets = all.filter((t) => {
-          if (userEmail.includes("aravind") || userCompany.includes("apex")) {
-            return (
-              t.id === "TDD-8942" ||
-              t.companyName.toLowerCase().includes("apex") ||
-              t.customerName.toLowerCase().includes("aravind")
-            );
+          if ((t as any).customerEmail && (t as any).customerEmail.toLowerCase() === userEmail) {
+            return true;
           }
-          return (
-            (t as any).customerEmail?.toLowerCase() === userEmail ||
-            t.customerName.toLowerCase() === userName ||
-            t.companyName.toLowerCase().includes(userCompany)
-          );
+          if (userEmail.includes("aravind") && (t.id === "TDD-8942" || t.companyName.toLowerCase().includes("apex"))) {
+            return true;
+          }
+          if (userCompany && userCompany.trim().length > 2 && t.companyName.toLowerCase().trim() === userCompany.trim()) {
+            return true;
+          }
+          return false;
         });
 
         setTickets(myTickets);

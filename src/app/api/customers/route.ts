@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabaseServer";
 
-export const DEFAULT_ACCOUNTS = [
-  {
-    id: "CUST-1001",
-    name: "Ebinezer",
-    email: "ebinezer@thedatadot.com",
-    company: "The Data Dot Client Desk",
-    phone: "+91 6380488373",
-    accountNumber: "TDD-CLI-1001",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-    activeTickets: 0,
-  },
+export const INITIAL_PRESETS = [
   {
     id: "CUST-0001",
     name: "Enterprise Admin",
@@ -22,7 +10,7 @@ export const DEFAULT_ACCOUNTS = [
     phone: "+91 6380488373",
     accountNumber: "TDD-CLI-0001",
     slaTier: "Internal Super Admin SLA",
-    password: "Password@123",
+    password: "Admin@DataDot2026!",
     status: "Active",
     activeTickets: 0,
   },
@@ -34,43 +22,7 @@ export const DEFAULT_ACCOUNTS = [
     phone: "+91 98402 11928",
     accountNumber: "TDD-CLI-8492",
     slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-    activeTickets: 1,
-  },
-  {
-    id: "CUST-8493",
-    name: "Dr. Aravind Swaminathan",
-    email: "aravind@apexhealth.com",
-    company: "Apex Healthcare Diagnostic Center",
-    phone: "+91 98402 11928",
-    accountNumber: "TDD-CLI-8493",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-    activeTickets: 1,
-  },
-  {
-    id: "CUST-9021",
-    name: "Advocate K. V. Sundaram",
-    email: "sundaram@nexuslegal.in",
-    company: "Nexus Legal Advisors LLP",
-    phone: "+91 94441 82910",
-    accountNumber: "TDD-CLI-9021",
-    slaTier: "Priority 4-Hour Response",
-    password: "Password@123",
-    status: "Active",
-    activeTickets: 1,
-  },
-  {
-    id: "CUST-6614",
-    name: "M. Rajesh Kumar",
-    email: "rajesh@metrologistics.com",
-    company: "Metropolitan Logistics Warehousing",
-    phone: "+91 97909 34120",
-    accountNumber: "TDD-CLI-6614",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
+    password: "Apex@Diagnostic2026",
     status: "Active",
     activeTickets: 1,
   },
@@ -84,22 +36,9 @@ export async function GET() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.warn("[API /api/customers GET] Supabase warning:", error.message);
-      return NextResponse.json({
-        success: true,
-        customers: DEFAULT_ACCOUNTS,
-      });
-    }
-
     const accountsMap = new Map<string, any>();
 
-    // Load defaults first
-    for (const acc of DEFAULT_ACCOUNTS) {
-      accountsMap.set(acc.email.toLowerCase(), acc);
-    }
-
-    // Process companies from Supabase
+    // Process companies from Supabase first
     if (companies && Array.isArray(companies)) {
       for (const comp of companies) {
         let meta: any = null;
@@ -120,13 +59,20 @@ export async function GET() {
             email: emailNorm,
             phone: meta.phone || "+91 6380488373",
             slaTier: comp.plan || meta.slaTier || "Enterprise 15-Min 24/7 SLA",
-            password: meta.password || "Password@123",
+            password: meta.password,
             accountNumber: meta.accountNumber || `TDD-CLI-${comp.id.substring(0, 4).toUpperCase()}`,
             status: comp.contract_status || "Active",
             activeTickets: 0,
             createdAt: comp.created_at,
           });
         }
+      }
+    }
+
+    // Only add presets if not already overridden in database
+    for (const preset of INITIAL_PRESETS) {
+      if (!accountsMap.has(preset.email.toLowerCase())) {
+        accountsMap.set(preset.email.toLowerCase(), preset);
       }
     }
 
@@ -141,7 +87,7 @@ export async function GET() {
     console.error("[API /api/customers GET exception]:", err);
     return NextResponse.json({
       success: true,
-      customers: DEFAULT_ACCOUNTS,
+      customers: INITIAL_PRESETS,
     });
   }
 }
@@ -170,10 +116,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const assignedPassword = (password && password.trim().length >= 4)
-      ? password.trim()
-      : `Client@${new Date().getFullYear()}!`;
+    if (!password || password.trim().length < 4) {
+      return NextResponse.json(
+        { success: false, error: "An individual password of at least 4 characters is required" },
+        { status: 400 }
+      );
+    }
 
+    const assignedPassword = password.trim();
     const cleanEmail = email.trim().toLowerCase();
     const cleanCompany = company.trim();
     const cleanName = name.trim();
@@ -192,27 +142,49 @@ export async function POST(req: Request) {
 
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase
+    // Check if company with this email already exists, update it if so
+    const { data: existingCompanies } = await supabase
       .from("companies")
-      .insert([
-        {
+      .select("id, industry")
+      .ilike("industry", `%"email":"${cleanEmail}"%`);
+
+    let savedCompanyId = null;
+
+    if (existingCompanies && existingCompanies.length > 0) {
+      const existingId = existingCompanies[0].id;
+      await supabase
+        .from("companies")
+        .update({
           name: cleanCompany,
           industry: metadata,
           plan: cleanSla,
-          contract_status: "Active Retainer",
-          account_manager: "S. Murugan",
-          devices_recovered: 0,
-        },
-      ])
-      .select()
-      .single();
+        })
+        .eq("id", existingId);
+      savedCompanyId = existingId;
+    } else {
+      const { data, error } = await supabase
+        .from("companies")
+        .insert([
+          {
+            name: cleanCompany,
+            industry: metadata,
+            plan: cleanSla,
+            contract_status: "Active Retainer",
+            account_manager: "S. Murugan",
+            devices_recovered: 0,
+          },
+        ])
+        .select()
+        .single();
 
-    if (error) {
-      console.error("[API /api/customers POST insert error]:", error);
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+      if (error) {
+        console.error("[API /api/customers POST insert error]:", error);
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 500 }
+        );
+      }
+      savedCompanyId = data?.id;
     }
 
     // Audit log
@@ -232,7 +204,7 @@ export async function POST(req: Request) {
     }
 
     const createdCustomer = {
-      id: data?.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: savedCompanyId || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
       name: cleanName,
       company: cleanCompany,
       email: cleanEmail,
@@ -257,6 +229,80 @@ export async function POST(req: Request) {
   }
 }
 
+// PATCH: Super Admin updates individual password for a specific customer
+export async function PATCH(req: Request) {
+  try {
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const body = await req.json();
+    const { email, password } = body;
+
+    if (!email || !password || password.trim().length < 4) {
+      return NextResponse.json(
+        { success: false, error: "Valid email and new password (min 4 characters) required" },
+        { status: 400 }
+      );
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const newPassword = password.trim();
+    const supabase = createAdminClient();
+
+    // Find company by email
+    const { data: companies } = await supabase
+      .from("companies")
+      .select("*")
+      .ilike("industry", `%"email":"${cleanEmail}"%`);
+
+    if (companies && companies.length > 0) {
+      const comp = companies[0];
+      let meta: any = {};
+      try {
+        meta = JSON.parse(comp.industry);
+      } catch {
+        meta = {};
+      }
+      meta.password = newPassword;
+
+      await supabase
+        .from("companies")
+        .update({ industry: JSON.stringify(meta) })
+        .eq("id", comp.id);
+    }
+
+    // Audit log
+    try {
+      await supabase.from("audit_logs").insert([
+        {
+          id: `LOG-PW-${Date.now().toString(36).toUpperCase()}`,
+          actor: "Super Admin",
+          action: "UPDATE_CUSTOMER_PASSWORD",
+          target: cleanEmail,
+          ip: clientIp,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (auditErr) {
+      console.warn("Audit log password update warning:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Password updated successfully for ${cleanEmail}`,
+    });
+  } catch (err: any) {
+    console.error("[API /api/customers PATCH exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to update password" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Deletes company account AND cascades all tickets & messages
 export async function DELETE(req: Request) {
   try {
     const clientIp =
@@ -266,25 +312,59 @@ export async function DELETE(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const email = searchParams.get("email");
+    const email = searchParams.get("email")?.toLowerCase().trim();
+    const company = searchParams.get("company")?.trim();
 
     const supabase = createAdminClient();
 
+    // 1. Delete company record
     if (id && id.includes("-")) {
-      // UUID in Supabase companies table
       await supabase.from("companies").delete().eq("id", id);
-    } else if (email) {
-      // Delete company record matching email in industry metadata
-      await supabase.from("companies").delete().ilike("industry", `%${email}%`);
+    }
+    if (email) {
+      await supabase.from("companies").delete().ilike("industry", `%"email":"${email}"%`);
+    }
+    if (company) {
+      await supabase.from("companies").delete().ilike("name", company);
     }
 
-    // Audit log
+    // 2. Cascade delete all tickets for this customer email or company so they don't linger
+    if (email || company) {
+      // Find ticket IDs first to delete associated messages
+      let ticketQuery = supabase.from("tickets").select("id");
+      if (email && company) {
+        ticketQuery = ticketQuery.or(`customer_email.ilike.${email},company_name.ilike.${company}`);
+      } else if (email) {
+        ticketQuery = ticketQuery.ilike("customer_email", email);
+      } else if (company) {
+        ticketQuery = ticketQuery.ilike("company_name", company);
+      }
+      const { data: customerTickets } = await ticketQuery;
+
+      if (customerTickets && customerTickets.length > 0) {
+        const ticketIds = customerTickets.map((t) => t.id);
+        await supabase.from("ticket_messages").delete().in("ticket_id", ticketIds);
+      }
+
+      // Delete the tickets
+      let delQuery = supabase.from("tickets").delete();
+      if (email && company) {
+        delQuery = delQuery.or(`customer_email.ilike.${email},company_name.ilike.${company}`);
+      } else if (email) {
+        delQuery = delQuery.ilike("customer_email", email);
+      } else if (company) {
+        delQuery = delQuery.ilike("company_name", company);
+      }
+      await delQuery;
+    }
+
+    // 3. Record in audit logs
     try {
       await supabase.from("audit_logs").insert([
         {
           id: `LOG-DEL-${Date.now().toString(36).toUpperCase()}`,
           actor: "Super Admin",
-          action: "DELETE_CUSTOMER_ACCOUNT",
+          action: "DELETE_CUSTOMER_ACCOUNT_AND_TICKETS",
           target: email || id || "Unknown Customer",
           ip: clientIp,
           created_at: new Date().toISOString(),
@@ -296,7 +376,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Customer account deleted successfully",
+      message: "Customer account and all associated tickets permanently deleted.",
     });
   } catch (err: any) {
     console.error("[API /api/customers DELETE exception]:", err);
@@ -306,4 +386,3 @@ export async function DELETE(req: Request) {
     );
   }
 }
-

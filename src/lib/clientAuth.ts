@@ -13,19 +13,8 @@ export interface CustomerUser {
   activeTickets?: number;
 }
 
-// Pre-authorized enterprise clients in directory with initial access keys
-export const DEFAULT_AUTHORIZED_ACCOUNTS: Record<string, CustomerUser> = {
-  "ebinezer@thedatadot.com": {
-    id: "CUST-1001",
-    name: "Ebinezer",
-    email: "ebinezer@thedatadot.com",
-    company: "The Data Dot Client Desk",
-    phone: "+91 6380488373",
-    accountNumber: "TDD-CLI-1001",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-  },
+// Fallback seed presets (WITHOUT universal passwords)
+export const SEED_ACCOUNTS: Record<string, CustomerUser> = {
   "support@thedatadot.com": {
     id: "CUST-0001",
     name: "Enterprise Admin",
@@ -34,81 +23,70 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS: Record<string, CustomerUser> = {
     phone: "+91 6380488373",
     accountNumber: "TDD-CLI-0001",
     slaTier: "Internal Super Admin SLA",
-    password: "Password@123",
-    status: "Active",
-  },
-  "aravind@scandiagnostics.com": {
-    id: "CUST-8492",
-    name: "Dr. Aravind Swaminathan",
-    email: "aravind@scandiagnostics.com",
-    company: "Apex Healthcare Diagnostic Center",
-    phone: "+91 98402 11928",
-    accountNumber: "TDD-CLI-8492",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-  },
-  "aravind@apexhealth.com": {
-    id: "CUST-8493",
-    name: "Dr. Aravind Swaminathan",
-    email: "aravind@apexhealth.com",
-    company: "Apex Healthcare Diagnostic Center",
-    phone: "+91 98402 11928",
-    accountNumber: "TDD-CLI-8493",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
-    status: "Active",
-  },
-  "sundaram@nexuslegal.in": {
-    id: "CUST-9021",
-    name: "Advocate K. V. Sundaram",
-    email: "sundaram@nexuslegal.in",
-    company: "Nexus Legal Advisors LLP",
-    phone: "+91 94441 82910",
-    accountNumber: "TDD-CLI-9021",
-    slaTier: "Priority 4-Hour Response",
-    password: "Password@123",
-    status: "Active",
-  },
-  "rajesh@metrologistics.com": {
-    id: "CUST-6614",
-    name: "M. Rajesh Kumar",
-    email: "rajesh@metrologistics.com",
-    company: "Metropolitan Logistics Warehousing",
-    phone: "+91 97909 34120",
-    accountNumber: "TDD-CLI-6614",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Password@123",
+    password: "Admin@DataDot2026!",
     status: "Active",
   },
 };
 
 /**
- * Retrieves all registered authorized accounts (presets + dynamically provisioned)
+ * Retrieves list of emails deleted by administrator to prevent zombie logins
+ */
+export function getDeletedEmails(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem("tdd_deleted_emails");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr.map((e: string) => e.toLowerCase().trim()));
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to read deleted emails list:", e);
+  }
+  return new Set();
+}
+
+/**
+ * Retrieves all registered authorized accounts from storage
  */
 export function getAuthorizedAccounts(): Record<string, CustomerUser> {
-  const accounts = { ...DEFAULT_AUTHORIZED_ACCOUNTS };
+  const accounts: Record<string, CustomerUser> = { ...SEED_ACCOUNTS };
   if (typeof window === "undefined") return accounts;
+
+  const deletedSet = getDeletedEmails();
 
   try {
     const raw = localStorage.getItem("tdd_registered_customers");
     if (raw) {
       const custom: Record<string, CustomerUser> = JSON.parse(raw);
-      Object.assign(accounts, custom);
+      for (const [key, val] of Object.entries(custom)) {
+        const normKey = key.toLowerCase().trim();
+        if (!deletedSet.has(normKey)) {
+          accounts[normKey] = val;
+        }
+      }
     }
   } catch (e) {
     console.warn("Failed to load registered accounts from storage:", e);
+  }
+
+  // Ensure deleted accounts are purged
+  for (const deletedEmail of Array.from(deletedSet)) {
+    delete accounts[deletedEmail];
   }
 
   return accounts;
 }
 
 /**
- * Synchronizes provisioned client accounts with backend API
+ * Synchronizes provisioned client accounts with backend API (Supabase)
  */
 export async function syncAuthorizedAccountsFromServer(): Promise<Record<string, CustomerUser>> {
-  const accounts = getAuthorizedAccounts();
+  const accounts: Record<string, CustomerUser> = { ...SEED_ACCOUNTS };
   if (typeof window === "undefined") return accounts;
+
+  const deletedSet = getDeletedEmails();
 
   try {
     const res = await fetch("/api/customers");
@@ -116,24 +94,26 @@ export async function syncAuthorizedAccountsFromServer(): Promise<Record<string,
     if (data?.success && Array.isArray(data.customers)) {
       for (const cust of data.customers) {
         if (cust.email) {
-          const normEmail = cust.email.toLowerCase();
-          accounts[normEmail] = {
-            id: cust.id,
-            name: cust.name,
-            email: normEmail,
-            company: cust.company,
-            phone: cust.phone,
-            accountNumber: cust.accountNumber,
-            slaTier: cust.slaTier,
-            password: cust.password,
-            status: cust.status,
-          };
+          const normEmail = cust.email.toLowerCase().trim();
+          if (!deletedSet.has(normEmail)) {
+            accounts[normEmail] = {
+              id: cust.id,
+              name: cust.name,
+              email: normEmail,
+              company: cust.company,
+              phone: cust.phone,
+              accountNumber: cust.accountNumber,
+              slaTier: cust.slaTier,
+              password: cust.password,
+              status: cust.status,
+            };
+          }
         }
       }
       localStorage.setItem("tdd_registered_customers", JSON.stringify(accounts));
     }
   } catch (err) {
-    console.warn("Server accounts sync fallback warning:", err);
+    console.warn("Server accounts sync warning:", err);
   }
 
   return accounts;
@@ -145,11 +125,47 @@ export async function syncAuthorizedAccountsFromServer(): Promise<Record<string,
 export function registerCustomerAccount(account: CustomerUser) {
   if (typeof window === "undefined") return;
   try {
+    const normEmail = account.email.toLowerCase().trim();
     const existing = getAuthorizedAccounts();
-    existing[account.email.toLowerCase()] = account;
+    existing[normEmail] = account;
+
+    // Remove from deleted list if re-provisioned
+    const deletedSet = getDeletedEmails();
+    if (deletedSet.has(normEmail)) {
+      deletedSet.delete(normEmail);
+      localStorage.setItem("tdd_deleted_emails", JSON.stringify(Array.from(deletedSet)));
+    }
+
     localStorage.setItem("tdd_registered_customers", JSON.stringify(existing));
   } catch (e) {
     console.warn("Failed to save registered account:", e);
+  }
+}
+
+/**
+ * Completely removes a customer account and revokes access
+ */
+export function deleteCustomerAccount(email: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const normEmail = email.toLowerCase().trim();
+    const existing = getAuthorizedAccounts();
+    delete existing[normEmail];
+    localStorage.setItem("tdd_registered_customers", JSON.stringify(existing));
+
+    // Record in deleted blacklist
+    const deletedSet = getDeletedEmails();
+    deletedSet.add(normEmail);
+    localStorage.setItem("tdd_deleted_emails", JSON.stringify(Array.from(deletedSet)));
+
+    // Terminate session if this user was logged in
+    const activeSession = getCustomerSession();
+    if (activeSession && activeSession.email.toLowerCase().trim() === normEmail) {
+      localStorage.removeItem("tdd_customer_session");
+      fetch("/api/auth", { method: "DELETE" }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn("Failed to delete account from storage:", e);
   }
 }
 
@@ -158,13 +174,16 @@ export function registerCustomerAccount(account: CustomerUser) {
  */
 export function isAccountAuthorized(email: string): CustomerUser | null {
   const normalized = email.trim().toLowerCase();
+  const deletedSet = getDeletedEmails();
+  if (deletedSet.has(normalized)) return null;
+
   const accounts = getAuthorizedAccounts();
   return accounts[normalized] || null;
 }
 
 /**
  * Returns current customer session if logged in.
- * STRICT: Returns NULL if no active session exists (NO fallback to Dr. Aravind!)
+ * STRICT: Returns NULL if no active session exists
  */
 export function getCustomerSession(): CustomerUser | null {
   if (typeof window === "undefined") {
@@ -175,7 +194,15 @@ export function getCustomerSession(): CustomerUser | null {
     const raw = localStorage.getItem("tdd_customer_session");
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed?.email) return parsed;
+      if (parsed?.email) {
+        const deletedSet = getDeletedEmails();
+        if (deletedSet.has(parsed.email.toLowerCase().trim())) {
+          // Purge session for deleted user
+          localStorage.removeItem("tdd_customer_session");
+          return null;
+        }
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Failed reading customer session:", e);
@@ -186,6 +213,7 @@ export function getCustomerSession(): CustomerUser | null {
 
 /**
  * Authenticates customer credentials and establishes secure session
+ * Strictly enforces individual password set by Super Admin (No universal passkeys)
  */
 export async function loginCustomer(
   email: string,
@@ -193,47 +221,56 @@ export async function loginCustomer(
 ): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Check local cache
-  let authorizedUser = isAccountAuthorized(normalizedEmail);
-
-  // If not found locally, attempt to sync from server (in case Super Admin just provisioned it)
-  if (!authorizedUser) {
-    const freshAccounts = await syncAuthorizedAccountsFromServer();
-    authorizedUser = freshAccounts[normalizedEmail] || null;
-  }
-
-  // If still not found, deny access
-  if (!authorizedUser) {
+  // 1. Check if user is in deleted accounts
+  const deletedSet = getDeletedEmails();
+  if (deletedSet.has(normalizedEmail)) {
     return {
       success: false,
-      error:
-        "Access Denied: No provisioned account found for this email. Client portal access is restricted to verified enterprise clients. Please contact your account manager or support@thedatadot.com.",
+      error: "Access Denied: This customer account was removed by the administrator.",
     };
   }
 
-  // Password verification
-  if (authorizedUser.password && password) {
-    const trimmedInput = password.trim();
-    const trimmedStored = authorizedUser.password.trim();
-    if (trimmedInput !== trimmedStored) {
-      return {
-        success: false,
-        error: "Invalid password. Please check your credentials or contact your administrator to reset access.",
-      };
-    }
-  } else if (authorizedUser.password && !password) {
+  if (!password || password.trim().length === 0) {
     return {
       success: false,
       error: "Please enter your account password.",
     };
   }
 
-  // Save session
+  // 2. Sync fresh accounts from Supabase server
+  let authorizedUser: CustomerUser | null = null;
+  try {
+    const freshAccounts = await syncAuthorizedAccountsFromServer();
+    authorizedUser = freshAccounts[normalizedEmail] || null;
+  } catch {
+    authorizedUser = isAccountAuthorized(normalizedEmail);
+  }
+
+  // 3. Reject if not provisioned
+  if (!authorizedUser) {
+    return {
+      success: false,
+      error:
+        "Access Denied: No active account found for this email. Portal access is provisioned exclusively by The Data Dot Administration upon onboarding.",
+    };
+  }
+
+  // 4. Strict Individual Password Verification
+  const expectedPassword = authorizedUser.password?.trim();
+  const enteredPassword = password.trim();
+
+  if (!expectedPassword || enteredPassword !== expectedPassword) {
+    return {
+      success: false,
+      error: "Invalid password. Please enter the password provisioned by your administrator.",
+    };
+  }
+
+  // 5. Establish secure session
   if (typeof window !== "undefined") {
     localStorage.setItem("tdd_customer_session", JSON.stringify(authorizedUser));
   }
 
-  // Set server-side session cookie via /api/auth
   try {
     await fetch("/api/auth", {
       method: "POST",
@@ -259,7 +296,6 @@ export function updateCustomerSession(updates: Partial<CustomerUser>): CustomerU
 
   if (typeof window !== "undefined") {
     localStorage.setItem("tdd_customer_session", JSON.stringify(updated));
-    // Also update in registered list
     registerCustomerAccount(updated);
   }
 
@@ -277,18 +313,3 @@ export async function logoutCustomer(): Promise<void> {
     console.warn("Logout request failed:", err);
   }
 }
-
-export function deleteCustomerAccount(email: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const existing = getAuthorizedAccounts();
-    const normalized = email.toLowerCase().trim();
-    if (existing[normalized]) {
-      delete existing[normalized];
-      localStorage.setItem("tdd_registered_customers", JSON.stringify(existing));
-    }
-  } catch (e) {
-    console.warn("Failed to delete account from storage:", e);
-  }
-}
-

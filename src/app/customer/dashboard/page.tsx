@@ -30,23 +30,22 @@ export default function CustomerDashboardPage() {
 
     async function loadTickets() {
       try {
-        const allTickets = await fetchTicketsFromSupabase();
-        // Filter tickets belonging to this customer/company
+        const allTickets = await fetchTicketsFromSupabase(userEmail);
+        // Filter tickets belonging strictly to this customer
         const myTickets = allTickets.filter((t) => {
-          // If demo account Aravind, include TDD-8942 and Apex cases
-          if (userEmail.includes("aravind") || userCompany.includes("apex")) {
-            return (
-              t.id === "TDD-8942" ||
-              t.companyName.toLowerCase().includes("apex") ||
-              t.customerName.toLowerCase().includes("aravind")
-            );
+          // 1. Strict match on customer email
+          if ((t as any).customerEmail && (t as any).customerEmail.toLowerCase() === userEmail) {
+            return true;
           }
-          // For any other customer, match by email or company name
-          return (
-            (t as any).customerEmail?.toLowerCase() === userEmail ||
-            t.customerName.toLowerCase() === userName ||
-            t.companyName.toLowerCase().includes(userCompany)
-          );
+          // 2. Demo account Aravind special case
+          if (userEmail.includes("aravind") && (t.id === "TDD-8942" || t.companyName.toLowerCase().includes("apex"))) {
+            return true;
+          }
+          // 3. Strict match on company name (only if company is valid string)
+          if (userCompany && userCompany.trim().length > 2 && t.companyName.toLowerCase().trim() === userCompany.trim()) {
+            return true;
+          }
+          return false;
         });
 
         setTickets(myTickets);
@@ -60,7 +59,7 @@ export default function CustomerDashboardPage() {
     loadTickets();
   }, []);
 
-  const activeTicket = tickets.find((t) => t.status !== "Resolved") || tickets[0];
+  const activeTicket = tickets.length > 0 ? (tickets.find((t) => t.status !== "Resolved") || tickets[0]) : null;
   const activeCount = tickets.filter((t) => t.status !== "Resolved").length;
 
   const files = [

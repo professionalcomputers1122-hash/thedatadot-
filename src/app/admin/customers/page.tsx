@@ -27,13 +27,19 @@ export default function AdminCustomersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Change Password Modal State
+  const [passwordModalCustomer, setPasswordModalCustomer] = useState<CustomerRecord | null>(null);
+  const [newPasswordValue, setNewPasswordValue] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
   const [newCust, setNewCust] = useState({
     name: "",
     company: "",
     email: "",
     phone: "",
-    sla: "Enterprise 15-Min",
-    password: "Client@2026!",
+    sla: "Enterprise 15-Min 24/7 SLA",
+    password: "",
   });
 
   // Fetch customers from backend API on mount
@@ -50,8 +56,8 @@ export default function AdminCustomersPage() {
             company: c.company || "Enterprise Client",
             email: c.email,
             phone: c.phone || "+91 6380488373",
-            sla: c.slaTier || c.sla || "Enterprise 15-Min",
-            password: c.password || "Password@123",
+            sla: c.slaTier || c.sla || "Enterprise 15-Min 24/7 SLA",
+            password: c.password,
             activeTickets: c.activeTickets || 0,
             status: c.status || "Active",
           }));
@@ -80,39 +86,102 @@ export default function AdminCustomersPage() {
     for (let i = 0; i < 4; i++) {
       rand += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setNewCust({ ...newCust, password: `TDD-${rand}#26` });
+    return `TDD-${rand}#26`;
   };
 
   const copyCredentials = (c: CustomerRecord) => {
-    const text = `The Data Dot Client Portal Login\nURL: https://thedatadot.vercel.app/customer/login\nCorporate Email: ${c.email}\nPortal Access Key / Password: ${c.password || "Password@123"}\nAssigned SLA: ${c.sla}`;
+    const pwText = c.password ? c.password : "[Password configured by Admin]";
+    const text = `The Data Dot Client Portal Login\nURL: https://thedatadot.vercel.app/customer/login\nCorporate Email: ${c.email}\nAssigned Password: ${pwText}\nSLA Tier: ${c.sla}`;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text);
       setNotification(`✓ Credentials for ${c.name} (${c.email}) copied to clipboard.`);
     } else {
-      setNotification(`Credentials: ${c.email} | PW: ${c.password || "Password@123"}`);
+      setNotification(`Credentials: ${c.email} | PW: ${pwText}`);
     }
     setTimeout(() => setNotification(""), 5000);
   };
 
   const handleDeleteCustomer = async (c: CustomerRecord) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete customer account for "${c.name}" (${c.company})?\n\nThis will immediately revoke their customer portal login.`
+      `Are you sure you want to permanently delete customer account for "${c.name}" (${c.company})?\n\nThis will immediately revoke their portal login AND delete all their recovery tickets. If they onboard again later, they will start completely clean as a new client.`
     );
     if (!confirmed) return;
 
     try {
-      await fetch(`/api/customers?id=${c.id}&email=${encodeURIComponent(c.email)}`, {
-        method: "DELETE",
-      });
+      await fetch(
+        `/api/customers?id=${c.id}&email=${encodeURIComponent(c.email)}&company=${encodeURIComponent(c.company)}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       deleteCustomerAccount(c.email);
       setCustomers((prev) => prev.filter((item) => item.email !== c.email && item.id !== c.id));
-      setNotification(`✓ Customer "${c.name}" (${c.company}) deleted and portal access revoked.`);
-      setTimeout(() => setNotification(""), 5000);
+      setNotification(`✓ Customer "${c.name}" (${c.company}) and all associated tickets permanently deleted.`);
+      setTimeout(() => setNotification(""), 6000);
     } catch (err) {
       console.error("Failed to delete customer:", err);
       setNotification("Failed to delete customer. Please try again.");
       setTimeout(() => setNotification(""), 5000);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordModalCustomer || newPasswordValue.trim().length < 4) return;
+
+    setSavingPassword(true);
+    const assignedPw = newPasswordValue.trim();
+
+    try {
+      const res = await fetch("/api/customers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: passwordModalCustomer.email,
+          password: assignedPw,
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        setNotification(data.error || "Failed to update password");
+        setSavingPassword(false);
+        return;
+      }
+
+      // Update state
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.email === passwordModalCustomer.email ? { ...c, password: assignedPw } : c
+        )
+      );
+
+      // Update in clientAuth
+      registerCustomerAccount({
+        id: passwordModalCustomer.id,
+        name: passwordModalCustomer.name,
+        email: passwordModalCustomer.email,
+        company: passwordModalCustomer.company,
+        phone: passwordModalCustomer.phone,
+        accountNumber: `TDD-CLI-${passwordModalCustomer.id.substring(0, 4)}`,
+        slaTier: passwordModalCustomer.sla,
+        password: assignedPw,
+        status: "Active",
+      });
+
+      setNotification(
+        `✓ Password updated for ${passwordModalCustomer.name} (${passwordModalCustomer.company}). New Password: ${assignedPw}`
+      );
+      setPasswordModalCustomer(null);
+      setNewPasswordValue("");
+      setTimeout(() => setNotification(""), 7000);
+    } catch (err) {
+      console.error("Password update error:", err);
+      setNotification("Failed to update password.");
+      setTimeout(() => setNotification(""), 4000);
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -121,7 +190,7 @@ export default function AdminCustomersPage() {
     if (!newCust.email || !newCust.company || !newCust.name) return;
 
     setSubmitting(true);
-    const assignedPassword = newCust.password.trim() || "Client@2026!";
+    const assignedPassword = newCust.password.trim() || generateRandomPassword();
 
     try {
       const res = await fetch("/api/customers", {
@@ -151,7 +220,6 @@ export default function AdminCustomersPage() {
         status: "Active",
       };
 
-      // Also register client-side for immediate session authorization
       registerCustomerAccount({
         id: created.id,
         name: created.name,
@@ -171,14 +239,14 @@ export default function AdminCustomersPage() {
         company: "",
         email: "",
         phone: "",
-        sla: "Enterprise 15-Min",
-        password: "Client@2026!",
+        sla: "Enterprise 15-Min 24/7 SLA",
+        password: "",
       });
 
       setNotification(
-        `✓ Customer ${created.name} (${created.company}) provisioned successfully! Portal Email: ${created.email} | Password: ${assignedPassword}`
+        `✓ Customer ${created.name} (${created.company}) provisioned! Login: ${created.email} | Password: ${assignedPassword}`
       );
-      setTimeout(() => setNotification(""), 7000);
+      setTimeout(() => setNotification(""), 8000);
     } catch (err) {
       console.error("Failed to add customer:", err);
       setNotification("Failed to save customer account. Please retry.");
@@ -191,7 +259,7 @@ export default function AdminCustomersPage() {
   return (
     <AdminLayoutShell
       title="Customer Accounts Directory"
-      subtitle="Provision verified enterprise client accounts, manage portal login passwords, and assign SLA tiers"
+      subtitle="Provision verified enterprise client accounts, manage custom individual passwords, and assign SLA tiers"
       actions={
         <button
           onClick={() => setShowAddModal(true)}
@@ -231,10 +299,9 @@ export default function AdminCustomersPage() {
               <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase text-slate-400">
                 <tr>
                   <th className="px-5 py-3.5">ID</th>
-                  <th className="px-5 py-3.5">Contact Name</th>
+                  <th className="px-5 py-3.5">Contact Person</th>
                   <th className="px-5 py-3.5">Organization</th>
-                  <th className="px-5 py-3.5">Login Email &amp; Phone</th>
-                  <th className="px-5 py-3.5">Portal Access Key</th>
+                  <th className="px-5 py-3.5">Corporate Email &amp; Phone</th>
                   <th className="px-5 py-3.5">SLA Tier</th>
                   <th className="px-5 py-3.5">Active Cases</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
@@ -249,11 +316,6 @@ export default function AdminCustomersPage() {
                     <td className="px-5 py-4">
                       <p className="text-slate-200 font-mono text-[11px]">{c.email}</p>
                       <span className="text-[11px] text-slate-500">{c.phone}</span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-[11px] bg-slate-950/70 border border-slate-800 px-2 py-1 rounded-md text-emerald-400">
-                        {c.password || "Password@123"}
-                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <span className="rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold">
@@ -274,12 +336,13 @@ export default function AdminCustomersPage() {
                         </button>
                         <button
                           onClick={() => {
-                            setNotification(`Password reset instructions emailed to ${c.email}`);
-                            setTimeout(() => setNotification(""), 4000);
+                            setPasswordModalCustomer(c);
+                            setNewPasswordValue(c.password || generateRandomPassword());
                           }}
-                          className="text-[11px] font-bold text-blue-400 hover:underline px-1.5"
+                          className="rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          title="Change password for this person"
                         >
-                          Reset PW
+                          🔑 Change PW
                         </button>
                         <button
                           onClick={() => handleDeleteCustomer(c)}
@@ -296,6 +359,86 @@ export default function AdminCustomersPage() {
             </table>
           </div>
         </div>
+
+        {/* CHANGE PASSWORD MODAL */}
+        {passwordModalCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
+            <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white">Change Password</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Update individual portal password for {passwordModalCustomer.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPasswordModalCustomer(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-slate-300 space-y-1">
+                  <p><strong>Client:</strong> {passwordModalCustomer.name}</p>
+                  <p><strong>Organization:</strong> {passwordModalCustomer.company}</p>
+                  <p className="font-mono text-[11px]"><strong>Email:</strong> {passwordModalCustomer.email}</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-semibold text-slate-300">New Password</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewPasswordValue(generateRandomPassword())}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      ⚡ Generate Random
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showChangePassword ? "text" : "password"}
+                      required
+                      placeholder="Enter new individual password"
+                      value={newPasswordValue}
+                      onChange={(e) => setNewPasswordValue(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-12 text-white font-mono outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowChangePassword(!showChangePassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs"
+                    >
+                      {showChangePassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Only this client will be able to log in with this updated password.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordModalCustomer(null)}
+                    className="px-4 py-2 text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPassword}
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                  >
+                    {savingPassword ? "Updating Password..." : "Save Password"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* PROVISION CUSTOMER MODAL */}
         {showAddModal && (
@@ -364,20 +507,20 @@ export default function AdminCustomersPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-slate-300">Initial Portal Password / Access Key</label>
+                    <label className="font-semibold text-slate-300">Individual Portal Password</label>
                     <button
                       type="button"
-                      onClick={generateRandomPassword}
+                      onClick={() => setNewCust({ ...newCust, password: generateRandomPassword() })}
                       className="text-[11px] font-semibold text-blue-400 hover:text-blue-300"
                     >
-                      ⚡ Generate Strong Key
+                      ⚡ Generate Random Key
                     </button>
                   </div>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      placeholder="Client@2026!"
+                      placeholder="Enter client password (min 4 characters)"
                       value={newCust.password}
                       onChange={(e) => setNewCust({ ...newCust, password: e.target.value })}
                       className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-10 text-white font-mono outline-none focus:border-blue-500"

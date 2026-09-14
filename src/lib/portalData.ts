@@ -163,13 +163,16 @@ export const initialTechnicians = [
 // ================= LIVE SUPABASE REAL-TIME HELPERS =================
 import { supabase, isSupabaseConfigured } from "./supabase";
 
-export async function fetchTicketsFromSupabase(): Promise<Ticket[]> {
+export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<Ticket[]> {
   try {
     if (typeof window !== "undefined") {
-      const res = await fetch("/api/tickets");
+      const url = customerEmail
+        ? `/api/tickets?customer_email=${encodeURIComponent(customerEmail)}`
+        : "/api/tickets";
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
-        if (json.tickets && json.tickets.length > 0) {
+        if (Array.isArray(json.tickets)) {
           return json.tickets.map((row: any) => ({
             id: row.id,
             customerName: row.customer_name,
@@ -203,12 +206,23 @@ export async function fetchTicketsFromSupabase(): Promise<Ticket[]> {
 
   if (!isSupabaseConfigured) return initialTickets;
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("tickets")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) return initialTickets;
+    if (customerEmail) {
+      query = query.ilike("customer_email", customerEmail);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Supabase query error:", error);
+      return [];
+    }
+
+    if (!data || data.length === 0) return [];
 
     return data.map((row) => ({
       id: row.id,

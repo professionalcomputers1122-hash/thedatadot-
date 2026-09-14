@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { registerCustomerAccount, loginCustomer } from "@/lib/clientAuth";
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
@@ -16,13 +17,28 @@ export default function CustomerRegisterPage() {
     password: "",
   });
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.email || !formData.companyName) return;
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const newAccount = {
+        name: formData.contactName || "Client Executive",
+        email: formData.email.trim().toLowerCase(),
+        company: formData.companyName.trim(),
+        phone: formData.phone || "+91 6380488373",
+        accountNumber: `TDD-CLI-${Math.floor(1000 + Math.random() * 9000)}`,
+        slaTier: formData.slaTier,
+      };
+
+      registerCustomerAccount(newAccount);
+      await loginCustomer(newAccount.email, formData.password);
       router.push("/customer/dashboard");
-    }, 600);
+    } catch (err) {
+      console.error("Registration error:", err);
+      setLoading(false);
+    }
   };
 
   return (

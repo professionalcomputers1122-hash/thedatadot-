@@ -70,32 +70,43 @@ export default function CustomerNav() {
 
         {/* ACCOUNT INFO & ACTIONS */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="font-bold text-slate-900">
-              {customer?.company || "Enterprise Account"}
-            </span>
-            <span className="text-slate-400 text-[11px]">
-              • #{customer?.accountNumber || "TDD-CLI"}
-            </span>
-          </div>
+          {customer ? (
+            <>
+              <div className="hidden lg:flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <span className="font-bold text-slate-900">
+                  {customer.company}
+                </span>
+                <span className="text-slate-400 text-[11px]">
+                  • #{customer.accountNumber}
+                </span>
+              </div>
 
-          <Link
-            href="/customer/tickets/new"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition"
-          >
-            <span>+ New Ticket</span>
-          </Link>
+              <Link
+                href="/customer/tickets/new"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition"
+              >
+                <span>+ New Ticket</span>
+              </Link>
 
-          <button
-            onClick={handleSignOut}
-            className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-          >
-            Sign Out
-          </button>
+              <button
+                onClick={handleSignOut}
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/customer/login"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
+            >
+              Sign In to Portal →
+            </Link>
+          )}
         </div>
       </div>
     </header>

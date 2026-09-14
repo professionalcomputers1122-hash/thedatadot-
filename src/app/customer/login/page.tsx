@@ -9,18 +9,30 @@ export default function CustomerLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes("@")) return;
+    setError("");
+
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid business email address.");
+      return;
+    }
 
     setLoading(true);
     try {
-      await loginCustomer(email);
+      const result = await loginCustomer(email, password);
+      if (!result.success) {
+        setError(result.error || "Invalid credentials or unauthorized account.");
+        setLoading(false);
+        return;
+      }
       router.push("/customer/dashboard");
     } catch (err) {
       console.error("Login failed:", err);
+      setError("An unexpected authentication error occurred.");
       setLoading(false);
     }
   };
@@ -47,6 +59,15 @@ export default function CustomerLoginPage() {
 
         {/* LOGIN CARD */}
         <div className="rounded-3xl border border-slate-200/90 bg-white p-8 shadow-xl shadow-slate-200/50 sm:p-10">
+          {error && (
+            <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-start gap-2.5">
+              <span className="text-base leading-none">⚠️</span>
+              <div className="flex-1">
+                <p className="font-bold">Authentication Failed</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>

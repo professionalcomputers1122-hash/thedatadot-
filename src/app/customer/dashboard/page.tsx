@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 import { fetchTicketsFromSupabase, Ticket } from "@/lib/portalData";
 
 export default function CustomerDashboardPage() {
+  const router = useRouter();
   const [customer, setCustomer] = useState<CustomerUser | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,15 +17,21 @@ export default function CustomerDashboardPage() {
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
-    setCustomer(currentCustomer);
+    if (!currentCustomer) {
+      router.push("/customer/login");
+      return;
+    }
+    const activeCust = currentCustomer;
+    setCustomer(activeCust);
+
+    const userEmail = activeCust.email.toLowerCase();
+    const userCompany = activeCust.company.toLowerCase();
+    const userName = activeCust.name.toLowerCase();
 
     async function loadTickets() {
       try {
         const allTickets = await fetchTicketsFromSupabase();
         // Filter tickets belonging to this customer/company
-        const userEmail = currentCustomer.email.toLowerCase();
-        const userCompany = currentCustomer.company.toLowerCase();
-
         const myTickets = allTickets.filter((t) => {
           // If demo account Aravind, include TDD-8942 and Apex cases
           if (userEmail.includes("aravind") || userCompany.includes("apex")) {
@@ -36,7 +44,7 @@ export default function CustomerDashboardPage() {
           // For any other customer, match by email or company name
           return (
             (t as any).customerEmail?.toLowerCase() === userEmail ||
-            t.customerName.toLowerCase() === currentCustomer.name.toLowerCase() ||
+            t.customerName.toLowerCase() === userName ||
             t.companyName.toLowerCase().includes(userCompany)
           );
         });

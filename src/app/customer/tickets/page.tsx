@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import { fetchTicketsFromSupabase, Ticket } from "@/lib/portalData";
 import { getCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerTicketsPage() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -16,12 +18,18 @@ export default function CustomerTicketsPage() {
 
   useEffect(() => {
     const cust = getCustomerSession();
+    if (!cust) {
+      router.push("/customer/login");
+      return;
+    }
+    const activeCust = cust;
+    const userEmail = activeCust.email.toLowerCase();
+    const userCompany = activeCust.company.toLowerCase();
+    const userName = activeCust.name.toLowerCase();
+
     async function load() {
       try {
         const all = await fetchTicketsFromSupabase();
-        const userEmail = cust.email.toLowerCase();
-        const userCompany = cust.company.toLowerCase();
-
         const myTickets = all.filter((t) => {
           if (userEmail.includes("aravind") || userCompany.includes("apex")) {
             return (
@@ -32,7 +40,7 @@ export default function CustomerTicketsPage() {
           }
           return (
             (t as any).customerEmail?.toLowerCase() === userEmail ||
-            t.customerName.toLowerCase() === cust.name.toLowerCase() ||
+            t.customerName.toLowerCase() === userName ||
             t.companyName.toLowerCase().includes(userCompany)
           );
         });

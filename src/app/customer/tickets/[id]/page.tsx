@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import {
@@ -24,10 +25,11 @@ export default function CustomerTicketDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const router = useRouter();
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
 
-  const [customer, setCustomer] = useState<CustomerUser>(() => getCustomerSession());
+  const [customer, setCustomer] = useState<CustomerUser | null>(null);
 
   const [ticket, setTicket] = useState<any>(() => {
     return initialTickets.find(
@@ -70,7 +72,16 @@ export default function CustomerTicketDetailPage({
   // Sync ticket details and perform authorization boundary check
   useEffect(() => {
     const currentCustomer = getCustomerSession();
+    if (!currentCustomer) {
+      router.push("/customer/login");
+      return;
+    }
     setCustomer(currentCustomer);
+
+    const activeCust = currentCustomer;
+    const custEmail = activeCust.email.toLowerCase();
+    const custCompany = activeCust.company.toLowerCase();
+    const custName = activeCust.name.toLowerCase();
 
     async function loadData() {
       try {
@@ -85,18 +96,16 @@ export default function CustomerTicketDetailPage({
         }
 
         // Anti-IDOR Check: Ensure ticket belongs to current customer's organization
-        const custEmail = currentCustomer.email.toLowerCase();
-        const custCompany = currentCustomer.company.toLowerCase();
         const isOwner =
           (custEmail.includes("aravind") && (found.id === "TDD-8942" || found.companyName.toLowerCase().includes("apex"))) ||
           found.companyName.toLowerCase().includes(custCompany) ||
-          found.customerName.toLowerCase() === currentCustomer.name.toLowerCase() ||
+          found.customerName.toLowerCase() === custName ||
           // Fresh ticket or demo access
           found.id.toLowerCase() === ticketId.toLowerCase();
 
         if (!isOwner) {
           console.warn(
-            `[SECURITY AUDIT] Unauthorized IDOR attempt detected for ticket ${ticketId} by ${currentCustomer.email}`
+            `[SECURITY AUDIT] Unauthorized IDOR attempt detected for ticket ${ticketId} by ${activeCust.email}`
           );
           setIsUnauthorized(true);
           return;
@@ -133,12 +142,15 @@ export default function CustomerTicketDetailPage({
     if (!replyText.trim()) return;
 
     const currentCustomer = getCustomerSession();
+    if (!currentCustomer) return;
+
+    const authorName = currentCustomer.name;
     const messageToSend = replyText.trim();
     setMessages((prev) => [
       ...prev,
       {
         sender: "Customer",
-        author: currentCustomer.name,
+        author: authorName,
         time: "Just now",
         text: messageToSend,
       },
@@ -149,7 +161,7 @@ export default function CustomerTicketDetailPage({
     await sendMessageToSupabase(
       ticket.id,
       "Customer",
-      currentCustomer.name,
+      authorName,
       messageToSend
     );
   };
@@ -174,7 +186,7 @@ export default function CustomerTicketDetailPage({
           </h1>
           <p className="mt-2 text-sm text-slate-600 leading-relaxed">
             Ticket <strong>#{ticketId}</strong> belongs to another client organization. 
-            You are authenticated as <strong>{customer.company}</strong>. 
+            You are authenticated as <strong>{customer?.company || "your organization"}</strong>. 
             Direct cross-organization ticket inspection is blocked by our zero-trust isolation policy.
           </p>
           <div className="mt-6 flex justify-center gap-3">

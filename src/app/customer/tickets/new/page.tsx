@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CustomerNav from "@/components/CustomerNav";
@@ -21,6 +21,13 @@ export default function CustomerNewTicketPage() {
     urgency: "CRITICAL",
     description: "",
   });
+
+  useEffect(() => {
+    const cust = getCustomerSession();
+    if (!cust) {
+      router.push("/customer/login");
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +50,10 @@ export default function CustomerNewTicketPage() {
           : "Standard";
 
       const customer = getCustomerSession();
+      if (!customer) {
+        router.push("/customer/login");
+        return;
+      }
 
       const newTicketId = await createTicketInSupabase({
         companyName: customer.company,

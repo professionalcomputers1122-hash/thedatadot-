@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import { getCustomerSession, updateCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerProfilePage() {
+  const router = useRouter();
   const [notification, setNotification] = useState("");
   const [profile, setProfile] = useState({
     companyName: "Enterprise Client",
@@ -21,6 +23,10 @@ export default function CustomerProfilePage() {
 
   useEffect(() => {
     const cust = getCustomerSession();
+    if (!cust) {
+      router.push("/customer/login");
+      return;
+    }
     setProfile({
       companyName: cust.company,
       accountNumber: cust.accountNumber,
@@ -32,7 +38,7 @@ export default function CustomerProfilePage() {
       smsAlerts: true,
       emailReports: true,
     });
-  }, []);
+  }, [router]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

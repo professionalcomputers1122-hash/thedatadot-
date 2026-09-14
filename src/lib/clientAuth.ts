@@ -1,4 +1,4 @@
-// Client-Side Dynamic Customer Session Manager
+// Enterprise Client-Side Customer Session & Authorization Engine
 
 export interface CustomerUser {
   name: string;
@@ -9,7 +9,24 @@ export interface CustomerUser {
   slaTier: string;
 }
 
-const PRESET_ACCOUNTS: Record<string, CustomerUser> = {
+// Pre-authorized enterprise clients in directory
+export const DEFAULT_AUTHORIZED_ACCOUNTS: Record<string, CustomerUser> = {
+  "ebinezer@thedatadot.com": {
+    name: "Ebinezer",
+    email: "ebinezer@thedatadot.com",
+    company: "The Data Dot Client Desk",
+    phone: "+91 6380488373",
+    accountNumber: "TDD-CLI-1001",
+    slaTier: "Enterprise 15-Min 24/7 SLA",
+  },
+  "support@thedatadot.com": {
+    name: "Enterprise Admin",
+    email: "support@thedatadot.com",
+    company: "The Data Dot Engineering Desk",
+    phone: "+91 6380488373",
+    accountNumber: "TDD-CLI-0001",
+    slaTier: "Internal Super Admin SLA",
+  },
   "aravind@scandiagnostics.com": {
     name: "Dr. Aravind Swaminathan",
     email: "aravind@scandiagnostics.com",
@@ -45,59 +62,55 @@ const PRESET_ACCOUNTS: Record<string, CustomerUser> = {
 };
 
 /**
- * Creates a dynamic customer account structure from any business email
+ * Retrieves all registered authorized accounts (presets + dynamically registered)
  */
-export function buildCustomerProfileFromEmail(email: string): CustomerUser {
-  const normalizedEmail = email.trim().toLowerCase();
+export function getAuthorizedAccounts(): Record<string, CustomerUser> {
+  const accounts = { ...DEFAULT_AUTHORIZED_ACCOUNTS };
+  if (typeof window === "undefined") return accounts;
 
-  // Return known preset if matched
-  if (PRESET_ACCOUNTS[normalizedEmail]) {
-    return PRESET_ACCOUNTS[normalizedEmail];
+  try {
+    const raw = localStorage.getItem("tdd_registered_customers");
+    if (raw) {
+      const custom: Record<string, CustomerUser> = JSON.parse(raw);
+      Object.assign(accounts, custom);
+    }
+  } catch (e) {
+    console.warn("Failed to load registered accounts:", e);
   }
 
-  // Parse email parts
-  const [userPart, domainPart] = normalizedEmail.split("@");
-
-  // Format Name (e.g. "ebinezer" -> "Ebinezer", "john.doe" -> "John Doe")
-  const formattedName = (userPart || "Client User")
-    .replace(/[._-]+/g, " ")
-    .split(" ")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-
-  // Format Company Name from domain (e.g. "thedatadot.com" -> "The Data Dot")
-  const domainClean = (domainPart || "Enterprise")
-    .split(".")[0]
-    .replace(/[-_]+/g, " ");
-  const formattedCompany =
-    domainClean.toLowerCase() === "thedatadot"
-      ? "The Data Dot Client Desk"
-      : domainClean
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ") + " Technologies";
-
-  // Generate deterministic account number
-  let hash = 0;
-  for (let i = 0; i < normalizedEmail.length; i++) {
-    hash = (hash << 5) - hash + normalizedEmail.charCodeAt(i);
-    hash |= 0;
-  }
-  const accountNum = Math.abs(hash % 9000) + 1000;
-
-  return {
-    name: formattedName,
-    email: normalizedEmail,
-    company: formattedCompany,
-    phone: "+91 6380488373",
-    accountNumber: `TDD-CLI-${accountNum}`,
-    slaTier: "Enterprise Priority SLA",
-  };
+  return accounts;
 }
 
-export function getCustomerSession(): CustomerUser {
+/**
+ * Registers a new customer account
+ */
+export function registerCustomerAccount(account: CustomerUser) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getAuthorizedAccounts();
+    existing[account.email.toLowerCase()] = account;
+    localStorage.setItem("tdd_registered_customers", JSON.stringify(existing));
+  } catch (e) {
+    console.warn("Failed to save registered account:", e);
+  }
+}
+
+/**
+ * Verifies if an email is registered and authorized to access the Customer Portal
+ */
+export function isAccountAuthorized(email: string): CustomerUser | null {
+  const normalized = email.trim().toLowerCase();
+  const accounts = getAuthorizedAccounts();
+  return accounts[normalized] || null;
+}
+
+/**
+ * Returns current customer session if logged in.
+ * STRICT: Returns NULL if no active session exists (NO fallback to Dr. Aravind!)
+ */
+export function getCustomerSession(): CustomerUser | null {
   if (typeof window === "undefined") {
-    return PRESET_ACCOUNTS["aravind@scandiagnostics.com"];
+    return null;
   }
 
   try {
@@ -110,43 +123,58 @@ export function getCustomerSession(): CustomerUser {
     console.warn("Failed reading customer session:", e);
   }
 
-  return PRESET_ACCOUNTS["aravind@scandiagnostics.com"];
+  return null;
 }
 
-export async function loginCustomer(email: string, name?: string): Promise<CustomerUser> {
-  const profile = buildCustomerProfileFromEmail(email);
-  if (name && name.trim()) {
-    profile.name = name.trim();
+/**
+ * Authenticates customer credentials and establishes secure session
+ */
+export async function loginCustomer(
+  email: string,
+  password?: string
+): Promise<{ success: boolean; user?: CustomerUser; error?: string }> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const authorizedUser = isAccountAuthorized(normalizedEmail);
+
+  if (!authorizedUser) {
+    return {
+      success: false,
+      error: "No authorized account found for this email. Please register your organization first or contact your administrator.",
+    };
   }
 
   if (typeof window !== "undefined") {
-    localStorage.setItem("tdd_customer_session", JSON.stringify(profile));
+    localStorage.setItem("tdd_customer_session", JSON.stringify(authorizedUser));
   }
 
-  // Also notify server /api/auth
+  // Set server-side session cookie via /api/auth
   try {
     await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: profile.email,
-        name: profile.name,
+        email: authorizedUser.email,
+        name: authorizedUser.name,
         role: "customer",
       }),
     });
   } catch (err) {
-    console.warn("Failed to set server auth cookie:", err);
+    console.warn("Server session dispatch warning:", err);
   }
 
-  return profile;
+  return { success: true, user: authorizedUser };
 }
 
-export function updateCustomerSession(updates: Partial<CustomerUser>): CustomerUser {
+export function updateCustomerSession(updates: Partial<CustomerUser>): CustomerUser | null {
   const current = getCustomerSession();
+  if (!current) return null;
+
   const updated = { ...current, ...updates };
 
   if (typeof window !== "undefined") {
     localStorage.setItem("tdd_customer_session", JSON.stringify(updated));
+    // Also update in registered list
+    registerCustomerAccount(updated);
   }
 
   return updated;

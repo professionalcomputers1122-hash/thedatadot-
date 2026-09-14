@@ -25,6 +25,7 @@ interface CaseItem {
   headsHealth?: string;
   badSectorsRemapped?: number;
   temp?: string;
+  leadTech?: string;
 }
 
 interface ChatMessage {
@@ -116,13 +117,13 @@ export default function TechnicianWorkbenchPage() {
       },
       {
         sender: "Technician",
-        author: "S. Murugan (Cleanroom Lead)",
+        author: "K. Vignesh (Solid State Forensic)",
         time: "Sep 12, 11:30 AM",
         text: "Hardware received in laminar clean air bench. Initiating donor slider replacement.",
       },
       {
         sender: "Technician",
-        author: "S. Murugan (Cleanroom Lead)",
+        author: "K. Vignesh (Solid State Forensic)",
         time: "Sep 13, 02:45 PM",
         text: "Donor heads swapped under ISO Class-5 clean air bench. PC-3000 mirror imaging is now 99.8% complete.",
       },
@@ -243,9 +244,14 @@ export default function TechnicianWorkbenchPage() {
     if (!replyText.trim()) return;
 
     const messageText = replyText.trim();
+    const currentAuthor =
+      activeCase?.leadTech && activeCase.leadTech !== "Unassigned"
+        ? activeCase.leadTech
+        : "K. Vignesh (Solid State Forensic)";
+
     const newMsg: ChatMessage = {
       sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
+      author: currentAuthor,
       time: "Just now",
       text: messageText,
     };
@@ -262,7 +268,7 @@ export default function TechnicianWorkbenchPage() {
     await sendMessageToSupabase(
       selectedCaseId,
       "Technician",
-      "S. Murugan (Cleanroom Lead)",
+      currentAuthor,
       messageText
     );
 

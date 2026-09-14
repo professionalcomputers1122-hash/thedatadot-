@@ -116,19 +116,19 @@ export default function CustomerTicketDetailPage({
             },
             {
               sender: "Technician",
-              author: "S. Murugan (Cleanroom Lead)",
+              author: "K. Vignesh (Cleanroom Lead)",
               time: "Sep 12, 11:30 AM",
               text: "Media received in cleanroom. Outer casing inspected and serial barcoded. Drive placed on anti-static isolation mat.",
             },
             {
               sender: "Technician",
-              author: "S. Murugan (Cleanroom Lead)",
+              author: "K. Vignesh (Cleanroom Lead)",
               time: "Sep 13, 02:45 PM",
               text: "ISO Class-5 clean bench opened. Microscopic inspection revealed Slider Head #1 unseated and contacting outer platter rim. Donor head assembly swapped and calibrated. Proceeding to PC-3000 mirror imaging.",
             },
             {
               sender: "Technician",
-              author: "S. Murugan (Cleanroom Lead)",
+              author: "K. Vignesh (Cleanroom Lead)",
               time: "Today, 03:15 PM",
               text: "PC-3000 Platter Mirror at 99.8% complete. 3.82 TB extracted without unrecoverable bad sector errors. The EMR database file (.mdf) is 100% intact.",
             },
@@ -147,7 +147,7 @@ export default function CustomerTicketDetailPage({
           if (found.techNotes) {
             thread.push({
               sender: "Technician",
-              author: found.assignedTech || "S. Murugan (Cleanroom Lead)",
+              author: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Triage & Intake Desk",
               time: "Cleanroom Intake",
               text: found.techNotes,
             });
@@ -439,11 +439,21 @@ export default function CustomerTicketDetailPage({
               </h3>
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-600 font-bold flex items-center justify-center text-sm border border-blue-200">
-                  SM
+                  {ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+                    ? ticket.assignedTech.substring(0, 2).toUpperCase()
+                    : "⏳"}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{ticket.assignedTech || "S. Murugan (Cleanroom Lead)"}</p>
-                  <span className="text-slate-500 text-[11px]">Cleanroom Bench 01</span>
+                  <p className="font-bold text-slate-900">
+                    {ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+                      ? ticket.assignedTech
+                      : "Pending Technician Dispatch"}
+                  </p>
+                  <span className="text-slate-500 text-[11px]">
+                    {ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+                      ? "Assigned Laboratory Bench"
+                      : "Triage & Allocation Queue"}
+                  </span>
                 </div>
               </div>
 

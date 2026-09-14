@@ -344,7 +344,7 @@ export default function SuperAdminDashboardPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setNotification("Case assigned to Cleanroom Bench A (Technician S. Murugan).");
+                      setNotification("Case assigned to Cleanroom Bench A (Technician K. Vignesh).");
                       setTimeout(() => setNotification(""), 4000);
                     }}
                     className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-700 text-center"
@@ -435,8 +435,8 @@ export default function SuperAdminDashboardPage() {
                     🔧
                   </div>
                   <div>
-                    <h3 className="font-bold text-white">S. Murugan</h3>
-                    <p className="text-slate-400">murugan.tech@thedatadot.com • Cleanroom Bench Lead</p>
+                    <h3 className="font-bold text-white">K. Vignesh</h3>
+                    <p className="text-slate-400">vignesh.ssd@thedatadot.com • Solid State &amp; Cleanroom Lead</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-[10px] font-bold text-indigo-300 border border-indigo-500/30">

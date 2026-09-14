@@ -24,7 +24,13 @@ export default function AdminTechniciansPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTechnicians(parsed);
+          const filtered = parsed.filter(
+            (t: any) =>
+              !t.name?.toLowerCase().includes("murugan") &&
+              !t.email?.toLowerCase().includes("murugan")
+          );
+          setTechnicians(filtered);
+          localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(filtered));
         }
       }
     } catch (e) {

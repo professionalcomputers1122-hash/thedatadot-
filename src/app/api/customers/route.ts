@@ -170,7 +170,7 @@ export async function POST(req: Request) {
             industry: metadata,
             plan: cleanSla,
             contract_status: "Active Retainer",
-            account_manager: "S. Murugan",
+            account_manager: "Enterprise Lead Desk",
             devices_recovered: 0,
           },
         ])

@@ -76,9 +76,9 @@ export async function POST(req: Request) {
     const serialNumber = body.serialNumber || body.serial_number || "N/A";
     const urgency = body.urgency || "Standard";
     const symptoms = body.symptoms || "";
-    const techNotes = body.techNotes || body.tech_notes || "Cleanroom intake logged. Awaiting bench diagnostics.";
-    const assignedBench = body.assignedBench || body.assigned_bench || "Cleanroom Intake Station";
-    const assignedTech = body.assignedTech || body.assigned_tech || "S. Murugan (Cleanroom Lead)";
+    const techNotes = body.techNotes || body.tech_notes || "Ticket registered. Awaiting Super Admin triage and technician dispatch.";
+    const assignedBench = body.assignedBench || body.assigned_bench || "Pending Allocation";
+    const assignedTech = body.assignedTech || body.assigned_tech || "Unassigned";
 
     if (!customerName || !customerEmail || !deviceOrSubject) {
       return NextResponse.json(

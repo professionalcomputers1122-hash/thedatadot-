@@ -89,19 +89,19 @@ export default function TechnicianTicketDetailPage({
               },
               {
                 sender: "Technician",
-                author: "S. Murugan (Cleanroom Lead)",
+                author: "K. Vignesh (Cleanroom Lead)",
                 time: "Sep 12, 11:30 AM",
                 text: "Media received in cleanroom. Outer casing inspected and serial barcoded. Drive placed on anti-static isolation mat.",
               },
               {
                 sender: "Technician",
-                author: "S. Murugan (Cleanroom Lead)",
+                author: "K. Vignesh (Cleanroom Lead)",
                 time: "Sep 13, 02:45 PM",
                 text: "ISO Class-5 clean bench opened. Microscopic inspection revealed Slider Head #1 unseated and contacting outer platter rim. Donor head assembly swapped and calibrated. Proceeding to PC-3000 mirror imaging.",
               },
               {
                 sender: "Technician",
-                author: "S. Murugan (Cleanroom Lead)",
+                author: "K. Vignesh (Cleanroom Lead)",
                 time: "Today, 03:15 PM",
                 text: "PC-3000 Platter Mirror at 99.8% complete. 3.82 TB extracted without unrecoverable bad sector errors. The EMR database file (.mdf) is 100% intact.",
               },
@@ -119,7 +119,7 @@ export default function TechnicianTicketDetailPage({
             if (found.techNotes) {
               initialThread.push({
                 sender: "Technician",
-                author: found.assignedTech || "S. Murugan (Cleanroom Lead)",
+                author: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Bench Intake Desk",
                 time: "Bench Intake",
                 text: found.techNotes,
               });
@@ -163,11 +163,16 @@ export default function TechnicianTicketDetailPage({
     if (!replyText.trim() || !ticket) return;
 
     const messageText = replyText.trim();
+    const currentAuthor =
+      ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+        ? ticket.assignedTech
+        : "K. Vignesh (Cleanroom Lead)";
+
     setMessages((prev) => [
       ...prev,
       {
         sender: "Technician",
-        author: "S. Murugan (Cleanroom Lead)",
+        author: currentAuthor,
         time: "Just now",
         text: messageText,
       },
@@ -180,7 +185,7 @@ export default function TechnicianTicketDetailPage({
       await sendMessageToSupabase(
         ticket.id,
         "Technician",
-        "S. Murugan (Cleanroom Lead)",
+        currentAuthor,
         messageText
       );
     } catch (err) {

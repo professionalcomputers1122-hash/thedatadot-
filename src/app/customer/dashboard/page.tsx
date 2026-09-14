@@ -165,8 +165,16 @@ export default function CustomerDashboardPage() {
 
               <div className="sm:text-right">
                 <span className="text-xs text-slate-500 block">Assigned Lead Engineer</span>
-                <span className="text-sm font-bold text-slate-900">{activeTicket.assignedTech || "S. Murugan (Cleanroom Lead)"}</span>
-                <p className="text-xs font-bold text-blue-600 mt-0.5">Lab Hotline: +91 6380488373</p>
+                <span className="text-sm font-bold text-slate-900">
+                  {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
+                    ? activeTicket.assignedTech
+                    : "Pending Admin Dispatch"}
+                </span>
+                <p className="text-xs font-bold text-blue-600 mt-0.5">
+                  {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
+                    ? "Lab Hotline: +91 6380488373"
+                    : "Triage Queue • Dispatch Pending"}
+                </p>
               </div>
             </div>
 

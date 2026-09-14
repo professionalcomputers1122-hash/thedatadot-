@@ -64,7 +64,7 @@ export default function CustomerNewTicketPage() {
         serialNumber: formData.serial || "N/A",
         urgency: urgencyVal,
         symptoms: `${formData.symptoms} - ${formData.trauma}. ${formData.description}`,
-        techNotes: `New client intake via Customer Portal by ${customer.name}. Prioritized for Cleanroom Bench inspection.`,
+        techNotes: `New hardware intake via Customer Portal by ${customer.name}. Case placed in Super Admin triage queue for technician dispatch.`,
       });
 
       const intakeDescription = formData.description
@@ -81,8 +81,8 @@ export default function CustomerNewTicketPage() {
         await sendMessageToSupabase(
           newTicketId,
           "Technician",
-          "S. Murugan (Cleanroom Lead)",
-          `Media received and logged in cleanroom vault. Drive placed on anti-static diagnostic bench awaiting Class-5 inspection.`
+          "Triage Desk",
+          `Ticket #${newTicketId} received and placed in triage queue. Super Admin is reviewing hardware failure specifications to dispatch an assigned forensic technician.`
         );
       } catch (msgErr) {
         console.warn("Intake message initialization warning:", msgErr);

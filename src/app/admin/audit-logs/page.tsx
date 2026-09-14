@@ -26,7 +26,7 @@ const defaultLogs: AuditEntry[] = [
   {
     id: "LOG-9020",
     timestamp: "2026-09-14 16:35:12 IST",
-    actor: "murugan.tech@thedatadot.com (Tech-048)",
+    actor: "vignesh.ssd@thedatadot.com (Tech-052)",
     event: "Updated Case #TDD-8942 sector clone to 99.8% on PC-3000 Bench 01",
     ip: "192.168.10.42 (Internal Lab VLAN)",
     hash: "sha256:e3b0c442...98b2",

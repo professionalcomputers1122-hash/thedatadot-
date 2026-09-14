@@ -61,7 +61,7 @@ export default function TechnicianNav() {
 
           <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs">
             <span className="text-slate-400">Tech:</span>
-            <span className="font-bold text-white">S. Murugan</span>
+            <span className="font-bold text-white">K. Vignesh</span>
           </div>
 
           <Link

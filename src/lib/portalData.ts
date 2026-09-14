@@ -29,7 +29,7 @@ export const initialTickets: Ticket[] = [
     serialNumber: "WDC-WMC4N0E83719",
     status: "PC-3000 Imaging",
     priority: "CRITICAL",
-    assignedTech: "S. Murugan (Cleanroom Lead)",
+    assignedTech: "K. Vignesh (Solid State Forensic)",
     clonedPercent: 99.8,
     recoveredSize: "3.82 TB of 4.0 TB",
     createdAt: "Sep 12, 2026",
@@ -63,7 +63,7 @@ export const initialTickets: Ticket[] = [
     serialNumber: "QNP-RAID-9921",
     status: "Cleanroom Diagnosis",
     priority: "CRITICAL",
-    assignedTech: "S. Murugan (Cleanroom Lead)",
+    assignedTech: "Unassigned",
     clonedPercent: 42.0,
     recoveredSize: "5.1 TB of 12.0 TB",
     createdAt: "Sep 13, 2026",
@@ -132,20 +132,20 @@ export const initialCustomers = [
 
 export const initialTechnicians = [
   {
-    id: "TECH-048",
-    name: "S. Murugan",
-    email: "murugan.tech@thedatadot.com",
-    role: "Cleanroom Storage Lead",
-    station: "PC-3000 Bench 01 (Class-5 Hood)",
-    activeCases: 2,
-    status: "On Bench",
-  },
-  {
     id: "TECH-052",
     name: "K. Vignesh",
     email: "vignesh.ssd@thedatadot.com",
     role: "Solid State & NVMe Specialist",
     station: "PC-3000 Flash & Portable III",
+    activeCases: 1,
+    status: "On Bench",
+  },
+  {
+    id: "TECH-064",
+    name: "M. Rajesh",
+    email: "rajesh.lab@thedatadot.com",
+    role: "PC-3000 Cleanroom Lead Engineer",
+    station: "PC-3000 Bench 01 (Class-5 Hood)",
     activeCases: 1,
     status: "On Bench",
   },
@@ -183,7 +183,7 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
             serialNumber: row.serial_number,
             status: (row.status as any) || "Cleanroom Diagnosis",
             priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
-            assignedTech: row.assigned_tech || "S. Murugan (Cleanroom Lead)",
+            assignedTech: row.assigned_tech || "Unassigned",
             clonedPercent: Number(row.cloned_percent) || 0,
             recoveredSize: `${row.cloned_percent}% cloned`,
             createdAt: row.created_at
@@ -234,7 +234,7 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
       serialNumber: row.serial_number,
       status: (row.status as any) || "Cleanroom Diagnosis",
       priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
-      assignedTech: row.assigned_tech || "S. Murugan (Cleanroom Lead)",
+      assignedTech: row.assigned_tech || "Unassigned",
       clonedPercent: Number(row.cloned_percent) || 0,
       recoveredSize: `${row.cloned_percent}% cloned`,
       createdAt: row.created_at
@@ -405,9 +405,9 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
         cloned_percent: 0,
         urgency: input.urgency || "Standard",
         symptoms: input.symptoms || "",
-        tech_notes: input.techNotes || "Awaiting hardware reception in Class-5 cleanroom.",
-        assigned_bench: "Cleanroom Intake Station",
-        assigned_tech: "S. Murugan (Cleanroom Lead)",
+        tech_notes: input.techNotes || "Awaiting Super Admin triage and technician dispatch.",
+        assigned_bench: (input as any).assignedBench || "Pending Allocation",
+        assigned_tech: (input as any).assignedTech || "Unassigned",
       },
     ]);
 

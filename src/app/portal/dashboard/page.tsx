@@ -42,7 +42,7 @@ export default function ClientDashboardPage() {
     name: "Apex Healthcare Diagnostic Center",
     accountNumber: "TDD-CLI-8492",
     slaTier: "Enterprise 15-Min Response",
-    assignedEngineer: "S. Murugan (Forensic Storage Lead)",
+    assignedEngineer: "K. Vignesh (Forensic Storage Lead)",
   };
 
   const activeCase = {

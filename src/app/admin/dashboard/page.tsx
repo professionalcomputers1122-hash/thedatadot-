@@ -1,10 +1,27 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
-import { initialTickets, initialCustomers } from "@/lib/portalData";
+import { initialTickets, initialCustomers, fetchTicketsFromSupabase } from "@/lib/portalData";
 
 export default function AdminDashboardPage() {
+  const [tickets, setTickets] = useState(initialTickets);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const live = await fetchTicketsFromSupabase();
+        if (live && live.length > 0) {
+          setTickets(live);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    load();
+  }, []);
+
   return (
     <AdminLayoutShell
       title="Executive Command Dashboard"
@@ -14,7 +31,7 @@ export default function AdminDashboardPage() {
           href="/admin/tickets"
           className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs"
         >
-          View All Tickets (4) →
+          View All Tickets ({tickets.length}) →
         </Link>
       }
     >
@@ -95,7 +112,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                {initialTickets.slice(0, 3).map((t) => (
+                {tickets.slice(0, 5).map((t) => (
                   <tr key={t.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-3.5 font-bold text-blue-400">#{t.id}</td>
                     <td className="py-3.5 font-medium text-white">{t.companyName}</td>
@@ -108,13 +125,21 @@ export default function AdminDashboardPage() {
                     <td className="py-3.5 font-black text-emerald-400">
                       {t.clonedPercent ? `${t.clonedPercent}%` : "—"}
                     </td>
-                    <td className="py-3.5 text-slate-400">{t.assignedTech}</td>
+                    <td className="py-3.5">
+                      {!t.assignedTech || t.assignedTech === "Unassigned" ? (
+                        <span className="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold">
+                          ⚠️ Unassigned
+                        </span>
+                      ) : (
+                        <span className="text-slate-300 font-medium">{t.assignedTech}</span>
+                      )}
+                    </td>
                     <td className="py-3.5 text-right">
                       <Link
-                        href={`/technician/tickets/${t.id}`}
+                        href="/admin/tickets"
                         className="text-blue-400 hover:underline font-bold"
                       >
-                        Inspect →
+                        Dispatch →
                       </Link>
                     </td>
                   </tr>

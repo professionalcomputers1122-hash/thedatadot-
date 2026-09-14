@@ -1,10 +1,16 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import TechnicianNav from "@/components/TechnicianNav";
 import Footer from "@/components/Footer";
-import { initialTickets } from "@/lib/portalData";
+import {
+  initialTickets,
+  fetchTicketsFromSupabase,
+  fetchMessagesFromSupabase,
+  sendMessageToSupabase,
+  updateTicketInSupabase,
+} from "@/lib/portalData";
 
 interface Message {
   sender: "Customer" | "Technician";
@@ -21,61 +27,204 @@ export default function TechnicianTicketDetailPage({
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
 
-  const ticket =
-    initialTickets.find((t) => t.id.toLowerCase() === ticketId.toLowerCase()) ||
-    initialTickets[0];
+  const [ticket, setTicket] = useState<any>(() => {
+    return (
+      initialTickets.find((t) => t.id.toLowerCase() === ticketId.toLowerCase()) ||
+      null
+    );
+  });
 
-  const [status, setStatus] = useState(ticket.status);
-  const [progress, setProgress] = useState(ticket.clonedPercent || 50);
-  const [notes, setNotes] = useState(ticket.techNotes);
+  const [status, setStatus] = useState("Cleanroom Diagnosis");
+  const [progress, setProgress] = useState(0);
+  const [notes, setNotes] = useState("");
   const [notification, setNotification] = useState("");
-
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: "Customer",
-      author: ticket.customerName,
-      time: "Sep 12, 10:15 AM",
-      text: ticket.symptoms,
-    },
-    {
-      sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
-      time: "Sep 12, 11:30 AM",
-      text: "Device logged in cleanroom vault. Starting donor slider matching.",
-    },
-    {
-      sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
-      time: "Sep 13, 02:45 PM",
-      text: "Donor heads swapped under ISO Class-5 clean air bench. PC-3000 mirror imaging initiated.",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveUpdate = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const liveTickets = await fetchTicketsFromSupabase();
+        let found = liveTickets.find(
+          (t) => t.id.toLowerCase() === ticketId.toLowerCase()
+        );
+
+        if (!found) {
+          found = initialTickets.find(
+            (t) => t.id.toLowerCase() === ticketId.toLowerCase()
+          );
+        }
+
+        if (found) {
+          setTicket(found);
+          setStatus(found.status || "Cleanroom Diagnosis");
+          setProgress(found.clonedPercent || 0);
+          setNotes(found.techNotes || "");
+
+          const liveMsgs = await fetchMessagesFromSupabase(ticketId);
+          if (liveMsgs && liveMsgs.length > 0) {
+            setMessages(
+              liveMsgs.map((m: any) => ({
+                sender: m.sender,
+                author: m.author,
+                time: m.created_at
+                  ? new Date(m.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Today",
+                text: m.text,
+              }))
+            );
+          } else if (ticketId.toUpperCase() === "TDD-8942") {
+            setMessages([
+              {
+                sender: "Customer",
+                author: "Dr. Aravind Swaminathan",
+                time: "Sep 12, 10:15 AM",
+                text: "Our server dropped offline after power flicker during MRI scan. Loud clicking noise heard from the 4TB Seagate drive. Critical patient databases .mdf are on this drive.",
+              },
+              {
+                sender: "Technician",
+                author: "S. Murugan (Cleanroom Lead)",
+                time: "Sep 12, 11:30 AM",
+                text: "Media received in cleanroom. Outer casing inspected and serial barcoded. Drive placed on anti-static isolation mat.",
+              },
+              {
+                sender: "Technician",
+                author: "S. Murugan (Cleanroom Lead)",
+                time: "Sep 13, 02:45 PM",
+                text: "ISO Class-5 clean bench opened. Microscopic inspection revealed Slider Head #1 unseated and contacting outer platter rim. Donor head assembly swapped and calibrated. Proceeding to PC-3000 mirror imaging.",
+              },
+              {
+                sender: "Technician",
+                author: "S. Murugan (Cleanroom Lead)",
+                time: "Today, 03:15 PM",
+                text: "PC-3000 Platter Mirror at 99.8% complete. 3.82 TB extracted without unrecoverable bad sector errors. The EMR database file (.mdf) is 100% intact.",
+              },
+            ]);
+          } else {
+            const initialThread: Message[] = [];
+            if (found.symptoms) {
+              initialThread.push({
+                sender: "Customer",
+                author: found.customerName || "Client",
+                time: found.createdAt || "Intake",
+                text: found.symptoms,
+              });
+            }
+            if (found.techNotes) {
+              initialThread.push({
+                sender: "Technician",
+                author: found.assignedTech || "S. Murugan (Cleanroom Lead)",
+                time: "Bench Intake",
+                text: found.techNotes,
+              });
+            }
+            setMessages(initialThread);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load technician ticket:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [ticketId]);
+
+  const handleSaveUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setNotification("Hardware recovery status updated! Synced to Customer Portal.");
-    setTimeout(() => setNotification(""), 4000);
+    if (!ticket) return;
+
+    setSaving(true);
+    try {
+      await updateTicketInSupabase(ticket.id, {
+        status,
+        clonedPercent: progress,
+        techNotes: notes,
+      });
+      setNotification("Hardware recovery status updated! Synced live to Customer Portal.");
+    } catch (err) {
+      console.warn("Update sync warning:", err);
+      setNotification("Status updated locally.");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setNotification(""), 4000);
+    }
   };
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !ticket) return;
 
-    setMessages([
-      ...messages,
+    const messageText = replyText.trim();
+    setMessages((prev) => [
+      ...prev,
       {
         sender: "Technician",
         author: "S. Murugan (Cleanroom Lead)",
         time: "Just now",
-        text: replyText,
+        text: messageText,
       },
     ]);
     setReplyText("");
     setNotification("Message dispatched to Customer Portal.");
     setTimeout(() => setNotification(""), 4000);
+
+    try {
+      await sendMessageToSupabase(
+        ticket.id,
+        "Technician",
+        "S. Murugan (Cleanroom Lead)",
+        messageText
+      );
+    } catch (err) {
+      console.warn("Message dispatch error:", err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased">
+        <TechnicianNav />
+        <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-16 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-4" />
+          <p className="text-xs text-slate-400 font-mono">Calibrating Workbench Target #{ticketId}...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased">
+        <TechnicianNav />
+        <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-20 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Target #{ticketId} Not Found
+          </h1>
+          <p className="mt-2 text-sm text-slate-400">
+            No active hardware forensic record found for this identifier.
+          </p>
+          <div className="mt-6">
+            <Link
+              href="/technician/tickets"
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-indigo-500 transition"
+            >
+              ← Back to Lab Queue
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
@@ -98,14 +247,14 @@ export default function TechnicianTicketDetailPage({
                 {status}
               </span>
               <span className="rounded-full bg-red-500/20 text-red-300 border border-red-500/30 px-2.5 py-0.5 text-[10px] font-bold">
-                {ticket.priority}
+                {ticket.priority || "CRITICAL"}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400">
-              Client: <strong className="text-white">{ticket.companyName}</strong>
+              Client: <strong className="text-white">{ticket.companyName}</strong> ({ticket.customerName})
             </span>
           </div>
         </div>
@@ -179,13 +328,14 @@ export default function TechnicianTicketDetailPage({
 
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-[11px] text-slate-500">
-                    * Client timeline updates automatically upon save.
+                    * Client timeline updates live upon save.
                   </span>
                   <button
                     type="submit"
-                    className="rounded-xl bg-indigo-600 px-6 py-2.5 font-bold text-white shadow-md hover:bg-indigo-500 transition"
+                    disabled={saving}
+                    className="rounded-xl bg-indigo-600 px-6 py-2.5 font-bold text-white shadow-md hover:bg-indigo-500 transition disabled:opacity-50"
                   >
-                    Save Hardware Update →
+                    {saving ? "Saving Changes..." : "Save Hardware Update →"}
                   </button>
                 </div>
               </form>
@@ -198,28 +348,37 @@ export default function TechnicianTicketDetailPage({
               </h2>
 
               <div className="space-y-3 mb-6 max-h-80 overflow-y-auto pr-1">
-                {messages.map((m, idx) => {
-                  const isTech = m.sender === "Technician";
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-3.5 rounded-2xl border ${
-                        isTech
-                          ? "border-indigo-500/30 bg-indigo-950/40 text-indigo-200 ml-4"
-                          : "border-slate-800 bg-slate-950 text-slate-200 mr-4"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-[11px]">
-                          {isTech ? "🔬 " : "👤 "}
-                          {m.author}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{m.time}</span>
+                {messages.length === 0 ? (
+                  <div className="p-6 text-center text-slate-500 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                    <p className="font-semibold text-slate-400">No communication logs recorded yet</p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Use the form below to dispatch an official cleanroom bench update to the customer.
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((m, idx) => {
+                    const isTech = m.sender === "Technician";
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-2xl border ${
+                          isTech
+                            ? "border-indigo-500/30 bg-indigo-950/40 text-indigo-200 ml-4"
+                            : "border-slate-800 bg-slate-950 text-slate-200 mr-4"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-[11px]">
+                            {isTech ? "🔬 " : "👤 "}
+                            {m.author}
+                          </span>
+                          <span className="text-[10px] text-slate-400">{m.time}</span>
+                        </div>
+                        <p className="leading-relaxed">{m.text}</p>
                       </div>
-                      <p className="leading-relaxed">{m.text}</p>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               <form onSubmit={handleSendReply} className="space-y-3">
@@ -259,50 +418,46 @@ export default function TechnicianTicketDetailPage({
                 {ticket.serialNumber && (
                   <div className="flex justify-between border-b border-slate-800 pb-2">
                     <span className="text-slate-500">Serial Number:</span>
-                    <span className="font-mono text-indigo-300">{ticket.serialNumber}</span>
+                    <span className="font-mono text-emerald-400">{ticket.serialNumber}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Intake Date:</span>
-                  <span>{ticket.createdAt}</span>
+                  <span className="text-slate-500">Category:</span>
+                  <span className="font-semibold text-indigo-400">{ticket.category}</span>
                 </div>
 
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Customer SLA:</span>
-                  <span className="text-red-400 font-bold">15-Minute Critical</span>
+                  <span className="text-slate-500">Client Org:</span>
+                  <span className="text-white">{ticket.companyName}</span>
                 </div>
 
-                <div className="mt-4">
-                  <span className="text-slate-500 block mb-1">Customer Failure Statement:</span>
-                  <p className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 leading-relaxed">
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-500">Intake Contact:</span>
+                  <span className="text-white">{ticket.customerName}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-500">Assigned Bench:</span>
+                  <span className="text-indigo-300 font-mono">PC-3000 Flash / SAS Bench 01</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-500 block mb-1">Reported Damage / Symptoms:</span>
+                  <p className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300 leading-relaxed font-mono text-[11px]">
                     {ticket.symptoms}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 backdrop-blur-sm">
-              <h3 className="font-bold text-white uppercase tracking-wider text-[11px] mb-3">
-                Workbench &amp; Tooling Calibration
-              </h3>
-              <ul className="space-y-2 text-slate-400">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  <span>PC-3000 Channel 01: Write-blocked SATA 6Gb/s</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  <span>ISO Class-5 Laminar Hood: 0.05 in. w.g. pressure</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span>
-                  <span>Micro-head comb unloader kit calibrated</span>
-                </li>
-              </ul>
+            <div className="rounded-3xl border border-indigo-500/20 bg-indigo-950/20 p-6 text-xs text-indigo-200">
+              <h4 className="font-bold text-indigo-300 mb-2">Class-5 Clean Bench Protocol</h4>
+              <p className="text-[11px] leading-relaxed text-indigo-300/80">
+                Ensure grounding wrist strap is attached before unsealing drive top cover. All head transplants require donor slider gap verification under 100x microscope.
+              </p>
             </div>
           </div>
-
         </div>
       </main>
 

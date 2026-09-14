@@ -67,13 +67,25 @@ export default function CustomerNewTicketPage() {
         techNotes: `New client intake via Customer Portal by ${customer.name}. Prioritized for Cleanroom Bench inspection.`,
       });
 
-      if (formData.description) {
+      const intakeDescription = formData.description
+        ? `${formData.symptoms} (${formData.trauma}) - ${formData.description}`
+        : `${formData.symptoms} (${formData.trauma})`;
+
+      try {
         await sendMessageToSupabase(
           newTicketId,
           "Customer",
           customer.name,
-          formData.description
+          intakeDescription
         );
+        await sendMessageToSupabase(
+          newTicketId,
+          "Technician",
+          "S. Murugan (Cleanroom Lead)",
+          `Media received and logged in cleanroom vault. Drive placed on anti-static diagnostic bench awaiting Class-5 inspection.`
+        );
+      } catch (msgErr) {
+        console.warn("Intake message initialization warning:", msgErr);
       }
 
       // Dispatch alert via Resend to Support Mailbox & Customer

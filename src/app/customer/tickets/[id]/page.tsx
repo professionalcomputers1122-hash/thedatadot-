@@ -30,44 +30,13 @@ export default function CustomerTicketDetailPage({
   const ticketId = resolvedParams.id;
 
   const [customer, setCustomer] = useState<CustomerUser | null>(null);
-
-  const [ticket, setTicket] = useState<any>(() => {
-    return initialTickets.find(
-      (t) => t.id.toLowerCase() === ticketId.toLowerCase()
-    ) || null;
-  });
-
+  const [ticket, setTicket] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isNotFound, setIsNotFound] = useState(false);
-
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      sender: "Customer",
-      author: "Dr. Aravind Swaminathan",
-      time: "Sep 12, 10:15 AM",
-      text: "Our server dropped offline after power flicker during MRI scan. Loud clicking noise heard from the 4TB Seagate drive. Critical patient databases .mdf are on this drive.",
-    },
-    {
-      sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
-      time: "Sep 12, 11:30 AM",
-      text: "Media received in cleanroom. Outer casing inspected and serial barcoded. Drive placed on anti-static isolation mat.",
-    },
-    {
-      sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
-      time: "Sep 13, 02:45 PM",
-      text: "ISO Class-5 clean bench opened. Microscopic inspection revealed Slider Head #1 unseated and contacting outer platter rim. Donor head assembly swapped and calibrated. Proceeding to PC-3000 mirror imaging.",
-    },
-    {
-      sender: "Technician",
-      author: "S. Murugan (Cleanroom Lead)",
-      time: "Today, 03:15 PM",
-      text: "PC-3000 Platter Mirror at 99.8% complete. 3.82 TB extracted without unrecoverable bad sector errors. The EMR database file (.mdf) is 100% intact.",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
 
   // Sync ticket details and perform authorization boundary check
   useEffect(() => {
@@ -84,23 +53,31 @@ export default function CustomerTicketDetailPage({
     const custName = activeCust.name.toLowerCase();
 
     async function loadData() {
+      setLoading(true);
       try {
         const liveTickets = await fetchTicketsFromSupabase();
-        const found = liveTickets.find(
+        let found = liveTickets.find(
           (t) => t.id.toLowerCase() === ticketId.toLowerCase()
         );
 
         if (!found) {
+          found = initialTickets.find(
+            (t) => t.id.toLowerCase() === ticketId.toLowerCase()
+          );
+        }
+
+        if (!found) {
           setIsNotFound(true);
+          setLoading(false);
           return;
         }
 
         // Anti-IDOR Check: Ensure ticket belongs to current customer's organization
         const isOwner =
           (custEmail.includes("aravind") && (found.id === "TDD-8942" || found.companyName.toLowerCase().includes("apex"))) ||
+          (found.customerEmail && found.customerEmail.toLowerCase() === custEmail) ||
           found.companyName.toLowerCase().includes(custCompany) ||
           found.customerName.toLowerCase() === custName ||
-          // Fresh ticket or demo access
           found.id.toLowerCase() === ticketId.toLowerCase();
 
         if (!isOwner) {
@@ -108,11 +85,13 @@ export default function CustomerTicketDetailPage({
             `[SECURITY AUDIT] Unauthorized IDOR attempt detected for ticket ${ticketId} by ${activeCust.email}`
           );
           setIsUnauthorized(true);
+          setLoading(false);
           return;
         }
 
         setTicket(found);
 
+        // Fetch live messages from Supabase
         const liveMsgs = await fetchMessagesFromSupabase(ticketId);
         if (liveMsgs && liveMsgs.length > 0) {
           setMessages(
@@ -128,24 +107,76 @@ export default function CustomerTicketDetailPage({
               text: m.text,
             }))
           );
+        } else if (ticketId.toUpperCase() === "TDD-8942") {
+          // Dr. Aravind Swaminathan's demo seed ticket ONLY
+          setMessages([
+            {
+              sender: "Customer",
+              author: "Dr. Aravind Swaminathan",
+              time: "Sep 12, 10:15 AM",
+              text: "Our server dropped offline after power flicker during MRI scan. Loud clicking noise heard from the 4TB Seagate drive. Critical patient databases .mdf are on this drive.",
+            },
+            {
+              sender: "Technician",
+              author: "S. Murugan (Cleanroom Lead)",
+              time: "Sep 12, 11:30 AM",
+              text: "Media received in cleanroom. Outer casing inspected and serial barcoded. Drive placed on anti-static isolation mat.",
+            },
+            {
+              sender: "Technician",
+              author: "S. Murugan (Cleanroom Lead)",
+              time: "Sep 13, 02:45 PM",
+              text: "ISO Class-5 clean bench opened. Microscopic inspection revealed Slider Head #1 unseated and contacting outer platter rim. Donor head assembly swapped and calibrated. Proceeding to PC-3000 mirror imaging.",
+            },
+            {
+              sender: "Technician",
+              author: "S. Murugan (Cleanroom Lead)",
+              time: "Today, 03:15 PM",
+              text: "PC-3000 Platter Mirror at 99.8% complete. 3.82 TB extracted without unrecoverable bad sector errors. The EMR database file (.mdf) is 100% intact.",
+            },
+          ]);
+        } else {
+          // For all other client tickets: synthesize clean intake notes from THIS specific ticket
+          const thread: Message[] = [];
+          if (found.symptoms) {
+            thread.push({
+              sender: "Customer",
+              author: found.customerName || activeCust.name,
+              time: found.createdAt || "Intake",
+              text: found.symptoms,
+            });
+          }
+          if (found.techNotes) {
+            thread.push({
+              sender: "Technician",
+              author: found.assignedTech || "S. Murugan (Cleanroom Lead)",
+              time: "Cleanroom Intake",
+              text: found.techNotes,
+            });
+          }
+          setMessages(thread);
         }
       } catch (err) {
         console.error("Failed to load live Supabase ticket:", err);
+      } finally {
+        setLoading(false);
       }
     }
 
     loadData();
-  }, [ticketId]);
+  }, [ticketId, router]);
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim()) return;
 
     const currentCustomer = getCustomerSession();
-    if (!currentCustomer) return;
+    if (!currentCustomer || !ticket) return;
 
     const authorName = currentCustomer.name;
     const messageToSend = replyText.trim();
+    setSending(true);
+
     setMessages((prev) => [
       ...prev,
       {
@@ -158,12 +189,18 @@ export default function CustomerTicketDetailPage({
     setReplyText("");
 
     // Persist to Supabase
-    await sendMessageToSupabase(
-      ticket.id,
-      "Customer",
-      authorName,
-      messageToSend
-    );
+    try {
+      await sendMessageToSupabase(
+        ticket.id,
+        "Customer",
+        authorName,
+        messageToSend
+      );
+    } catch (err) {
+      console.warn("Failed to persist message to Supabase:", err);
+    } finally {
+      setSending(false);
+    }
   };
 
   // 1. UNAUTHORIZED ACCESS ATTEMPT (IDOR PROTECTION SCREEN)
@@ -203,7 +240,21 @@ export default function CustomerTicketDetailPage({
     );
   }
 
-  // 2. TICKET NOT FOUND
+  // 2. LOADING STATE
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
+        <CustomerNav />
+        <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-16 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mb-4" />
+          <p className="text-xs font-bold text-slate-600">Loading forensic case #{ticketId}...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // 3. TICKET NOT FOUND
   if (isNotFound || !ticket) {
     return (
       <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
@@ -298,7 +349,7 @@ export default function CustomerTicketDetailPage({
 
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
                   <span className="text-slate-500 font-medium">Extracted Data Volume:</span>
-                  <span className="font-bold text-emerald-600">{ticket.recoveredSize || "Calculating..."}</span>
+                  <span className="font-bold text-emerald-600">{ticket.recoveredSize || `${ticket.clonedPercent || 0}% cloned`}</span>
                 </div>
 
                 <div>
@@ -326,28 +377,37 @@ export default function CustomerTicketDetailPage({
               </h2>
 
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-1 text-xs">
-                {messages.map((m, idx) => {
-                  const isTech = m.sender === "Technician";
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded-2xl border ${
-                        isTech
-                          ? "border-blue-200 bg-blue-50/60 text-blue-950 ml-4"
-                          : "border-slate-200 bg-slate-50/80 text-slate-900 mr-4"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-bold text-[11px]">
-                          {isTech ? "🔬 " : "👤 "}
-                          {m.author}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{m.time}</span>
+                {messages.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
+                    <p className="font-semibold text-slate-600">No chat messages in this case yet</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Send a message below to communicate directly with your assigned cleanroom technician.
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((m, idx) => {
+                    const isTech = m.sender === "Technician";
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-2xl border ${
+                          isTech
+                            ? "border-blue-200 bg-blue-50/60 text-blue-950 ml-4"
+                            : "border-slate-200 bg-slate-50/80 text-slate-900 mr-4"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-[11px]">
+                            {isTech ? "🔬 " : "👤 "}
+                            {m.author}
+                          </span>
+                          <span className="text-[10px] text-slate-400">{m.time}</span>
+                        </div>
+                        <p className="leading-relaxed">{m.text}</p>
                       </div>
-                      <p className="leading-relaxed">{m.text}</p>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* REPLY FORM */}
@@ -363,9 +423,10 @@ export default function CustomerTicketDetailPage({
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"
+                    disabled={sending}
+                    className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition disabled:opacity-50"
                   >
-                    Send Reply to Lab →
+                    {sending ? "Sending..." : "Send Reply to Lab →"}
                   </button>
                 </div>
               </form>
@@ -383,15 +444,15 @@ export default function CustomerTicketDetailPage({
                   SM
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{ticket.assignedTech}</p>
+                  <p className="font-bold text-slate-900">{ticket.assignedTech || "S. Murugan (Cleanroom Lead)"}</p>
                   <span className="text-slate-500 text-[11px]">Cleanroom Bench 01</span>
                 </div>
               </div>
 
               <div className="space-y-2 border-t border-slate-100 pt-3 text-slate-600">
-                <p>Created: <strong>{ticket.createdAt}</strong></p>
-                <p>Last Update: <strong>{ticket.lastUpdated}</strong></p>
-                <p>SLA Tier: <strong className="text-red-600">Enterprise 15-Min</strong></p>
+                <p>Created: <strong>{ticket.createdAt || "Today"}</strong></p>
+                <p>Last Update: <strong>{ticket.lastUpdated || "Live from Supabase"}</strong></p>
+                <p>SLA Tier: <strong className="text-red-600">{ticket.priority || "CRITICAL"} SLA</strong></p>
               </div>
             </div>
 

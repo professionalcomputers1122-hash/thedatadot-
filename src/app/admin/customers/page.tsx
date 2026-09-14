@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import { initialCustomers } from "@/lib/portalData";
-import { registerCustomerAccount } from "@/lib/clientAuth";
+import { registerCustomerAccount, deleteCustomerAccount } from "@/lib/clientAuth";
 
 interface CustomerRecord {
   id: string;
@@ -92,6 +92,28 @@ export default function AdminCustomersPage() {
       setNotification(`Credentials: ${c.email} | PW: ${c.password || "Password@123"}`);
     }
     setTimeout(() => setNotification(""), 5000);
+  };
+
+  const handleDeleteCustomer = async (c: CustomerRecord) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete customer account for "${c.name}" (${c.company})?\n\nThis will immediately revoke their customer portal login.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await fetch(`/api/customers?id=${c.id}&email=${encodeURIComponent(c.email)}`, {
+        method: "DELETE",
+      });
+
+      deleteCustomerAccount(c.email);
+      setCustomers((prev) => prev.filter((item) => item.email !== c.email && item.id !== c.id));
+      setNotification(`✓ Customer "${c.name}" (${c.company}) deleted and portal access revoked.`);
+      setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      setNotification("Failed to delete customer. Please try again.");
+      setTimeout(() => setNotification(""), 5000);
+    }
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -258,6 +280,13 @@ export default function AdminCustomersPage() {
                           className="text-[11px] font-bold text-blue-400 hover:underline px-1.5"
                         >
                           Reset PW
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCustomer(c)}
+                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          title="Delete customer and revoke portal access"
+                        >
+                          🗑️ Delete
                         </button>
                       </div>
                     </td>

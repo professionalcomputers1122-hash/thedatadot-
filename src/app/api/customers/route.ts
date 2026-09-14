@@ -256,3 +256,54 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const email = searchParams.get("email");
+
+    const supabase = createAdminClient();
+
+    if (id && id.includes("-")) {
+      // UUID in Supabase companies table
+      await supabase.from("companies").delete().eq("id", id);
+    } else if (email) {
+      // Delete company record matching email in industry metadata
+      await supabase.from("companies").delete().ilike("industry", `%${email}%`);
+    }
+
+    // Audit log
+    try {
+      await supabase.from("audit_logs").insert([
+        {
+          id: `LOG-DEL-${Date.now().toString(36).toUpperCase()}`,
+          actor: "Super Admin",
+          action: "DELETE_CUSTOMER_ACCOUNT",
+          target: email || id || "Unknown Customer",
+          ip: clientIp,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (auditErr) {
+      console.warn("Audit log delete warning:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Customer account deleted successfully",
+    });
+  } catch (err: any) {
+    console.error("[API /api/customers DELETE exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to delete customer" },
+      { status: 500 }
+    );
+  }
+}
+

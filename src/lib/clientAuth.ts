@@ -277,3 +277,18 @@ export async function logoutCustomer(): Promise<void> {
     console.warn("Logout request failed:", err);
   }
 }
+
+export function deleteCustomerAccount(email: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getAuthorizedAccounts();
+    const normalized = email.toLowerCase().trim();
+    if (existing[normalized]) {
+      delete existing[normalized];
+      localStorage.setItem("tdd_registered_customers", JSON.stringify(existing));
+    }
+  } catch (e) {
+    console.warn("Failed to delete account from storage:", e);
+  }
+}
+

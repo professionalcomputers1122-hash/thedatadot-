@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import { initialTechnicians } from "@/lib/portalData";
 
@@ -16,21 +16,61 @@ export default function AdminTechniciansPage() {
     station: "PC-3000 Bench 02",
   });
 
+  // Load persisted technicians from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("tdd_laboratory_technicians");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTechnicians(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed loading technicians from storage:", e);
+    }
+  }, []);
+
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     const created = {
       id: `TECH-0${technicians.length + 50}`,
-      name: newTech.name,
-      email: newTech.email,
+      name: newTech.name.trim(),
+      email: newTech.email.trim(),
       role: newTech.role,
       station: newTech.station,
       activeCases: 0,
       status: "Available",
     };
-    setTechnicians([...technicians, created]);
+
+    const updated = [...technicians, created];
+    setTechnicians(updated);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(updated));
+    }
+
     setShowAddModal(false);
     setNewTech({ name: "", email: "", role: "Forensic Cleanroom Technician", station: "PC-3000 Bench 02" });
-    setNotification(`Technician ${created.name} registered and bench credentials generated.`);
+    setNotification(`✓ Technician ${created.name} registered and bench credentials generated.`);
+    setTimeout(() => setNotification(""), 4000);
+  };
+
+  const handleDeleteTechnician = (t: any) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to remove technician "${t.name}" (${t.role}) from the laboratory roster?\n\nTheir assigned hardware bench (${t.station}) will be unallocated.`
+    );
+    if (!confirmed) return;
+
+    const updated = technicians.filter((tech) => tech.id !== t.id && tech.email !== t.email);
+    setTechnicians(updated);
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(updated));
+    }
+
+    setNotification(`✓ Technician "${t.name}" removed from laboratory roster.`);
     setTimeout(() => setNotification(""), 4000);
   };
 
@@ -41,17 +81,19 @@ export default function AdminTechniciansPage() {
       actions={
         <button
           onClick={() => setShowAddModal(true)}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
         >
-          + Add Laboratory Technician
+          <span>+</span> Add Laboratory Technician
         </button>
       }
     >
       <div className="space-y-6 text-xs">
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between">
-            <span>✓ {notification}</span>
-            <button onClick={() => setNotification("")}>✕</button>
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between shadow-lg">
+            <span>{notification}</span>
+            <button onClick={() => setNotification("")} className="text-emerald-400 hover:text-white ml-4">
+              ✕
+            </button>
           </div>
         )}
 
@@ -93,16 +135,25 @@ export default function AdminTechniciansPage() {
                         {t.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={() => {
-                          setNotification(`Temporary PIN re-issued for ${t.name}`);
-                          setTimeout(() => setNotification(""), 4000);
-                        }}
-                        className="text-[11px] font-bold text-blue-400 hover:underline"
-                      >
-                        Reset PIN
-                      </button>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setNotification(`Temporary PIN re-issued for ${t.name}`);
+                            setTimeout(() => setNotification(""), 4000);
+                          }}
+                          className="text-[11px] font-bold text-blue-400 hover:underline px-1.5"
+                        >
+                          Reset PIN
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTechnician(t)}
+                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          title="Remove technician from roster"
+                        >
+                          🗑️ Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -117,7 +168,7 @@ export default function AdminTechniciansPage() {
             <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
                 <h3 className="text-base font-bold text-white">Add Laboratory Technician</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400">✕</button>
+                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white">✕</button>
               </div>
 
               <form onSubmit={handleAdd} className="space-y-3.5">
@@ -138,7 +189,7 @@ export default function AdminTechniciansPage() {
                   <input
                     type="email"
                     required
-                    placeholder="karthi.tech@thedatadot.com"
+                    placeholder="karthik.tech@thedatadot.com"
                     value={newTech.email}
                     onChange={(e) => setNewTech({ ...newTech, email: e.target.value })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
@@ -146,30 +197,30 @@ export default function AdminTechniciansPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Specialization Role</label>
+                  <label className="block font-semibold text-slate-300 mb-1">Engineering Specialization</label>
                   <select
                     value={newTech.role}
                     onChange={(e) => setNewTech({ ...newTech, role: e.target.value })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none"
                   >
-                    <option>Cleanroom Mechanical Slider Lead</option>
-                    <option>Solid State &amp; Monolithic Flash Specialist</option>
-                    <option>RAID &amp; File System Disassembly Engineer</option>
-                    <option>Tier-3 Cloud &amp; Incident Response Lead</option>
+                    <option>Forensic Cleanroom Technician</option>
+                    <option>Solid State Forensic Analyst</option>
+                    <option>Enterprise RAID Recovery Specialist</option>
+                    <option>Lead Cleanroom Supervisor</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Hardware Station Assignment</label>
+                  <label className="block font-semibold text-slate-300 mb-1">Hardware Workstation / Bench</label>
                   <select
                     value={newTech.station}
                     onChange={(e) => setNewTech({ ...newTech, station: e.target.value })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none"
                   >
-                    <option>PC-3000 Bench 01 (ISO Class-5 Laminar Hood)</option>
-                    <option>PC-3000 Portable III NVMe &amp; SAS Station</option>
-                    <option>PC-3000 Flash &amp; Virtual Translator Station</option>
-                    <option>Forensic Hex Server Rack 04</option>
+                    <option>PC-3000 Bench 01 (Class-5 Hood)</option>
+                    <option>PC-3000 Bench 02</option>
+                    <option>Flash / Monolith Extraction Bay</option>
+                    <option>High-Throughput SAS Imaging Rack</option>
                   </select>
                 </div>
 
@@ -183,7 +234,7 @@ export default function AdminTechniciansPage() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition"
                   >
                     Register Technician
                   </button>

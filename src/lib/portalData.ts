@@ -163,6 +163,42 @@ export const initialTechnicians = [
 import { supabase, isSupabaseConfigured } from "./supabase";
 
 export async function fetchTicketsFromSupabase(): Promise<Ticket[]> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/tickets");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.tickets && json.tickets.length > 0) {
+          return json.tickets.map((row: any) => ({
+            id: row.id,
+            customerName: row.customer_name,
+            companyName: row.company_name,
+            category: "Data Recovery",
+            deviceOrSubject: row.device_or_subject,
+            serialNumber: row.serial_number,
+            status: (row.status as any) || "Cleanroom Diagnosis",
+            priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
+            assignedTech: row.assigned_tech || "S. Murugan (Cleanroom Lead)",
+            clonedPercent: Number(row.cloned_percent) || 0,
+            recoveredSize: `${row.cloned_percent}% cloned`,
+            createdAt: row.created_at
+              ? new Date(row.created_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "Today",
+            lastUpdated: "Live from API",
+            symptoms: row.symptoms || "",
+            techNotes: row.tech_notes || "",
+          }));
+        }
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Falling back to direct Supabase tickets query:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return initialTickets;
   try {
     const { data, error } = await supabase
@@ -205,6 +241,19 @@ export async function updateTicketInSupabase(
   id: string,
   updates: { status?: string; clonedPercent?: number; techNotes?: string }
 ) {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) return;
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase update:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return;
   try {
     const payload: any = { updated_at: new Date().toISOString() };
@@ -219,6 +268,18 @@ export async function updateTicketInSupabase(
 }
 
 export async function fetchMessagesFromSupabase(ticketId: string) {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/tickets/${ticketId}/messages`);
+      if (res.ok) {
+        const json = await res.json();
+        return json.messages;
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase message fetch:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase
@@ -240,6 +301,19 @@ export async function sendMessageToSupabase(
   author: string,
   text: string
 ) {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/tickets/${ticketId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender, author, text }),
+      });
+      if (res.ok) return;
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase message insert:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return;
   try {
     await supabase.from("ticket_messages").insert([
@@ -270,6 +344,34 @@ export interface NewTicketInput {
 
 export async function createTicketInSupabase(input: NewTicketInput): Promise<string> {
   const ticketId = input.id || `TDD-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: ticketId,
+          companyName: input.companyName,
+          customerName: input.customerName,
+          customerEmail: input.customerEmail,
+          deviceOrSubject: input.deviceOrSubject,
+          mediaType: input.mediaType || "HDD",
+          serialNumber: input.serialNumber || "N/A",
+          urgency: input.urgency || "Standard",
+          symptoms: input.symptoms || "",
+          techNotes: input.techNotes || "Awaiting hardware reception in Class-5 cleanroom.",
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json.ticketId || ticketId;
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase ticket insert:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return ticketId;
 
   try {
@@ -315,6 +417,18 @@ export interface SupabaseBlogPost {
 }
 
 export async function fetchBlogPostsFromSupabase(): Promise<SupabaseBlogPost[]> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/blog");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.posts) return json.posts;
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase blog query:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return [];
   try {
     const { data, error } = await supabase
@@ -331,6 +445,19 @@ export async function fetchBlogPostsFromSupabase(): Promise<SupabaseBlogPost[]> 
 }
 
 export async function createOrUpdateBlogPostInSupabase(post: SupabaseBlogPost) {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/blog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(post),
+      });
+      if (res.ok) return;
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase blog upsert:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return;
   try {
     await supabase.from("blog_posts").upsert([post]);
@@ -349,6 +476,18 @@ export interface SupabaseFaq {
 }
 
 export async function fetchFaqsFromSupabase(): Promise<SupabaseFaq[]> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/faq");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.faqs) return json.faqs;
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase faq query:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return [];
   try {
     const { data, error } = await supabase
@@ -365,6 +504,19 @@ export async function fetchFaqsFromSupabase(): Promise<SupabaseFaq[]> {
 }
 
 export async function createOrUpdateFaqInSupabase(faq: SupabaseFaq) {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch("/api/faq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(faq),
+      });
+      if (res.ok) return;
+    }
+  } catch (apiErr) {
+    console.warn("Fallback to direct Supabase faq upsert:", apiErr);
+  }
+
   if (!isSupabaseConfigured) return;
   try {
     await supabase.from("faqs").upsert([faq]);

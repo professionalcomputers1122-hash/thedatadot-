@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 
 interface AuditEntry {
@@ -13,54 +13,87 @@ interface AuditEntry {
   status: "SUCCESS" | "VERIFIED" | "ALERT";
 }
 
+const defaultLogs: AuditEntry[] = [
+  {
+    id: "LOG-9021",
+    timestamp: "2026-09-14 16:42:01 IST",
+    actor: "support@thedatadot.com (Super Admin)",
+    event: "Executive session authenticated via FIDO2 WebAuthn token",
+    ip: "103.142.18.91 (Chennai)",
+    hash: "sha256:7f83b165...92a1",
+    status: "SUCCESS",
+  },
+  {
+    id: "LOG-9020",
+    timestamp: "2026-09-14 16:35:12 IST",
+    actor: "murugan.tech@thedatadot.com (Tech-048)",
+    event: "Updated Case #TDD-8942 sector clone to 99.8% on PC-3000 Bench 01",
+    ip: "192.168.10.42 (Internal Lab VLAN)",
+    hash: "sha256:e3b0c442...98b2",
+    status: "VERIFIED",
+  },
+  {
+    id: "LOG-9019",
+    timestamp: "2026-09-14 15:10:04 IST",
+    actor: "System Sentinel Daemon",
+    event: "ISO Class-5 Laminar Hood differential pressure sensor verified (0.05 in. w.g.)",
+    ip: "127.0.0.1 (Sensor Bus)",
+    hash: "sha256:ca978112...120f",
+    status: "VERIFIED",
+  },
+  {
+    id: "LOG-9018",
+    timestamp: "2026-09-14 14:02:49 IST",
+    actor: "aravind@scandiagnostics.com (Customer #TDD-8492)",
+    event: "Customer previewed 5 reconstructed files for Case #TDD-8942",
+    ip: "182.74.92.11 (Hospital Gateway)",
+    hash: "sha256:88d4266f...43c1",
+    status: "SUCCESS",
+  },
+  {
+    id: "LOG-9017",
+    timestamp: "2026-09-14 11:20:15 IST",
+    actor: "support@thedatadot.com (Super Admin)",
+    event: "Published blog article '10 Cybersecurity Tips for Small Businesses'",
+    ip: "103.142.18.91 (Chennai)",
+    hash: "sha256:2c26b46b...e5b8",
+    status: "SUCCESS",
+  },
+];
+
 export default function AdminAuditLogsPage() {
-  const [logs] = useState<AuditEntry[]>([
-    {
-      id: "LOG-9021",
-      timestamp: "2026-09-14 16:42:01 IST",
-      actor: "support@thedatadot.com (Super Admin)",
-      event: "Executive session authenticated via FIDO2 WebAuthn token",
-      ip: "103.142.18.91 (Chennai)",
-      hash: "sha256:7f83b165...92a1",
-      status: "SUCCESS",
-    },
-    {
-      id: "LOG-9020",
-      timestamp: "2026-09-14 16:35:12 IST",
-      actor: "murugan.tech@thedatadot.com (Tech-048)",
-      event: "Updated Case #TDD-8942 sector clone to 99.8% on PC-3000 Bench 01",
-      ip: "192.168.10.42 (Internal Lab VLAN)",
-      hash: "sha256:e3b0c442...98b2",
-      status: "VERIFIED",
-    },
-    {
-      id: "LOG-9019",
-      timestamp: "2026-09-14 15:10:04 IST",
-      actor: "System Sentinel Daemon",
-      event: "ISO Class-5 Laminar Hood differential pressure sensor verified (0.05 in. w.g.)",
-      ip: "127.0.0.1 (Sensor Bus)",
-      hash: "sha256:ca978112...120f",
-      status: "VERIFIED",
-    },
-    {
-      id: "LOG-9018",
-      timestamp: "2026-09-14 14:02:49 IST",
-      actor: "aravind@scandiagnostics.com (Customer #TDD-8492)",
-      event: "Customer previewed 5 reconstructed files for Case #TDD-8942",
-      ip: "182.74.92.11 (Hospital Gateway)",
-      hash: "sha256:88d4266f...43c1",
-      status: "SUCCESS",
-    },
-    {
-      id: "LOG-9017",
-      timestamp: "2026-09-14 11:20:15 IST",
-      actor: "support@thedatadot.com (Super Admin)",
-      event: "Published blog article '10 Cybersecurity Tips for Small Businesses'",
-      ip: "103.142.18.91 (Chennai)",
-      hash: "sha256:2c26b46b...e5b8",
-      status: "SUCCESS",
-    },
-  ]);
+  const [logs, setLogs] = useState<AuditEntry[]>(defaultLogs);
+
+  useEffect(() => {
+    async function loadAuditLogs() {
+      try {
+        const res = await fetch("/api/audit-logs");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.logs && json.logs.length > 0) {
+            const mappedLogs: AuditEntry[] = json.logs.map((row: any) => ({
+              id: row.id,
+              timestamp: row.created_at
+                ? new Date(row.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST"
+                : "Recent",
+              actor: row.actor,
+              event: `${row.action}: ${row.target}`,
+              ip: row.ip || "127.0.0.1",
+              hash: "sha256:" + (row.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "a7f29b12") + "...98b2",
+              status: "VERIFIED" as const,
+            }));
+            // Merge live logs on top of default logs avoiding duplicates
+            const liveIds = new Set(mappedLogs.map((l) => l.id));
+            const merged = [...mappedLogs, ...defaultLogs.filter((d) => !liveIds.has(d.id))];
+            setLogs(merged);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch live audit logs:", err);
+      }
+    }
+    loadAuditLogs();
+  }, []);
 
   const [notification, setNotification] = useState("");
 

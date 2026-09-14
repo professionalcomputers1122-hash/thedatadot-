@@ -1,10 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { getCustomerSession, logoutCustomer, CustomerUser } from "@/lib/clientAuth";
 
 export default function CustomerNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [customer, setCustomer] = useState<CustomerUser | null>(null);
+
+  useEffect(() => {
+    setCustomer(getCustomerSession());
+  }, []);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await logoutCustomer();
+    router.push("/customer/login");
+  };
 
   const links = [
     { name: "Dashboard", href: "/customer/dashboard", icon: "📊" },
@@ -61,8 +75,12 @@ export default function CustomerNav() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="font-bold text-slate-900">Apex Healthcare</span>
-            <span className="text-slate-400 text-[11px]">• #TDD-8492</span>
+            <span className="font-bold text-slate-900">
+              {customer?.company || "Enterprise Account"}
+            </span>
+            <span className="text-slate-400 text-[11px]">
+              • #{customer?.accountNumber || "TDD-CLI"}
+            </span>
           </div>
 
           <Link
@@ -72,12 +90,12 @@ export default function CustomerNav() {
             <span>+ New Ticket</span>
           </Link>
 
-          <Link
-            href="/customer/login"
+          <button
+            onClick={handleSignOut}
             className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
           >
             Sign Out
-          </Link>
+          </button>
         </div>
       </div>
     </header>

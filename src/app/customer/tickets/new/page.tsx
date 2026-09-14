@@ -6,6 +6,7 @@ import Link from "next/link";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import { createTicketInSupabase, sendMessageToSupabase } from "@/lib/portalData";
+import { getCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerNewTicketPage() {
   const router = useRouter();
@@ -41,23 +42,25 @@ export default function CustomerNewTicketPage() {
           ? "High"
           : "Standard";
 
+      const customer = getCustomerSession();
+
       const newTicketId = await createTicketInSupabase({
-        companyName: "Apex Healthcare Diagnostic Center",
-        customerName: "Dr. Aravind Swaminathan",
-        customerEmail: "aravind@apexhealth.com",
+        companyName: customer.company,
+        customerName: customer.name,
+        customerEmail: customer.email,
         deviceOrSubject: formData.device || `${formData.category} Service Request`,
         mediaType: mediaType as any,
         serialNumber: formData.serial || "N/A",
         urgency: urgencyVal,
         symptoms: `${formData.symptoms} - ${formData.trauma}. ${formData.description}`,
-        techNotes: "New client intake via Customer Portal. Prioritized for Cleanroom Bench inspection.",
+        techNotes: `New client intake via Customer Portal by ${customer.name}. Prioritized for Cleanroom Bench inspection.`,
       });
 
       if (formData.description) {
         await sendMessageToSupabase(
           newTicketId,
           "Customer",
-          "Dr. Aravind Swaminathan",
+          customer.name,
           formData.description
         );
       }
@@ -70,9 +73,9 @@ export default function CustomerNewTicketPage() {
           body: JSON.stringify({
             type: "ticket",
             ticketId: newTicketId,
-            customerName: "Dr. Aravind Swaminathan",
-            customerEmail: "aravind@apexhealth.com",
-            companyName: "Apex Healthcare Diagnostic Center",
+            customerName: customer.name,
+            customerEmail: customer.email,
+            companyName: customer.company,
             service: formData.category,
             deviceOrSubject: formData.device,
             serialNumber: formData.serial,

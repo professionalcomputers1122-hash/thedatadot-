@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loginCustomer } from "@/lib/clientAuth";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
@@ -10,13 +11,18 @@ export default function CustomerLoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !email.includes("@")) return;
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await loginCustomer(email);
       router.push("/customer/dashboard");
-    }, 500);
+    } catch (err) {
+      console.error("Login failed:", err);
+      setLoading(false);
+    }
   };
 
   return (

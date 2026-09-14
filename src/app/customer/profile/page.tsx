@@ -1,25 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
+import { getCustomerSession, updateCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerProfilePage() {
   const [notification, setNotification] = useState("");
   const [profile, setProfile] = useState({
-    companyName: "Apex Healthcare Diagnostic Center",
+    companyName: "Enterprise Client",
     accountNumber: "TDD-CLI-8492",
-    contactPerson: "Dr. Aravind Swaminathan",
-    email: "aravind@scandiagnostics.com",
-    phone: "+91 98402 11928",
-    address: "42, Cathedral Road, Nungambakkam, Chennai, Tamil Nadu 600034",
+    contactPerson: "Client User",
+    email: "client@example.com",
+    phone: "+91 6380488373",
+    address: "Chennai, Tamil Nadu, India",
     slaTier: "Enterprise 15-Min Emergency SLA",
     smsAlerts: true,
     emailReports: true,
   });
 
+  useEffect(() => {
+    const cust = getCustomerSession();
+    setProfile({
+      companyName: cust.company,
+      accountNumber: cust.accountNumber,
+      contactPerson: cust.name,
+      email: cust.email,
+      phone: cust.phone || "+91 6380488373",
+      address: "Chennai, Tamil Nadu, India",
+      slaTier: cust.slaTier || "Enterprise 15-Min Emergency SLA",
+      smsAlerts: true,
+      emailReports: true,
+    });
+  }, []);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    updateCustomerSession({
+      company: profile.companyName,
+      name: profile.contactPerson,
+      email: profile.email,
+      phone: profile.phone,
+    });
     setNotification("Profile details updated successfully!");
     setTimeout(() => setNotification(""), 4000);
   };

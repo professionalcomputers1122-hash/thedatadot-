@@ -1,16 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
-import { initialTickets, Ticket } from "@/lib/portalData";
+import { fetchTicketsFromSupabase, Ticket } from "@/lib/portalData";
+import { getCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerTicketsPage() {
-  const [tickets] = useState<Ticket[]>(initialTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+
+  useEffect(() => {
+    const cust = getCustomerSession();
+    async function load() {
+      try {
+        const all = await fetchTicketsFromSupabase();
+        const userEmail = cust.email.toLowerCase();
+        const userCompany = cust.company.toLowerCase();
+
+        const myTickets = all.filter((t) => {
+          if (userEmail.includes("aravind") || userCompany.includes("apex")) {
+            return (
+              t.id === "TDD-8942" ||
+              t.companyName.toLowerCase().includes("apex") ||
+              t.customerName.toLowerCase().includes("aravind")
+            );
+          }
+          return (
+            (t as any).customerEmail?.toLowerCase() === userEmail ||
+            t.customerName.toLowerCase() === cust.name.toLowerCase() ||
+            t.companyName.toLowerCase().includes(userCompany)
+          );
+        });
+
+        setTickets(myTickets);
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const filtered = tickets.filter((t) => {
     const matchesSearch =

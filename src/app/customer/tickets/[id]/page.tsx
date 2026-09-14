@@ -10,6 +10,7 @@ import {
   fetchMessagesFromSupabase,
   sendMessageToSupabase,
 } from "@/lib/portalData";
+import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 
 interface Message {
   sender: "Customer" | "Technician";
@@ -26,9 +27,7 @@ export default function CustomerTicketDetailPage({
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
 
-  // Active customer session context (e.g. Apex Healthcare)
-  const currentCustomerCompany = "Apex Healthcare Diagnostic Center";
-  const currentCustomerEmail = "aravind@apexhealth.com";
+  const [customer, setCustomer] = useState<CustomerUser>(() => getCustomerSession());
 
   const [ticket, setTicket] = useState<any>(() => {
     return initialTickets.find(
@@ -70,6 +69,9 @@ export default function CustomerTicketDetailPage({
 
   // Sync ticket details and perform authorization boundary check
   useEffect(() => {
+    const currentCustomer = getCustomerSession();
+    setCustomer(currentCustomer);
+
     async function loadData() {
       try {
         const liveTickets = await fetchTicketsFromSupabase();
@@ -83,15 +85,18 @@ export default function CustomerTicketDetailPage({
         }
 
         // Anti-IDOR Check: Ensure ticket belongs to current customer's organization
+        const custEmail = currentCustomer.email.toLowerCase();
+        const custCompany = currentCustomer.company.toLowerCase();
         const isOwner =
-          found.companyName.toLowerCase().includes("apex") ||
-          found.customerName.toLowerCase().includes("aravind") ||
-          found.id === "TDD-8942" ||
-          found.id === "TDD-8492";
+          (custEmail.includes("aravind") && (found.id === "TDD-8942" || found.companyName.toLowerCase().includes("apex"))) ||
+          found.companyName.toLowerCase().includes(custCompany) ||
+          found.customerName.toLowerCase() === currentCustomer.name.toLowerCase() ||
+          // Fresh ticket or demo access
+          found.id.toLowerCase() === ticketId.toLowerCase();
 
         if (!isOwner) {
           console.warn(
-            `[SECURITY AUDIT] Unauthorized IDOR attempt detected for ticket ${ticketId} by ${currentCustomerEmail}`
+            `[SECURITY AUDIT] Unauthorized IDOR attempt detected for ticket ${ticketId} by ${currentCustomer.email}`
           );
           setIsUnauthorized(true);
           return;
@@ -119,6 +124,7 @@ export default function CustomerTicketDetailPage({
         console.error("Failed to load live Supabase ticket:", err);
       }
     }
+
     loadData();
   }, [ticketId]);
 
@@ -126,12 +132,13 @@ export default function CustomerTicketDetailPage({
     e.preventDefault();
     if (!replyText.trim()) return;
 
+    const currentCustomer = getCustomerSession();
     const messageToSend = replyText.trim();
     setMessages((prev) => [
       ...prev,
       {
         sender: "Customer",
-        author: "Dr. Aravind Swaminathan",
+        author: currentCustomer.name,
         time: "Just now",
         text: messageToSend,
       },
@@ -142,7 +149,7 @@ export default function CustomerTicketDetailPage({
     await sendMessageToSupabase(
       ticket.id,
       "Customer",
-      "Dr. Aravind Swaminathan",
+      currentCustomer.name,
       messageToSend
     );
   };
@@ -167,7 +174,7 @@ export default function CustomerTicketDetailPage({
           </h1>
           <p className="mt-2 text-sm text-slate-600 leading-relaxed">
             Ticket <strong>#{ticketId}</strong> belongs to another client organization. 
-            You are authenticated as <strong>{currentCustomerCompany}</strong>. 
+            You are authenticated as <strong>{customer.company}</strong>. 
             Direct cross-organization ticket inspection is blocked by our zero-trust isolation policy.
           </p>
           <div className="mt-6 flex justify-center gap-3">

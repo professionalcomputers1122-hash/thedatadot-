@@ -1,0 +1,957 @@
+/* =========================================
+   CYBER SECURITY SCENE
+========================================= */
+
+.cyber-security-scene {
+  position: relative;
+
+  width: 100%;
+  height: 520px;
+
+  overflow: hidden;
+
+  border-radius: 32px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #ffffff 0%,
+      #f3faff 45%,
+      #dcefff 100%
+    );
+
+  isolation: isolate;
+}
+
+
+/* =========================================
+   BACKGROUND
+========================================= */
+
+.cyber-bg-glow {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 380px;
+  height: 380px;
+
+  transform:
+    translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(20,125,255,.20),
+      rgba(20,125,255,.07) 45%,
+      transparent 72%
+    );
+
+  filter: blur(10px);
+
+  animation:
+    cyberGlow 3s ease-in-out infinite;
+
+  z-index: 0;
+}
+
+@keyframes cyberGlow {
+
+  0%,
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(.95);
+
+    opacity: .7;
+  }
+
+  50% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.08);
+
+    opacity: 1;
+  }
+}
+
+
+/* =========================================
+   DIGITAL GRID
+========================================= */
+
+.cyber-grid {
+  position: absolute;
+
+  inset: 0;
+
+  background-image:
+    linear-gradient(
+      rgba(50,140,230,.07) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(50,140,230,.07) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    45px 45px;
+
+  opacity: .45;
+
+  mask-image:
+    radial-gradient(
+      circle at center,
+      black,
+      transparent 75%
+    );
+
+  z-index: 0;
+}
+
+
+/* =========================================
+   ORBITS
+========================================= */
+
+.cyber-orbit {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  border:
+    1px solid rgba(45,145,255,.28);
+
+  border-radius: 50%;
+
+  transform:
+    translate(-50%, -50%);
+
+  z-index: 1;
+}
+
+.cyber-orbit-one {
+  width: 250px;
+  height: 250px;
+
+  animation:
+    orbitRotate 12s linear infinite;
+}
+
+.cyber-orbit-two {
+  width: 340px;
+  height: 340px;
+
+  border-style: dashed;
+
+  animation:
+    orbitRotate 18s linear infinite reverse;
+}
+
+.cyber-orbit-three {
+  width: 430px;
+  height: 430px;
+
+  opacity: .45;
+
+  animation:
+    orbitRotate 25s linear infinite;
+}
+
+@keyframes orbitRotate {
+
+  from {
+    transform:
+      translate(-50%, -50%)
+      rotate(0deg);
+  }
+
+  to {
+    transform:
+      translate(-50%, -50%)
+      rotate(360deg);
+  }
+}
+
+
+/* =========================================
+   SHIELD
+========================================= */
+
+.cyber-shield-wrap {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 190px;
+  height: 220px;
+
+  transform:
+    translate(-50%, -50%);
+
+  z-index: 5;
+
+  animation:
+    shieldFloat 4s ease-in-out infinite;
+}
+
+@keyframes shieldFloat {
+
+  0%,
+  100% {
+    transform:
+      translate(-50%, -50%)
+      translateY(0);
+  }
+
+  50% {
+    transform:
+      translate(-50%, -50%)
+      translateY(-8px);
+  }
+}
+
+
+/* =========================================
+   SHIELD GLOW
+========================================= */
+
+.cyber-shield-glow {
+  position: absolute;
+
+  inset: -35px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(35,145,255,.35),
+      transparent 65%
+    );
+
+  filter: blur(20px);
+
+  animation:
+    shieldGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes shieldGlow {
+
+  0%,
+  100% {
+    opacity: .55;
+    transform: scale(.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+
+/* =========================================
+   SHIELD BODY
+========================================= */
+
+.cyber-shield {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 150px;
+  height: 180px;
+
+  transform:
+    translate(-50%, -50%);
+
+  clip-path:
+    polygon(
+      50% 0%,
+      91% 14%,
+      86% 65%,
+      50% 100%,
+      14% 65%,
+      9% 14%
+    );
+
+  background:
+    linear-gradient(
+      145deg,
+      #75caff,
+      #0876ff 45%,
+      #0645a7
+    );
+
+  filter:
+    drop-shadow(
+      0 0 22px
+      rgba(20,125,255,.7)
+    );
+
+  animation:
+    shieldEnergy 2.5s ease-in-out infinite;
+}
+
+@keyframes shieldEnergy {
+
+  0%,
+  100% {
+    filter:
+      drop-shadow(
+        0 0 18px
+        rgba(20,125,255,.55)
+      );
+  }
+
+  50% {
+    filter:
+      drop-shadow(
+        0 0 35px
+        rgba(20,145,255,.95)
+      );
+  }
+}
+
+
+/* =========================================
+   SHIELD INNER
+========================================= */
+
+.cyber-shield-inner {
+  position: absolute;
+
+  inset: 7px;
+
+  clip-path:
+    polygon(
+      50% 0%,
+      91% 14%,
+      86% 65%,
+      50% 100%,
+      14% 65%,
+      9% 14%
+    );
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.45),
+      rgba(10,90,190,.28)
+    );
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* =========================================
+   SHIELD CHECK
+========================================= */
+
+.shield-check {
+
+  width: 62px;
+  height: 62px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255,255,255,.18);
+
+  border:
+    2px solid
+    rgba(255,255,255,.7);
+
+  color: white;
+
+  font-size: 38px;
+
+  font-weight: 900;
+
+  text-shadow:
+    0 0 15px
+    rgba(255,255,255,.9);
+
+  box-shadow:
+    0 0 25px
+    rgba(255,255,255,.2);
+}
+
+
+/* =========================================
+   CYBER ATTACK
+========================================= */
+
+.cyber-attack {
+  position: absolute;
+
+  width: 260px;
+  height: 4px;
+
+  z-index: 4;
+
+  transform-origin: left center;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #ff3048 35%,
+      #ff5265 80%,
+      transparent
+    );
+
+  box-shadow:
+    0 0 12px
+    rgba(255,40,65,.8);
+
+  animation:
+    attackTravel 2.2s
+    linear infinite;
+}
+
+
+/* =========================================
+   ATTACK POSITIONS
+========================================= */
+
+.cyber-attack-one {
+  left: -20px;
+  top: 27%;
+
+  transform:
+    rotate(12deg);
+}
+
+.cyber-attack-two {
+  right: -20px;
+  top: 29%;
+
+  transform:
+    rotate(168deg);
+
+  animation-delay:
+    .5s;
+}
+
+.cyber-attack-three {
+  left: 7%;
+  bottom: 27%;
+
+  transform:
+    rotate(-13deg);
+
+  animation-delay:
+    1s;
+}
+
+.cyber-attack-four {
+  right: -20px;
+  bottom: 25%;
+
+  transform:
+    rotate(193deg);
+
+  animation-delay:
+    1.5s;
+}
+
+
+/* =========================================
+   ATTACK ANIMATION
+========================================= */
+
+@keyframes attackTravel {
+
+  0% {
+    opacity: 0;
+
+    clip-path:
+      inset(0 100% 0 0);
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  62% {
+    opacity: 1;
+
+    clip-path:
+      inset(0 0 0 0);
+  }
+
+  70% {
+    opacity: .2;
+  }
+
+  100% {
+    opacity: 0;
+
+    clip-path:
+      inset(0 0 0 100%);
+  }
+}
+
+
+/* =========================================
+   ATTACK CORE
+========================================= */
+
+.attack-core {
+
+  position: absolute;
+
+  left: 50%;
+
+  top: 50%;
+
+  width: 9px;
+  height: 9px;
+
+  transform:
+    translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background: #ff334b;
+
+  box-shadow:
+    0 0 12px #ff334b,
+    0 0 25px rgba(255,40,65,.7);
+
+  animation:
+    attackCorePulse
+    .8s ease-in-out infinite;
+}
+
+@keyframes attackCorePulse {
+
+  0%,
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(.7);
+  }
+
+  50% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.35);
+  }
+}
+
+
+/* =========================================
+   ATTACK PARTICLES
+========================================= */
+
+.attack-particle {
+
+  position: absolute;
+
+  width: 4px;
+  height: 4px;
+
+  border-radius: 50%;
+
+  background: #ff5265;
+
+  box-shadow:
+    0 0 8px #ff3048;
+
+  animation:
+    attackParticle
+    1s ease-in-out infinite;
+}
+
+.attack-particle-one {
+  left: 25%;
+  top: -9px;
+}
+
+.attack-particle-two {
+  left: 50%;
+  top: 8px;
+
+  animation-delay:
+    .2s;
+}
+
+.attack-particle-three {
+  left: 72%;
+  top: -7px;
+
+  animation-delay:
+    .4s;
+}
+
+@keyframes attackParticle {
+
+  0%,
+  100% {
+    opacity: .2;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-5px);
+  }
+}
+
+
+/* =========================================
+   SHIELD IMPACT
+========================================= */
+
+.shield-impact {
+
+  position: absolute;
+
+  width: 22px;
+  height: 22px;
+
+  border-radius: 50%;
+
+  border:
+    2px solid
+    rgba(60,170,255,.8);
+
+  box-shadow:
+    0 0 20px
+    rgba(50,160,255,.8);
+
+  z-index: 6;
+
+  animation:
+    impactPulse
+    2.2s ease-out infinite;
+}
+
+.impact-one {
+  left: calc(50% - 72px);
+  top: 38%;
+}
+
+.impact-two {
+  right: calc(50% - 72px);
+  top: 40%;
+
+  animation-delay:
+    .5s;
+}
+
+.impact-three {
+  left: calc(50% - 68px);
+  bottom: 34%;
+
+  animation-delay:
+    1s;
+}
+
+.impact-four {
+  right: calc(50% - 68px);
+  bottom: 32%;
+
+  animation-delay:
+    1.5s;
+}
+
+@keyframes impactPulse {
+
+  0% {
+    opacity: 0;
+    transform: scale(.3);
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+
+/* =========================================
+   STATUS
+========================================= */
+
+.cyber-status {
+
+  position: absolute;
+
+  top: 25px;
+  left: 25px;
+
+  z-index: 12;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding:
+    10px 15px;
+
+  border:
+    1px solid
+    rgba(90,170,230,.25);
+
+  border-radius: 15px;
+
+  background:
+    rgba(255,255,255,.85);
+
+  backdrop-filter:
+    blur(12px);
+
+  box-shadow:
+    0 12px 25px
+    rgba(30,90,140,.12);
+}
+
+.cyber-status small {
+
+  display: block;
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing:
+    .14em;
+
+  color: #8da0b4;
+}
+
+.cyber-status strong {
+
+  display: block;
+
+  margin-top: 2px;
+
+  font-size: 11px;
+
+  color: #08294d;
+}
+
+.status-dot {
+
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+
+  background: #20c77a;
+
+  box-shadow:
+    0 0 12px
+    rgba(32,199,122,.7);
+
+  animation:
+    statusPulse
+    1.8s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+
+  0%,
+  100% {
+    opacity: .55;
+    transform: scale(.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+
+/* =========================================
+   PARTICLES
+========================================= */
+
+.cyber-particles span {
+
+  position: absolute;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: #4aabff;
+
+  box-shadow:
+    0 0 10px
+    rgba(50,155,255,.7);
+
+  z-index: 3;
+
+  animation:
+    particleFloat
+    4s ease-in-out infinite;
+}
+
+.cyber-particles span:nth-child(1) {
+  left: 15%;
+  top: 18%;
+}
+
+.cyber-particles span:nth-child(2) {
+  left: 27%;
+  top: 35%;
+
+  animation-delay: .4s;
+}
+
+.cyber-particles span:nth-child(3) {
+  right: 18%;
+  top: 17%;
+
+  animation-delay: .8s;
+}
+
+.cyber-particles span:nth-child(4) {
+  right: 10%;
+  top: 50%;
+
+  animation-delay: 1.2s;
+}
+
+.cyber-particles span:nth-child(5) {
+  left: 18%;
+  bottom: 20%;
+
+  animation-delay: 1.6s;
+}
+
+.cyber-particles span:nth-child(6) {
+  right: 22%;
+  bottom: 18%;
+
+  animation-delay: 2s;
+}
+
+.cyber-particles span:nth-child(7) {
+  left: 40%;
+  top: 10%;
+
+  animation-delay: 2.4s;
+}
+
+.cyber-particles span:nth-child(8) {
+  right: 40%;
+  bottom: 12%;
+
+  animation-delay: 2.8s;
+}
+
+.cyber-particles span:nth-child(n+9) {
+  opacity: .45;
+}
+
+@keyframes particleFloat {
+
+  0%,
+  100% {
+    transform:
+      translateY(0);
+
+    opacity: .35;
+  }
+
+  50% {
+    transform:
+      translateY(-16px);
+
+    opacity: 1;
+  }
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+
+  .cyber-security-scene {
+    height: 420px;
+
+    border-radius:
+      24px;
+  }
+
+  .cyber-shield-wrap {
+    transform:
+      translate(-50%, -50%)
+      scale(.8);
+  }
+
+  .cyber-orbit-one {
+    width: 210px;
+    height: 210px;
+  }
+
+  .cyber-orbit-two {
+    width: 285px;
+    height: 285px;
+  }
+
+  .cyber-orbit-three {
+    width: 350px;
+    height: 350px;
+  }
+
+  .cyber-attack {
+    width: 190px;
+  }
+
+  .cyber-status {
+    top: 15px;
+    left: 15px;
+  }
+}
+
+
+/* =========================================
+   REDUCED MOTION
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .cyber-security-scene *,
+  .cyber-security-scene *::before,
+  .cyber-security-scene *::after {
+
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+  }
+}

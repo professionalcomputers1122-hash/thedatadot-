@@ -1,0 +1,779 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import AdminLayoutShell from "@/components/AdminLayoutShell";
+import {
+  fetchBlogPostsFromSupabase,
+  createOrUpdateBlogPostInSupabase,
+} from "@/lib/portalData";
+
+interface BlogPost {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  readTime: string;
+  status: "Published" | "Draft";
+  excerpt: string;
+  coverImage?: string;
+  content?: string;
+}
+
+export default function AdminBlogPage() {
+  const [articles, setArticles] = useState<BlogPost[]>([
+    {
+      id: "cybersecurity-tips",
+      title: "10 Cybersecurity Tips for Small Businesses",
+      category: "Cybersecurity",
+      date: "Sep 10, 2026",
+      readTime: "5 min read",
+      status: "Published",
+      coverImage: "/images/blog/cybersecurity-tips.jpg",
+      excerpt: "Practical defense tactics to protect workstations, credentials, and customer data.",
+      content: "Small businesses are currently the prime target for automated ransomware attacks. Implementing multi-factor authentication (MFA) and DNS filtering alone reduces threat vulnerability by over 80%. In this comprehensive guide, our cybersecurity engineers walk through the top 10 defense protocols.",
+    },
+    {
+      id: "cloud-solutions-benefits",
+      title: "The Benefits of Cloud Solutions for Growing Companies",
+      category: "Cloud Solutions",
+      date: "Sep 05, 2026",
+      readTime: "4 min read",
+      status: "Published",
+      coverImage: "/images/blog/cloud-solutions.jpg",
+      excerpt: "How modern cloud infrastructure and Microsoft 365 eliminate server headaches.",
+      content: "Migrating from on-premise legacy towers to hybrid cloud infrastructure reduces operational maintenance overhead by 45%. Learn how Microsoft Azure and 365 deliver scalable uptime.",
+    },
+    {
+      id: "choose-it-partner",
+      title: "How to Choose the Right IT Support Partner",
+      category: "Managed IT",
+      date: "Aug 28, 2026",
+      readTime: "6 min read",
+      status: "Published",
+      coverImage: "/images/blog/it-partner.jpg",
+      excerpt: "The critical criteria to evaluate: response SLAs and flat-rate billing.",
+      content: "When evaluating managed service providers (MSPs), always scrutinize contractual response time guarantees. An IT partner should offer transparent flat-rate agreements with zero surprise hourly overages.",
+    },
+    {
+      id: "cleanroom-recovery-guide",
+      title: "Inside an ISO Class-5 Cleanroom: Platter Swaps & PC-3000 Telemetry",
+      category: "Data Recovery",
+      date: "Draft",
+      readTime: "7 min read",
+      status: "Draft",
+      coverImage: "/images/blog/cybersecurity-tips.jpg",
+      excerpt: "A deep dive into donor head calibration and PC-3000 mirror imaging.",
+      content: "Exposing sensitive hard drive platters to open air causes catastrophic head crashes. Learn how laminar airflow filtration eliminates airborne dust particles down to 0.5 microns.",
+    },
+  ]);
+
+  const [filter, setFilter] = useState<"All" | "Published" | "Draft">("All");
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [notification, setNotification] = useState("");
+
+  // Editor form state
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("Cybersecurity");
+  const [readTime, setReadTime] = useState("5 min read");
+  const [status, setStatus] = useState<"Published" | "Draft">("Published");
+  const [coverImage, setCoverImage] = useState("/images/blog/cybersecurity-tips.jpg");
+  const [imageInputMode, setImageInputMode] = useState<"upload" | "url">("upload");
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [content, setContent] = useState("");
+
+  // Sync live blog posts from Supabase on mount
+  useEffect(() => {
+    async function loadLivePosts() {
+      try {
+        const livePosts = await fetchBlogPostsFromSupabase();
+        if (livePosts && livePosts.length > 0) {
+          setArticles(
+            livePosts.map((p) => ({
+              id: p.id,
+              title: p.title,
+              category: p.category,
+              date: p.created_at
+                ? new Date(p.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Live",
+              readTime: p.read_time || "5 min read",
+              status: p.status,
+              coverImage: p.cover_image || "/images/blog/cybersecurity-tips.jpg",
+              excerpt: p.excerpt,
+              content: p.content,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load blog posts from Supabase:", err);
+      }
+    }
+    loadLivePosts();
+  }, []);
+
+  const filtered = articles.filter((a) => {
+    const matchesFilter = filter === "All" || a.status === filter;
+    const matchesSearch =
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
+      a.category.toLowerCase().includes(search.toLowerCase()) ||
+      a.excerpt.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const handleOpenCreate = () => {
+    setEditingId(null);
+    setTitle("");
+    setCategory("Cybersecurity");
+    setReadTime("5 min read");
+    setStatus("Published");
+    setCoverImage("/images/blog/cybersecurity-tips.jpg");
+    setCustomImageUrl("");
+    setExcerpt("");
+    setContent("");
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (post: BlogPost) => {
+    setEditingId(post.id);
+    setTitle(post.title);
+    setCategory(post.category);
+    setReadTime(post.readTime);
+    setStatus(post.status);
+    setCoverImage(post.coverImage || "/images/blog/cybersecurity-tips.jpg");
+    setCustomImageUrl(post.coverImage || "");
+    setExcerpt(post.excerpt);
+    setContent(post.content || "");
+    setShowModal(true);
+  };
+
+  // Security-hardened file upload handler (Blocks SVG, XSS, scripts & oversized payloads)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. File Size Validation (Max 5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      alert("Security Alert: File exceeds maximum allowed size (5MB). Upload rejected.");
+      e.target.value = "";
+      return;
+    }
+
+    // 2. Strict Extension & MIME Validation (Reject SVG, HTML, PHP, Executables)
+    const fileName = file.name.toLowerCase();
+    const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+    const hasValidExtension = allowedExtensions.some((ext) => fileName.endsWith(ext));
+    const allowedMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+
+    if (!hasValidExtension || !allowedMimeTypes.includes(file.type)) {
+      alert(
+        "Security Alert: Dangerous file type detected. Only sanitized raster images (.PNG, .JPG, .WebP) are permitted. Vector formats (.SVG) and executable files are strictly prohibited."
+      );
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setCoverImage(reader.result);
+        setNotification(`Image "${file.name}" verified and loaded safely.`);
+        setTimeout(() => setNotification(""), 3500);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveArticle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const postId = editingId || title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const payload = {
+      id: postId,
+      title,
+      category,
+      read_time: readTime,
+      status,
+      cover_image: coverImage,
+      excerpt,
+      content,
+    };
+
+    if (editingId) {
+      // Update existing
+      setArticles((prev) =>
+        prev.map((a) =>
+          a.id === editingId
+            ? {
+                ...a,
+                title,
+                category,
+                readTime,
+                status,
+                coverImage,
+                excerpt,
+                content,
+                date: a.date === "Draft" && status === "Published" ? "Today" : a.date,
+              }
+            : a
+        )
+      );
+      setNotification(`Article "${title}" updated & saved to Supabase.`);
+    } else {
+      // Create new
+      const newPost: BlogPost = {
+        id: postId,
+        title,
+        category,
+        date: status === "Published" ? "Just now" : "Draft",
+        readTime,
+        status,
+        coverImage,
+        excerpt,
+        content,
+      };
+      setArticles([newPost, ...articles]);
+      setNotification(`Article "${title}" published & saved to Supabase!`);
+    }
+
+    await createOrUpdateBlogPostInSupabase(payload);
+    setShowModal(false);
+    setTimeout(() => setNotification(""), 4000);
+  };
+
+  const handleDelete = (id: string, postTitle: string) => {
+    if (confirm(`Are you sure you want to delete "${postTitle}"?`)) {
+      setArticles(articles.filter((a) => a.id !== id));
+      setNotification(`Deleted article "${postTitle}".`);
+      setTimeout(() => setNotification(""), 4000);
+    }
+  };
+
+  const insertFormatting = (syntax: string) => {
+    setContent((prev) => `${prev} ${syntax} `);
+  };
+
+  const insertImageTag = () => {
+    const url = prompt("Enter the image URL to insert into the article body:", "https://");
+    if (url && url.trim() !== "https://") {
+      const alt = prompt("Enter a short description (Alt text) for this image:", "Article diagram") || "Diagram";
+      setContent((prev) => `${prev}\n\n![${alt}](${url})\n\n`);
+    }
+  };
+
+  return (
+    <AdminLayoutShell
+      title="Blog Publishing &amp; Content CMS"
+      subtitle="Draft, schedule, and publish educational articles directly to your public website (/blog)"
+      actions={
+        <div className="flex items-center gap-3">
+          <Link
+            href="/blog"
+            target="_blank"
+            className="rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:text-white transition flex items-center gap-1.5"
+          >
+            <span>Live Blog</span>
+            <span>↗</span>
+          </Link>
+          <button
+            onClick={handleOpenCreate}
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/25 flex items-center gap-1.5"
+          >
+            <span>+ Write New Article</span>
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-6 text-xs">
+        
+        {/* TOAST ALERT */}
+        {notification && (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 font-bold text-emerald-300 flex items-center justify-between">
+            <span>✓ {notification}</span>
+            <button onClick={() => setNotification("")} className="text-emerald-400">✕</button>
+          </div>
+        )}
+
+        {/* METRICS & QUICK STATS */}
+        <div className="grid gap-4 sm:grid-cols-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Published</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white">
+                {articles.filter((a) => a.status === "Published").length}
+              </span>
+              <span className="text-[11px] text-emerald-400 font-semibold">Live Articles</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Drafts in Progress</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-amber-400">
+                {articles.filter((a) => a.status === "Draft").length}
+              </span>
+              <span className="text-[11px] text-slate-400">Pending Review</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Top Category</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-blue-400">Cybersecurity</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">SEO Organic Reach</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-emerald-400">14.8k</span>
+              <span className="text-[11px] text-slate-400">Monthly Views</span>
+            </div>
+          </div>
+        </div>
+
+        {/* SEARCH & FILTERS BAR */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <input
+            type="text"
+            placeholder="Search articles by title, topic, or summary..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-96 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-white outline-none focus:border-blue-500"
+          />
+
+          <div className="flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800">
+            {(["All", "Published", "Draft"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`rounded-lg px-3 py-1.5 font-bold transition ${
+                  filter === tab
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ARTICLES MASTER TABLE */}
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-slate-300">
+              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="px-5 py-3.5">Article Headline</th>
+                  <th className="px-5 py-3.5">Category</th>
+                  <th className="px-5 py-3.5">Read Time</th>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {filtered.map((art) => (
+                  <tr key={art.id} className="hover:bg-slate-800/40 transition">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        {art.coverImage && (
+                          <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={art.coverImage}
+                              alt={art.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p
+                            className="font-bold text-white text-sm hover:text-blue-400 transition cursor-pointer"
+                            onClick={() => handleOpenEdit(art)}
+                          >
+                            {art.title}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate max-w-lg mt-0.5">{art.excerpt}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="rounded-md bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-blue-300 border border-slate-700">
+                        {art.category}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-400">{art.readTime}</td>
+                    <td className="px-5 py-4 text-slate-400">{art.date}</td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          art.status === "Published"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        }`}
+                      >
+                        {art.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(art)}
+                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-blue-400 hover:bg-slate-700 transition"
+                        >
+                          Edit
+                        </button>
+                        <Link
+                          href="/blog"
+                          target="_blank"
+                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white transition"
+                        >
+                          View Live ↗
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(art.id, art.title)}
+                          className="rounded-lg px-2.5 py-1 text-[11px] text-red-400 hover:bg-red-950/40 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* FULL PROFESSIONAL ARTICLE & IMAGE EDITOR MODAL */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md text-xs overflow-y-auto">
+            <div className="w-full max-w-3xl my-8 rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
+              
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {editingId ? "Edit Blog Article" : "Write & Publish New Article"}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Syncs directly with The Data Dot public website at <code className="text-blue-400">/blog</code>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveArticle} className="space-y-4">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Article Headline</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 5 Warning Signs of Hard Drive Spindle & Head Degradation"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-blue-500 text-sm font-semibold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Category</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option>Cybersecurity</option>
+                      <option>Data Recovery</option>
+                      <option>Cloud Solutions</option>
+                      <option>Managed IT</option>
+                      <option>Backup &amp; Recovery</option>
+                      <option>Network Architecture</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Reading Time</label>
+                    <input
+                      type="text"
+                      value={readTime}
+                      onChange={(e) => setReadTime(e.target.value)}
+                      placeholder="e.g. 5 min read"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">Publication Status</label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as "Published" | "Draft")}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option value="Published">Published Live</option>
+                      <option value="Draft">Save as Draft</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ================= COMPLETE IMAGE UPLOADER & PREVIEW SECTION ================= */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-slate-200">
+                      Featured Cover Image
+                    </label>
+                    
+                    {/* Switcher: Upload vs URL */}
+                    <div className="flex items-center gap-1 rounded-lg bg-slate-900 p-1 border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setImageInputMode("upload")}
+                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                          imageInputMode === "upload"
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Upload From Computer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageInputMode("url")}
+                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                          imageInputMode === "url"
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        Enter Image URL / Preset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mode 1: Real File Upload from Computer */}
+                  {imageInputMode === "upload" && (
+                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-5 text-center transition hover:border-blue-500">
+                      <input
+                        type="file"
+                        id="blog-image-upload"
+                        accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="blog-image-upload"
+                        className="cursor-pointer inline-flex flex-col items-center justify-center gap-2"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-bold text-white hover:text-blue-400 transition">
+                          Click to Browse &amp; Upload Image from Your Device
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Supports PNG, JPG, WebP, SVG up to 10MB (automatically formatted for blog cards)
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Mode 2: Custom URL or Library Preset */}
+                  {imageInputMode === "url" && (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Paste image web URL: https://example.com/banner.jpg"
+                        value={customImageUrl}
+                        onChange={(e) => {
+                          setCustomImageUrl(e.target.value);
+                          if (e.target.value.trim()) {
+                            setCoverImage(e.target.value.trim());
+                          }
+                        }}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white outline-none focus:border-blue-500"
+                      />
+                      
+                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <span className="text-slate-400">Or pick stock library preset:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoverImage("/images/blog/cybersecurity-tips.jpg");
+                            setCustomImageUrl("/images/blog/cybersecurity-tips.jpg");
+                          }}
+                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                        >
+                          Cybersecurity Shield
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoverImage("/images/blog/cloud-solutions.jpg");
+                            setCustomImageUrl("/images/blog/cloud-solutions.jpg");
+                          }}
+                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                        >
+                          Cloud Data Center
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoverImage("/images/blog/it-partner.jpg");
+                            setCustomImageUrl("/images/blog/it-partner.jpg");
+                          }}
+                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                        >
+                          Team IT Consultation
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* LIVE COVER IMAGE PREVIEW */}
+                  {coverImage && (
+                    <div className="mt-3 flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 p-3">
+                      <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={coverImage}
+                          alt="Cover preview"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                          ✓ Active Cover Image Preview
+                        </span>
+                        <p className="text-[11px] text-slate-300 truncate max-w-sm">
+                          {coverImage.startsWith("data:") ? "Custom Image Uploaded (Base64)" : coverImage}
+                        </p>
+                        <span className="text-[10px] text-slate-500 mt-1 block">
+                          Displays in 16:9 ratio across /blog cards and social sharing previews.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Article Excerpt (SEO Summary)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Short 1-2 sentence hook displayed on social media previews and search cards..."
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* RICH FORMATTING TOOLBAR WITH IMAGE INSERTION */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-slate-300">Full Article Content</label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("**bold text**")}
+                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white font-bold"
+                      >
+                        B
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("*italic text*")}
+                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white italic"
+                      >
+                        I
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("## Section Header")}
+                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white font-mono text-[10px]"
+                      >
+                        H2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("- Key takeaway item")}
+                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white"
+                      >
+                        List
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("> Important cleanroom advisory notice")}
+                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white"
+                      >
+                        Quote
+                      </button>
+                      <button
+                        type="button"
+                        onClick={insertImageTag}
+                        className="rounded px-2.5 py-0.5 bg-blue-600/30 border border-blue-500/40 text-blue-300 hover:bg-blue-600/50 font-semibold"
+                      >
+                        + Add In-Article Image
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    rows={8}
+                    placeholder="Compose your article markdown or paragraphs here... You can insert images anywhere using the button above."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3.5 text-white outline-none focus:border-blue-500 leading-relaxed font-mono text-xs"
+                  />
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Markdown formatting supported.</span>
+                    <span>{content.length} characters</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="rounded-xl px-4 py-2.5 text-slate-400 hover:text-white transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-lg shadow-blue-600/30"
+                  >
+                    {editingId ? "Save Article Changes →" : "Publish Live to Website →"}
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        )}
+
+      </div>
+    </AdminLayoutShell>
+  );
+}

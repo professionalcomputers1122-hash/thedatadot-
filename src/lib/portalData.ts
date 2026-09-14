@@ -4,6 +4,7 @@ export interface Ticket {
   id: string;
   customerName: string;
   companyName: string;
+  customerEmail?: string;
   category: "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT";
   deviceOrSubject: string;
   serialNumber?: string;
@@ -173,6 +174,7 @@ export async function fetchTicketsFromSupabase(): Promise<Ticket[]> {
             id: row.id,
             customerName: row.customer_name,
             companyName: row.company_name,
+            customerEmail: row.customer_email,
             category: "Data Recovery",
             deviceOrSubject: row.device_or_subject,
             serialNumber: row.serial_number,
@@ -212,6 +214,7 @@ export async function fetchTicketsFromSupabase(): Promise<Ticket[]> {
       id: row.id,
       customerName: row.customer_name,
       companyName: row.company_name,
+      customerEmail: row.customer_email,
       category: "Data Recovery",
       deviceOrSubject: row.device_or_subject,
       serialNumber: row.serial_number,

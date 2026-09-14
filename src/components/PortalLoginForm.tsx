@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loginCustomer } from "@/lib/clientAuth";
 
 export default function PortalLoginForm() {
   const router = useRouter();
@@ -11,22 +12,40 @@ export default function PortalLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid corporate email address.");
+      return;
+    }
+
+    if (!password) {
+      setError("Please enter your account password or access key.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await loginCustomer(email, password);
+      if (!res.success) {
+        setError(res.error || "Access Denied: Invalid credentials or unprovisioned account.");
+        setLoading(false);
+        return;
+      }
       router.push("/customer/dashboard");
-    }, 400);
+    } catch (err) {
+      console.error("Login failed:", err);
+      setError("An unexpected error occurred during authentication.");
+      setLoading(false);
+    }
   };
 
   const handleSSOLogin = (provider: "microsoft" | "google") => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/customer/dashboard");
-    }, 350);
+    setError(`Single Sign-On for ${provider.toUpperCase()} requires your corporate tenant domain to be enrolled by The Data Dot Admin.`);
   };
 
   return (
@@ -48,7 +67,7 @@ export default function PortalLoginForm() {
           Client Portal Sign In
         </h2>
         <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
-          Access your organization&apos;s support desk, active SLAs, and live data recovery tracker.
+          Access your organization&apos;s support desk, active SLAs, and live forensic recovery tracker.
         </p>
       </div>
 
@@ -89,9 +108,16 @@ export default function PortalLoginForm() {
       <div className="relative my-6 flex items-center justify-center">
         <div className="w-full border-t border-slate-800" />
         <span className="absolute bg-[#0b1626] px-3 text-[11px] font-medium text-slate-400">
-          Or with work email
+          Or with authorized email
         </span>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-950/60 p-3 text-xs text-red-300">
+          <p className="font-bold text-[11px]">Authentication Notice</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-red-200">{error}</p>
+        </div>
+      )}
 
       {/* STANDARD LOGIN FORM */}
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -119,9 +145,9 @@ export default function PortalLoginForm() {
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="font-semibold text-slate-300">Password</label>
+            <label className="font-semibold text-slate-300">Password / Access Key</label>
             <Link
-              href="/customer/forgot-password"
+              href="/contact"
               className="text-[11px] font-medium text-blue-400 transition hover:text-blue-300 hover:underline"
             >
               Forgot password?
@@ -170,7 +196,7 @@ export default function PortalLoginForm() {
               onChange={(e) => setRememberMe(e.target.checked)}
               className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500/30"
             />
-            <span className="text-[11px] text-slate-400">Remember this device for 30 days</span>
+            <span className="text-[11px] text-slate-400">Remember this workstation</span>
           </label>
         </div>
 
@@ -182,7 +208,7 @@ export default function PortalLoginForm() {
           {loading ? (
             <span className="inline-flex items-center gap-2">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Authenticating...
+              Authenticating Credentials...
             </span>
           ) : (
             "Sign In to Client Portal →"
@@ -194,7 +220,7 @@ export default function PortalLoginForm() {
       <div className="mt-5 text-center text-xs text-slate-400">
         New client organization?{" "}
         <Link href="/customer/register" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
-          Request Portal Access
+          Request Client Onboarding →
         </Link>
       </div>
 

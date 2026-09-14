@@ -9,6 +9,7 @@ export default function CustomerLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +18,12 @@ export default function CustomerLoginPage() {
     setError("");
 
     if (!email || !email.includes("@")) {
-      setError("Please enter a valid business email address.");
+      setError("Please enter a valid corporate email address.");
+      return;
+    }
+
+    if (!password) {
+      setError("Please enter your account password or access key.");
       return;
     }
 
@@ -25,14 +31,14 @@ export default function CustomerLoginPage() {
     try {
       const result = await loginCustomer(email, password);
       if (!result.success) {
-        setError(result.error || "Invalid credentials or unauthorized account.");
+        setError(result.error || "Access Denied: Invalid credentials or unauthorized account.");
         setLoading(false);
         return;
       }
       router.push("/customer/dashboard");
     } catch (err) {
       console.error("Login failed:", err);
-      setError("An unexpected authentication error occurred.");
+      setError("An unexpected authentication error occurred. Please try again.");
       setLoading(false);
     }
   };
@@ -51,14 +57,21 @@ export default function CustomerLoginPage() {
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-950">The Data Dot</span>
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Customer Portal Login</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Client Portal Sign In</h1>
           <p className="mt-1 text-xs text-slate-500">
-            Track hardware recovery in real time and manage enterprise IT tickets
+            Real-time forensic hardware tracking, SLA compliance, and cloud ticketing
           </p>
         </div>
 
         {/* LOGIN CARD */}
         <div className="rounded-3xl border border-slate-200/90 bg-white p-8 shadow-xl shadow-slate-200/50 sm:p-10">
+          <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-[11px] text-blue-900 flex items-start gap-2">
+            <span className="text-blue-600 font-bold">ℹ️</span>
+            <span>
+              <strong>Authorized Access Only:</strong> Accounts are provisioned exclusively by The Data Dot Administration upon service onboarding.
+            </span>
+          </div>
+
           {error && (
             <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-start gap-2.5">
               <span className="text-base leading-none">⚠️</span>
@@ -72,42 +85,51 @@ export default function CustomerLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>
               <label className="block font-semibold text-slate-700 mb-1.5">
-                Business Email
+                Corporate Email ID
               </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
+                placeholder="client@organization.com"
                 className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-sm font-medium"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="font-semibold text-slate-700">Password</label>
+                <label className="font-semibold text-slate-700">Password / Access Key</label>
                 <Link
-                  href="/customer/forgot-password"
-                  className="text-xs text-blue-600 hover:underline font-semibold"
+                  href="/contact"
+                  className="text-[11px] text-blue-600 hover:underline font-semibold"
                 >
-                  Forgot Password?
+                  Need password reset?
                 </Link>
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 pr-10 text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-medium"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-600">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" defaultChecked className="rounded accent-blue-600" />
-                <span>Remember this device</span>
+                <span>Remember this workstation</span>
               </label>
             </div>
 
@@ -116,21 +138,21 @@ export default function CustomerLoginPage() {
               disabled={loading}
               className="w-full rounded-xl bg-slate-950 py-3.5 text-xs font-bold text-white shadow-md transition hover:bg-blue-600 disabled:opacity-50"
             >
-              {loading ? "Authenticating..." : "Sign In to Portal →"}
+              {loading ? "Authenticating Credentials..." : "Sign In to Client Portal →"}
             </button>
           </form>
 
           <div className="mt-6 border-t border-slate-100 pt-5 text-center text-xs text-slate-600">
-            Don&apos;t have an account yet?{" "}
+            New client organization?{" "}
             <Link href="/customer/register" className="font-bold text-blue-600 hover:underline">
-              Register Organization
+              Request Client Onboarding →
             </Link>
           </div>
         </div>
 
         {/* SECURITY FOOTNOTE */}
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          256-Bit TLS Encrypted • Protected by The Data Dot 99.98% Recovery Guarantee
+          256-Bit TLS Encrypted • Protected by The Data Dot 99.98% Cleanroom SLA
         </p>
       </div>
     </main>

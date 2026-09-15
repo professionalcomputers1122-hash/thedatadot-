@@ -8,6 +8,7 @@ export interface Ticket {
   category: "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT";
   deviceOrSubject: string;
   serialNumber?: string;
+  mediaType?: string;
   status: "Media Received" | "Cleanroom Diagnosis" | "PC-3000 Imaging" | "Integrity Verification" | "Resolved" | "Intake & Diagnostics" | "Threat Containment & Analysis" | "Architecture & Deployment" | string;
   priority: "CRITICAL" | "HIGH" | "STANDARD";
   assignedTech: string;

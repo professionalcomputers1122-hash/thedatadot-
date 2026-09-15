@@ -258,10 +258,10 @@ export default function TechnicianTicketDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased">
+      <div className="min-h-screen bg-[#0b1324] text-slate-100 flex flex-col antialiased">
         <TechnicianNav />
         <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-16 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-4" />
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mb-4" />
           <p className="text-xs text-slate-400 font-mono">Calibrating Workbench Target #{ticketId}...</p>
         </main>
         <Footer />
@@ -271,7 +271,7 @@ export default function TechnicianTicketDetailPage({
 
   if (!ticket) {
     return (
-      <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased">
+      <div className="min-h-screen bg-[#0b1324] text-slate-100 flex flex-col antialiased">
         <TechnicianNav />
         <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-20 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -283,9 +283,9 @@ export default function TechnicianTicketDetailPage({
           <div className="mt-6">
             <Link
               href="/technician/tickets"
-              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-indigo-500 transition"
+              className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-blue-500 transition"
             >
-              ← Back to Lab Queue
+              ← Back to Diagnostic Queue
             </Link>
           </div>
         </main>
@@ -295,26 +295,26 @@ export default function TechnicianTicketDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#0b1324] text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
       <TechnicianNav />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <Link
               href="/technician/tickets"
-              className="text-xs font-semibold text-slate-400 hover:text-white mb-2 inline-block"
+              className="text-xs font-medium text-slate-400 hover:text-white mb-2 inline-block transition"
             >
-              ← Back to Lab Queue
+              ← Back to Diagnostic Queue
             </Link>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-white">
-                Workbench Target #{ticket.id}
+              <h1 className="text-2xl font-bold tracking-tight text-white font-mono">
+                #{ticket.id}
               </h1>
-              <span className="rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-0.5 text-xs font-bold">
+              <span className="rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20 px-2.5 py-0.5 text-xs font-semibold">
                 {status}
               </span>
-              <span className="rounded-full bg-red-500/20 text-red-300 border border-red-500/30 px-2.5 py-0.5 text-[10px] font-bold">
+              <span className="rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2 py-0.5 text-[10px] font-mono font-semibold">
                 {ticket.priority || "CRITICAL"}
               </span>
             </div>
@@ -328,21 +328,24 @@ export default function TechnicianTicketDetailPage({
         </div>
 
         {notification && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between">
+          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/70 p-4 text-xs font-semibold text-emerald-300 flex items-center justify-between shadow-sm">
             <span>✓ {notification}</span>
-            <button onClick={() => setNotification("")}>✕</button>
+            <button onClick={() => setNotification("")} className="text-emerald-400 hover:text-white">✕</button>
           </div>
         )}
 
         {/* WORKBENCH GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           
           {/* LEFT: CONTROLLER FORM (7 COLS) */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 backdrop-blur-sm text-xs">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-5">
-                Technical Execution Controls &amp; Stage
-              </h2>
+            <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6 text-xs shadow-sm">
+              <div className="flex items-center justify-between mb-5 border-b border-slate-800 pb-3">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Technical Execution Controls &amp; Stage
+                </h2>
+                <span className="text-[11px] font-mono text-blue-400">Telemetry Push Active</span>
+              </div>
 
               <form onSubmit={handleSaveUpdate} className="space-y-5">
                 <div>
@@ -358,7 +361,7 @@ export default function TechnicianTicketDetailPage({
                   <select
                     value={status}
                     onChange={(e: any) => setStatus(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 font-medium"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white outline-none focus:border-blue-500 font-medium transition"
                   >
                     {(() => {
                       const stages =
@@ -421,7 +424,7 @@ export default function TechnicianTicketDetailPage({
                         ? "Technical Resolution & Deployment (% Resolved)"
                         : "Sector Extraction Progress (% Cloned)"}
                     </label>
-                    <span className="text-sm font-black text-emerald-400">
+                    <span className="text-sm font-mono font-bold text-emerald-400">
                       {progress}%
                     </span>
                   </div>
@@ -432,7 +435,7 @@ export default function TechnicianTicketDetailPage({
                     step="0.5"
                     value={progress}
                     onChange={(e) => setProgress(parseFloat(e.target.value))}
-                    className="w-full h-2 rounded-lg bg-slate-700 accent-indigo-500 cursor-pointer"
+                    className="w-full h-2 rounded-lg bg-slate-800 accent-blue-500 cursor-pointer"
                   />
                 </div>
 
@@ -451,37 +454,40 @@ export default function TechnicianTicketDetailPage({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Enter technical observations, forensic logs, or resolution steps..."
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 font-mono text-xs leading-relaxed"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white outline-none focus:border-blue-500 font-mono text-xs leading-relaxed transition"
                   />
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-[11px] text-slate-500">
-                    * Client timeline &amp; communication thread update live upon save.
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    * Status &amp; telemetry sync live to customer view upon save.
                   </span>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-xl bg-indigo-600 px-6 py-2.5 font-bold text-white shadow-md hover:bg-indigo-500 transition disabled:opacity-50"
+                    className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-500 transition disabled:opacity-50 text-xs"
                   >
-                    {saving ? "Saving Changes..." : "Save Status & Sync to Client →"}
+                    {saving ? "Saving Changes..." : "Save Status & Sync Telemetry →"}
                   </button>
                 </div>
               </form>
             </div>
 
             {/* DIRECT CLIENT MESSAGES */}
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 backdrop-blur-sm text-xs">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
-                Client Communication Thread
-              </h2>
+            <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6 text-xs shadow-sm">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Client Communication Thread
+                </h2>
+                <span className="text-[11px] text-slate-400">Two-way authenticated sync</span>
+              </div>
 
               <div className="space-y-3 mb-6 max-h-80 overflow-y-auto pr-1">
                 {messages.length === 0 ? (
-                  <div className="p-6 text-center text-slate-500 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                  <div className="p-6 text-center text-slate-500 bg-slate-900/60 rounded-xl border border-dashed border-slate-800">
                     <p className="font-semibold text-slate-400">No communication logs recorded yet</p>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Use the form below to dispatch an official bench update to the customer.
+                      Use the field below to dispatch an engineering case update to the client.
                     </p>
                   </div>
                 ) : (
@@ -490,18 +496,18 @@ export default function TechnicianTicketDetailPage({
                     return (
                       <div
                         key={idx}
-                        className={`p-3.5 rounded-2xl border ${
+                        className={`p-3.5 rounded-xl border ${
                           isTech
-                            ? "border-indigo-500/30 bg-indigo-950/40 text-indigo-200 ml-4"
-                            : "border-slate-800 bg-slate-950 text-slate-200 mr-4"
+                            ? "border-blue-500/20 bg-blue-950/30 text-blue-100 ml-4"
+                            : "border-slate-800 bg-slate-900 text-slate-200 mr-4"
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-[11px]">
-                            {isTech ? "🔬 " : "👤 "}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-semibold text-[11px] text-slate-200">
+                            {isTech ? "Specialist: " : "Client: "}
                             {m.author}
                           </span>
-                          <span className="text-[10px] text-slate-400">{m.time}</span>
+                          <span className="text-[10px] font-mono text-slate-400">{m.time}</span>
                         </div>
                         <p className="leading-relaxed">{m.text}</p>
                       </div>
@@ -517,12 +523,12 @@ export default function TechnicianTicketDetailPage({
                   placeholder="Send an official laboratory or engineering update to the client..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 text-xs"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white outline-none focus:border-blue-500 text-xs transition"
                 />
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="rounded-xl bg-indigo-600 px-5 py-2 font-bold text-white hover:bg-indigo-500 transition"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-500 transition text-xs shadow-xs"
                   >
                     Send Update to Client Portal →
                   </button>
@@ -533,8 +539,8 @@ export default function TechnicianTicketDetailPage({
 
           {/* RIGHT: HARDWARE / TECHNICAL SPECS (5 COLS) */}
           <div className="lg:col-span-5 space-y-6 text-xs">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 backdrop-blur-sm">
-              <h3 className="font-bold text-white uppercase tracking-wider text-[11px] mb-4">
+            <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6 shadow-sm">
+              <h3 className="font-bold text-white uppercase tracking-wider text-[11px] mb-4 border-b border-slate-800 pb-3">
                 {ticket.category === "Cybersecurity"
                   ? "Target Infrastructure & Host Identity"
                   : ticket.category === "Cloud Solutions"
@@ -545,16 +551,16 @@ export default function TechnicianTicketDetailPage({
               </h3>
 
               <div className="space-y-3 text-slate-300">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">
+                <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-slate-400">
                     {ticket.category === "Data Recovery" ? "Device Target:" : "Subject / Scope:"}
                   </span>
-                  <span className="font-bold text-white text-right">{ticket.deviceOrSubject}</span>
+                  <span className="font-semibold text-white text-right">{ticket.deviceOrSubject}</span>
                 </div>
 
                 {ticket.serialNumber && (
-                  <div className="flex justify-between border-b border-slate-800 pb-2">
-                    <span className="text-slate-500">
+                  <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                    <span className="text-slate-400">
                       {ticket.category === "Cybersecurity"
                         ? "Host / Domain:"
                         : ticket.category === "Cloud Solutions"
@@ -563,28 +569,28 @@ export default function TechnicianTicketDetailPage({
                         ? "Asset Tag:"
                         : "Serial Number:"}
                     </span>
-                    <span className="font-mono text-emerald-400">{ticket.serialNumber}</span>
+                    <span className="font-mono text-emerald-400 font-semibold">{ticket.serialNumber}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Service Category:</span>
-                  <span className="font-semibold text-indigo-400">{ticket.category}</span>
+                <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-slate-400">Service Category:</span>
+                  <span className="font-semibold text-blue-400">{ticket.category}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Client Org:</span>
-                  <span className="text-white">{ticket.companyName}</span>
+                <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-slate-400">Client Org:</span>
+                  <span className="text-white font-medium">{ticket.companyName}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Authorized Contact:</span>
+                <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-slate-400">Authorized Contact:</span>
                   <span className="text-white">{ticket.customerName}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Assigned Station / Unit:</span>
-                  <span className="text-indigo-300 font-mono">
+                <div className="flex justify-between border-b border-slate-800/80 pb-2">
+                  <span className="text-slate-400">Assigned Station / Unit:</span>
+                  <span className="text-blue-300 font-mono">
                     {ticket.assignedBench && ticket.assignedBench !== "Pending Allocation"
                       ? ticket.assignedBench
                       : ticket.category === "Cybersecurity"
@@ -598,7 +604,7 @@ export default function TechnicianTicketDetailPage({
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block mb-1">
+                  <span className="text-slate-400 block mb-1">
                     {ticket.category === "Cybersecurity"
                       ? "Threat Scope & Incident Indicators:"
                       : ticket.category === "Cloud Solutions"
@@ -607,15 +613,15 @@ export default function TechnicianTicketDetailPage({
                       ? "Fleet Hardware / Workstation Issues:"
                       : "Reported Damage / Symptoms:"}
                   </span>
-                  <p className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300 leading-relaxed font-mono text-[11px]">
+                  <p className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 leading-relaxed font-mono text-[11px]">
                     {ticket.symptoms}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-indigo-500/20 bg-indigo-950/20 p-6 text-xs text-indigo-200">
-              <h4 className="font-bold text-indigo-300 mb-2">
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-950/20 p-6 text-xs text-blue-200">
+              <h4 className="font-bold text-blue-300 mb-2">
                 {ticket.category === "Cybersecurity"
                   ? "SOC Rapid Incident Containment Protocol"
                   : ticket.category === "Cloud Solutions"
@@ -624,7 +630,7 @@ export default function TechnicianTicketDetailPage({
                   ? "Managed IT Infrastructure Protocol"
                   : "Class-5 Clean Bench Protocol"}
               </h4>
-              <p className="text-[11px] leading-relaxed text-indigo-300/80">
+              <p className="text-[11px] leading-relaxed text-blue-300/80">
                 {ticket.category === "Cybersecurity"
                   ? "Maintain forensic evidence chain of custody. Isolate affected subnets and preserve volatile RAM captures prior to applying containment scripts."
                   : ticket.category === "Cloud Solutions"

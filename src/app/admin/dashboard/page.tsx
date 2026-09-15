@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
-import { initialTickets, initialCustomers, fetchTicketsFromSupabase } from "@/lib/portalData";
+import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
 
 export default function AdminDashboardPage() {
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [customerCount, setCustomerCount] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -16,6 +18,8 @@ export default function AdminDashboardPage() {
         setTickets(live || []);
       } catch (e) {
         console.warn(e);
+      } finally {
+        setLoading(false);
       }
 
       try {
@@ -36,6 +40,60 @@ export default function AdminDashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete Ticket #${ticketId}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(ticketId);
+    try {
+      const ok = await deleteTicketFromSupabase(ticketId);
+      if (ok) {
+        setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+      } else {
+        alert("Failed to delete ticket. Please check connection.");
+      }
+    } catch (err) {
+      console.error("Delete ticket error:", err);
+      alert("Error deleting ticket.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const unassignedCount = tickets.filter(
+    (t) => !t.assignedTech || t.assignedTech === "Unassigned"
+  ).length;
+
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat) {
+      case "Cybersecurity":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-400 border border-rose-500/20">
+            Cybersecurity
+          </span>
+        );
+      case "Cloud Solutions":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-400 border border-indigo-500/20">
+            Cloud
+          </span>
+        );
+      case "Managed IT":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
+            Managed IT
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-400 border border-blue-500/20">
+            Data Recovery
+          </span>
+        );
+    }
+  };
+
   return (
     <AdminLayoutShell
       title="Executive Command Dashboard"
@@ -43,7 +101,7 @@ export default function AdminDashboardPage() {
       actions={
         <Link
           href="/admin/tickets"
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
         >
           View All Tickets ({tickets.length}) →
         </Link>
@@ -52,155 +110,199 @@ export default function AdminDashboardPage() {
       <div className="space-y-8">
         {/* METRICS ROW */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Recovery Success Score
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 shadow-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Recovery SLA Success
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-emerald-400">99.98%</span>
-              <span className="text-xs text-emerald-400 font-semibold">ISO Certified</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-3xl font-extrabold text-emerald-400">99.98%</span>
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                ISO-5 Class
+              </span>
             </div>
             <p className="mt-2 text-[11px] text-slate-500">Based on 500+ verified cleanroom jobs</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 shadow-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Active Cleanroom Bays
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-blue-400">4 / 4</span>
-              <span className="text-xs text-blue-400 font-semibold">100% Capacity</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-3xl font-extrabold text-blue-400">4 / 4</span>
+              <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                100% Load
+              </span>
             </div>
-            <p className="mt-2 text-[11px] text-slate-500">PC-3000 Channel 01-04 active</p>
+            <p className="mt-2 text-[11px] text-slate-500">PC-3000 Channels 01-04 operational</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 shadow-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Client Organizations
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white">{customerCount}</span>
-              <span className="text-xs text-slate-400 font-semibold">Enterprise</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-3xl font-extrabold text-white">{customerCount || 48}</span>
+              <span className="text-xs font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                Enterprise
+              </span>
             </div>
-            <p className="mt-2 text-[11px] text-slate-500">All contracts in good standing</p>
+            <p className="mt-2 text-[11px] text-slate-500">Active enterprise SLA contracts</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Avg SLA Response
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 shadow-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Unassigned Triage Queue
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-emerald-400">9.4 min</span>
-              <span className="text-xs text-emerald-400 font-semibold">vs 15m Target</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-3xl font-extrabold text-amber-400">
+                {unassignedCount} {unassignedCount === 1 ? "Case" : "Cases"}
+              </span>
+              <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Needs Dispatch
+              </span>
             </div>
-            <p className="mt-2 text-[11px] text-slate-500">Zero SLA breaches this month</p>
+            <p className="mt-2 text-[11px] text-slate-500">Average triage dispatch: &lt; 9.4 mins</p>
           </div>
         </div>
 
-        {/* ACTIVE RECOVERY PIPELINE */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-5">
+        {/* MASTER HARDWARE & INCIDENT PIPELINE TABLE */}
+        <div className="rounded-2xl border border-slate-800 bg-[#0f172a] shadow-lg overflow-hidden">
+          <div className="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-white">Live Hardware Recovery Pipeline</h2>
-              <p className="text-xs text-slate-400">Active cleanroom targets and sector extraction status</p>
+              <h2 className="text-base font-bold text-white">Master Service Ticket Directory</h2>
+              <p className="text-xs text-slate-400">Live hardware targets, cloud migrations, and SOC security incidents</p>
             </div>
             <Link
               href="/admin/tickets"
-              className="text-xs font-bold text-blue-400 hover:underline"
+              className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition"
             >
-              Manage Tickets →
+              Manage &amp; Dispatch Tickets →
             </Link>
           </div>
 
           <div className="overflow-x-auto text-xs">
             <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400">
+              <thead className="bg-slate-950/50 border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
                 <tr>
-                  <th className="pb-3">Case ID</th>
-                  <th className="pb-3">Client</th>
-                  <th className="pb-3">Device Target</th>
-                  <th className="pb-3">Stage</th>
-                  <th className="pb-3">Extraction</th>
-                  <th className="pb-3">Lead Tech</th>
-                  <th className="pb-3 text-right">Action</th>
+                  <th className="px-5 py-3.5">Ticket ID</th>
+                  <th className="px-5 py-3.5">Service Category</th>
+                  <th className="px-5 py-3.5">Client Organization</th>
+                  <th className="px-5 py-3.5">Hardware Target / Subject</th>
+                  <th className="px-5 py-3.5">Stage</th>
+                  <th className="px-5 py-3.5">Lead Specialist</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {tickets.slice(0, 5).map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/40 transition">
-                    <td className="py-3.5 font-bold text-blue-400">#{t.id}</td>
-                    <td className="py-3.5 font-medium text-white">{t.companyName}</td>
-                    <td className="py-3.5 text-slate-300">{t.deviceOrSubject}</td>
-                    <td className="py-3.5">
-                      <span className="rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold">
-                        {t.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 font-black text-emerald-400">
-                      {t.clonedPercent ? `${t.clonedPercent}%` : "—"}
-                    </td>
-                    <td className="py-3.5">
-                      {!t.assignedTech || t.assignedTech === "Unassigned" ? (
-                        <span className="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold">
-                          ⚠️ Unassigned
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 font-medium">{t.assignedTech}</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 text-right">
-                      <Link
-                        href="/admin/tickets"
-                        className="text-blue-400 hover:underline font-bold"
-                      >
-                        Dispatch →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-800/70">
+                {tickets.slice(0, 8).map((t) => {
+                  const isUnassigned = !t.assignedTech || t.assignedTech === "Unassigned";
+                  return (
+                    <tr key={t.id} className="hover:bg-slate-800/40 transition">
+                      <td className="px-5 py-3.5 font-mono font-bold text-blue-400">#{t.id}</td>
+                      <td className="px-5 py-3.5">{getCategoryBadge(t.category)}</td>
+                      <td className="px-5 py-3.5 font-semibold text-white">{t.companyName}</td>
+                      <td className="px-5 py-3.5 text-slate-300 max-w-xs truncate">{t.deviceOrSubject}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-blue-500 h-1.5 rounded-full"
+                              style={{ width: `${Math.min(100, Math.max(10, t.clonedPercent || 15))}%` }}
+                            />
+                          </div>
+                          <span className="font-mono text-[11px] text-slate-400">
+                            {t.clonedPercent ? `${t.clonedPercent}%` : t.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {isUnassigned ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" />
+                            Pending Dispatch
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-medium">{t.assignedTech}</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href="/admin/tickets"
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold transition"
+                          >
+                            Dispatch
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTicket(t.id)}
+                            disabled={deletingId === t.id}
+                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition text-xs"
+                            title={`Delete Ticket #${t.id}`}
+                          >
+                            {deletingId === t.id ? "..." : "🗑️"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* QUICK MANAGEMENT SHORTCUTS */}
+        {/* QUICK SHORTCUTS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <Link
             href="/admin/blog"
-            className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 hover:border-blue-500 transition group"
+            className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 hover:border-slate-700 transition group shadow-sm"
           >
-            <span className="text-xl block mb-2">📝</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center mb-3">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
             <h3 className="font-bold text-white group-hover:text-blue-400 transition">
-              Blog &amp; Content Publisher
+              Blog &amp; Case Study Publisher
             </h3>
             <p className="text-slate-400 mt-1 text-[11px]">
-              Publish new articles and manage posts live on the website.
+              Publish new recovery forensics and technical articles live on the website.
             </p>
           </Link>
 
           <Link
             href="/admin/technicians"
-            className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 hover:border-blue-500 transition group"
+            className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 hover:border-slate-700 transition group shadow-sm"
           >
-            <span className="text-xl block mb-2">🔧</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
             <h3 className="font-bold text-white group-hover:text-blue-400 transition">
               Technician &amp; Bench Roster
             </h3>
             <p className="text-slate-400 mt-1 text-[11px]">
-              Manage forensic engineers and assign PC-3000 workbenches.
+              Manage forensic specialists and allocate cleanroom PC-3000 workbenches.
             </p>
           </Link>
 
           <Link
             href="/admin/settings"
-            className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 hover:border-blue-500 transition group"
+            className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 hover:border-slate-700 transition group shadow-sm"
           >
-            <span className="text-xl block mb-2">⚙️</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-3">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </div>
             <h3 className="font-bold text-white group-hover:text-blue-400 transition">
               Company Settings &amp; SLA Rules
             </h3>
             <p className="text-slate-400 mt-1 text-[11px]">
-              Configure contact hotlines (+91 6380488373) and SLA thresholds.
+              Configure emergency dispatch hotline (+91 6380488373) and SLA tiers.
             </p>
           </Link>
         </div>

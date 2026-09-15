@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import {
-  initialTickets,
   Ticket,
   fetchTicketsFromSupabase,
   initialTechnicians,
@@ -19,13 +18,15 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [notification, setNotification] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDeleteTicket = async (ticketId: string) => {
     const ok = window.confirm(
-      `⚠️ PERMANENT PURGE: Are you sure you want to permanently delete Ticket #${ticketId}? All messages, diagnostics, and records will be purged.`
+      `PERMANENT PURGE: Are you sure you want to permanently delete Ticket #${ticketId}? All messages, diagnostics, and records will be permanently removed.`
     );
     if (!ok) return;
 
+    setDeletingId(ticketId);
     try {
       await deleteTicketFromSupabase(ticketId);
       setTickets((prev) => prev.filter((t) => t.id !== ticketId));
@@ -34,6 +35,8 @@ export default function AdminTicketsPage() {
     } catch (err) {
       console.error("Delete ticket error:", err);
       alert("Failed to delete ticket.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -45,7 +48,7 @@ export default function AdminTicketsPage() {
   const [techDirective, setTechDirective] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  // Load live tickets from Supabase and technicians from storage
+  // Load live tickets from Supabase
   useEffect(() => {
     async function loadData() {
       try {
@@ -181,9 +184,38 @@ export default function AdminTicketsPage() {
     }
   };
 
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat) {
+      case "Cybersecurity":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-rose-400 border border-rose-500/20">
+            Cybersecurity
+          </span>
+        );
+      case "Cloud Solutions":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-400 border border-indigo-500/20">
+            Cloud
+          </span>
+        );
+      case "Managed IT":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
+            Managed IT
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-blue-400 border border-blue-500/20">
+            Data Recovery
+          </span>
+        );
+    }
+  };
+
   return (
     <AdminLayoutShell
-      title="Master Tickets & Technician Dispatch"
+      title="Master Tickets &amp; Technician Dispatch"
       subtitle="Super Admin case assignment, ISO Class-5 cleanroom dispatch, and engineering workload triage"
     >
       <div className="space-y-6 text-xs">
@@ -200,9 +232,9 @@ export default function AdminTicketsPage() {
         {unassignedCount > 0 && (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200">
             <div className="flex items-center gap-3">
-              <span className="flex h-3 w-3 relative">
+              <span className="flex h-2.5 w-2.5 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
               </span>
               <div>
                 <p className="font-bold text-amber-300">
@@ -215,7 +247,7 @@ export default function AdminTicketsPage() {
             </div>
             <button
               onClick={() => setFilter("UNASSIGNED")}
-              className="rounded-xl bg-amber-500 px-4 py-1.5 font-bold text-slate-950 hover:bg-amber-400 transition shrink-0"
+              className="rounded-xl bg-amber-500 px-4 py-1.5 font-bold text-slate-950 hover:bg-amber-400 transition shrink-0 shadow-sm"
             >
               View Unassigned Queue ({unassignedCount}) →
             </button>
@@ -223,21 +255,23 @@ export default function AdminTicketsPage() {
         )}
 
         {/* CONTROLS */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <input
-            type="text"
-            placeholder="Search tickets by case ID, client, organization, drive model..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-96 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-white outline-none focus:border-blue-500 text-xs"
-          />
+        <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="relative w-full sm:w-96">
+            <input
+              type="text"
+              placeholder="Search tickets by case ID, client, organization, drive model..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2 text-slate-200 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 text-xs transition"
+            />
+          </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setFilter("ALL")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 filter === "ALL"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
@@ -245,80 +279,81 @@ export default function AdminTicketsPage() {
             </button>
             <button
               onClick={() => setFilter("UNASSIGNED")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition flex items-center gap-1.5 ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition flex items-center gap-1.5 text-xs ${
                 filter === "UNASSIGNED"
-                  ? "bg-amber-500 text-slate-950"
+                  ? "bg-amber-500 text-slate-950 shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-amber-400 hover:text-white"
               }`}
             >
-              <span>⚠️ Unassigned ({unassignedCount})</span>
+              <span>Unassigned ({unassignedCount})</span>
             </button>
             <button
               onClick={() => setFilter("Data Recovery")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 filter === "Data Recovery"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
-              💽 Recovery
+              Data Recovery
             </button>
             <button
               onClick={() => setFilter("Cybersecurity")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 filter === "Cybersecurity"
-                  ? "bg-rose-600 text-white"
+                  ? "bg-rose-600 text-white shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
-              🛡️ Cyber
+              Cybersecurity
             </button>
             <button
               onClick={() => setFilter("Cloud Solutions")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 filter === "Cloud Solutions"
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-indigo-600 text-white shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
-              ☁️ Cloud
+              Cloud
             </button>
             <button
               onClick={() => setFilter("Managed IT")}
-              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 filter === "Managed IT"
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-emerald-600 text-white shadow-sm"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
-              🖥️ Managed IT
+              Managed IT
             </button>
           </div>
         </div>
 
         {/* MASTER TABLE */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-slate-800 bg-[#0f172a] shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <thead className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <tr>
                   <th className="px-5 py-3.5">Ticket ID</th>
+                  <th className="px-5 py-3.5">Service Category</th>
                   <th className="px-5 py-3.5">Organization &amp; Client</th>
                   <th className="px-5 py-3.5">Device Target</th>
                   <th className="px-5 py-3.5">SLA Urgency</th>
                   <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5">Extraction</th>
-                  <th className="px-5 py-3.5">Assigned Technician</th>
+                  <th className="px-5 py-3.5">Assigned Specialist</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-800/70">
                 {filtered.map((t) => {
                   const isUnassigned = !t.assignedTech || t.assignedTech === "Unassigned";
 
                   return (
                     <tr key={t.id} className="hover:bg-slate-800/40 transition">
                       <td className="px-5 py-4 font-mono font-bold text-blue-400">#{t.id}</td>
+                      <td className="px-5 py-4">{getCategoryBadge(t.category)}</td>
                       <td className="px-5 py-4">
                         <span className="font-bold text-white block">{t.companyName}</span>
                         <span className="text-slate-400 text-[11px]">{t.customerName}</span>
@@ -329,30 +364,27 @@ export default function AdminTicketsPage() {
                       </td>
                       <td className="px-5 py-4">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                             t.priority === "CRITICAL"
-                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
                               : t.priority === "HIGH"
-                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                              : "bg-slate-800 text-slate-300"
+                              ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                              : "bg-slate-800 text-slate-300 border border-slate-700"
                           }`}
                         >
                           {t.priority}
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-medium text-slate-300 border border-slate-700">
-                          {t.status}
+                        <span className="rounded-md bg-slate-950/70 px-2 py-0.5 text-[11px] font-medium text-slate-300 border border-slate-800">
+                          {t.status} {t.clonedPercent ? `(${t.clonedPercent}%)` : ""}
                         </span>
-                      </td>
-                      <td className="px-5 py-4 font-black text-emerald-400">
-                        {t.clonedPercent ? `${t.clonedPercent}%` : "—"}
                       </td>
                       <td className="px-5 py-4">
                         {isUnassigned ? (
                           <button
                             onClick={() => openAssignModal(t)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition shadow-xs"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/25 transition shadow-xs"
                           >
                             <span>⚡</span>
                             <span>Assign Tech</span>
@@ -362,33 +394,37 @@ export default function AdminTicketsPage() {
                             <span className="font-semibold text-white">{t.assignedTech}</span>
                             <button
                               onClick={() => openAssignModal(t)}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline font-bold"
+                              className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline font-semibold"
                             >
                               [Reassign]
                             </button>
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-right space-x-2">
-                        <button
-                          onClick={() => openAssignModal(t)}
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 font-bold text-amber-300 hover:bg-slate-700"
-                        >
-                          Dispatch
-                        </button>
-                        <Link
-                          href={`/technician/tickets/${t.id}`}
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 font-bold text-blue-400 hover:text-white"
-                        >
-                          Workbench →
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteTicket(t.id)}
-                          className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 font-bold text-rose-400 hover:bg-rose-500/20 transition"
-                          title="Permanently Delete Ticket"
-                        >
-                          🗑️
-                        </button>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openAssignModal(t)}
+                            className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 font-semibold text-blue-400 hover:bg-slate-700 hover:text-white transition text-xs"
+                          >
+                            Dispatch
+                          </button>
+                          <Link
+                            href={`/technician/tickets/${t.id}`}
+                            className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition text-xs"
+                          >
+                            Workbench →
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTicket(t.id)}
+                            disabled={deletingId === t.id}
+                            className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition text-xs"
+                            title="Permanently Delete Ticket"
+                          >
+                            {deletingId === t.id ? "..." : "🗑️"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -401,31 +437,31 @@ export default function AdminTicketsPage() {
         {/* ASSIGN TECHNICIAN MODAL */}
         {assignModalTicket && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div className="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8 text-slate-200 shadow-2xl">
+            <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-[#0f172a] p-6 sm:p-8 text-slate-200 shadow-2xl">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-blue-400 text-sm">
                       Case #{assignModalTicket.id}
                     </span>
-                    <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                    <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-300">
                       Super Admin Dispatch
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mt-1">
+                  <h3 className="text-base font-bold text-white mt-1">
                     Assign Technician &amp; Workbench
                   </h3>
                 </div>
                 <button
                   onClick={() => setAssignModalTicket(null)}
-                  className="rounded-full bg-slate-800 p-2 text-slate-400 hover:bg-slate-700 hover:text-white"
+                  className="rounded-lg bg-slate-800 p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
                 >
                   ✕
                 </button>
               </div>
 
               {/* TICKET SUMMARY CARD */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 mb-5 text-xs space-y-1.5">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 mb-5 text-xs space-y-1.5">
                 <p>
                   <strong className="text-slate-400">Client:</strong>{" "}
                   <span className="text-white font-semibold">{assignModalTicket.customerName}</span> ({assignModalTicket.companyName})
@@ -440,7 +476,7 @@ export default function AdminTicketsPage() {
                 </p>
                 <p>
                   <strong className="text-slate-400">SLA Priority:</strong>{" "}
-                  <span className="font-bold text-red-400">{assignModalTicket.priority}</span>
+                  <span className="font-bold text-rose-400">{assignModalTicket.priority}</span>
                 </p>
               </div>
 
@@ -453,7 +489,7 @@ export default function AdminTicketsPage() {
                     value={selectedTech}
                     onChange={(e) => setSelectedTech(e.target.value)}
                     required
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
                   >
                     {technicians.map((tech) => (
                       <option key={tech.id} value={tech.name}>
@@ -470,7 +506,7 @@ export default function AdminTicketsPage() {
                   <select
                     value={selectedStation}
                     onChange={(e) => setSelectedStation(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
                   >
                     <option value="PC-3000 Bench 01 (Class-5 Hood)">
                       PC-3000 Bench 01 (ISO Class-5 Laminar Hood)
@@ -503,7 +539,7 @@ export default function AdminTicketsPage() {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
                   >
                     <option value="Intake & Diagnostics">Intake &amp; Diagnostics</option>
                     <option value="Cleanroom Diagnosis">Cleanroom Diagnosis (Data Recovery)</option>
@@ -528,7 +564,7 @@ export default function AdminTicketsPage() {
                     value={techDirective}
                     onChange={(e) => setTechDirective(e.target.value)}
                     placeholder="Instructions for lead technician..."
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -536,7 +572,7 @@ export default function AdminTicketsPage() {
                   <button
                     type="button"
                     onClick={() => setAssignModalTicket(null)}
-                    className="rounded-xl border border-slate-700 px-4 py-2 font-semibold text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-800 px-4 py-2 font-semibold text-slate-400 hover:text-white"
                   >
                     Cancel
                   </button>
@@ -545,7 +581,7 @@ export default function AdminTicketsPage() {
                     disabled={assigning}
                     className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 shadow-md transition disabled:opacity-50"
                   >
-                    {assigning ? "Assigning..." : "Confirm & Dispatch Technician"}
+                    {assigning ? "Dispatching..." : "Confirm & Dispatch Technician"}
                   </button>
                 </div>
               </form>
@@ -556,4 +592,3 @@ export default function AdminTicketsPage() {
     </AdminLayoutShell>
   );
 }
-

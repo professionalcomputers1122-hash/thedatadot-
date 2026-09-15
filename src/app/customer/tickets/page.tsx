@@ -94,25 +94,25 @@ export default function CustomerTicketsPage() {
     switch (cat) {
       case "Cybersecurity":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/15 px-2.5 py-0.5 text-[11px] font-bold text-rose-300 border border-rose-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200">
             <span>🛡️</span> Cybersecurity
           </span>
         );
       case "Cloud Solutions":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-500/15 px-2.5 py-0.5 text-[11px] font-bold text-indigo-300 border border-indigo-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 border border-indigo-200">
             <span>☁️</span> Cloud Solutions
           </span>
         );
       case "Managed IT":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
             <span>🖥️</span> Managed IT
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-bold text-blue-300 border border-blue-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200">
             <span>💽</span> Data Recovery
           </span>
         );
@@ -134,98 +134,88 @@ export default function CustomerTicketsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased relative selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden">
-      {/* AMBIENT GLOW MESH */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[20%] w-[550px] h-[550px] bg-blue-600/10 rounded-full blur-[140px]" />
-        <div className="absolute top-[40%] right-[-5%] w-[450px] h-[450px] bg-indigo-600/8 rounded-full blur-[140px]" />
-      </div>
-
+    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
       <CustomerNav />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-mono text-blue-400 mb-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-              <span>Direct Telemetry Desk</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950">
               Enterprise Support &amp; Recovery Tickets
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Live telemetry for Cleanroom Data Recovery, SOC Cybersecurity, Cloud Infrastructure, and Managed IT
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live telemetry for Data Recovery, Cybersecurity, Cloud Infrastructure, and Managed IT
             </p>
           </div>
 
           <Link
             href="/customer/tickets/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_0_25px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition"
           >
             <span>+ Open New Ticket</span>
           </Link>
         </div>
 
         {/* SEARCH & FILTERS BAR */}
-        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl p-4 mb-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 mb-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="w-full sm:w-80">
             <input
               type="text"
-              placeholder="Search Ticket ID, serial, domain..."
+              placeholder="Search Ticket ID, hardware target, domain..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2 text-xs outline-none focus:border-blue-500 focus:bg-white"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setCategoryFilter("ALL")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "ALL"
-                  ? "bg-slate-800 text-white border border-slate-700 shadow-sm"
-                  : "border border-slate-800/80 bg-slate-950/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-slate-900 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               All Categories
             </button>
             <button
               onClick={() => setCategoryFilter("Data Recovery")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "Data Recovery"
-                  ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]"
-                  : "border border-slate-800/80 bg-slate-950/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-blue-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               💽 Recovery
             </button>
             <button
               onClick={() => setCategoryFilter("Cybersecurity")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "Cybersecurity"
-                  ? "bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)]"
-                  : "border border-slate-800/80 bg-slate-950/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-rose-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               🛡️ Cyber
             </button>
             <button
               onClick={() => setCategoryFilter("Cloud Solutions")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "Cloud Solutions"
-                  ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]"
-                  : "border border-slate-800/80 bg-slate-950/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-indigo-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               ☁️ Cloud
             </button>
             <button
               onClick={() => setCategoryFilter("Managed IT")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "Managed IT"
-                  ? "bg-emerald-600 text-white shadow-[0_0_15px_rgba(5,150,105,0.4)]"
-                  : "border border-slate-800/80 bg-slate-950/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               🖥️ Managed IT
@@ -234,23 +224,23 @@ export default function CustomerTicketsPage() {
         </div>
 
         {/* TICKETS TABLE */}
-        <div className="rounded-3xl border border-slate-800/80 bg-slate-900/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
           {loading ? (
-            <div className="p-16 text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mb-3" />
-              <p className="text-xs text-slate-400 font-mono">Synchronizing live portal tickets from database...</p>
+            <div className="p-12 text-center">
+              <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-3" />
+              <p className="text-xs text-slate-400 font-mono">Synchronizing live portal tickets...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-16 text-center text-slate-400">
-              <p className="font-bold text-white text-sm">No tickets found</p>
-              <p className="text-xs text-slate-500 mt-1">
+            <div className="p-12 text-center text-slate-500">
+              <p className="font-semibold text-slate-700">No tickets found</p>
+              <p className="text-xs text-slate-400 mt-1">
                 {search ? "No cases match your search criteria." : "You have no active support tickets in this view."}
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/80 text-[10px] font-mono font-bold uppercase text-slate-400 border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-3.5">Ticket ID</th>
                     <th className="px-5 py-3.5">Service Category</th>
@@ -261,7 +251,7 @@ export default function CustomerTicketsPage() {
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100">
                   {filtered.map((t) => {
                     const isUnassigned =
                       !t.assignedTech ||
@@ -269,15 +259,15 @@ export default function CustomerTicketsPage() {
                       t.assignedTech.toLowerCase().includes("unassigned");
 
                     return (
-                      <tr key={t.id} className="hover:bg-slate-800/40 transition">
-                        <td className="px-5 py-4 font-mono font-bold text-blue-400">
+                      <tr key={t.id} className="hover:bg-slate-50/60 transition">
+                        <td className="px-5 py-4 font-bold text-blue-600">
                           #{t.id}
                         </td>
                         <td className="px-5 py-4">
                           {getCategoryBadge(t.category)}
                         </td>
                         <td className="px-5 py-4">
-                          <p className="font-bold text-white">{t.deviceOrSubject}</p>
+                          <p className="font-bold text-slate-900">{t.deviceOrSubject}</p>
                           {t.serialNumber && (
                             <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
                               ID: {t.serialNumber}
@@ -286,12 +276,12 @@ export default function CustomerTicketsPage() {
                         </td>
                         <td className="px-5 py-4">
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                               t.priority === "CRITICAL"
-                                ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                                ? "bg-red-100 text-red-800"
                                 : t.priority === "HIGH"
-                                ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                                : "bg-slate-800 text-slate-300 border border-slate-700"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-slate-100 text-slate-700"
                             }`}
                           >
                             {t.priority}
@@ -300,16 +290,16 @@ export default function CustomerTicketsPage() {
                         <td className="px-5 py-4">
                           <div className="flex flex-col gap-1">
                             <span
-                              className={`inline-block w-fit rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+                              className={`inline-block w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                                 t.status === "Resolved"
-                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                                  : "bg-blue-500/15 text-blue-300 border border-blue-500/30"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-blue-100 text-blue-800"
                               }`}
                             >
                               {t.status}
                             </span>
                             {Number(t.clonedPercent) > 0 && (
-                              <span className="text-[10px] font-mono font-semibold text-emerald-400">
+                              <span className="text-[10px] font-semibold text-emerald-600">
                                 {getProgressLabel(t)}
                               </span>
                             )}
@@ -317,22 +307,19 @@ export default function CustomerTicketsPage() {
                         </td>
                         <td className="px-5 py-4">
                           {isUnassigned ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-400 border border-amber-500/30">
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                               Pending Dispatch
                             </span>
                           ) : (
-                            <span className="text-slate-200 font-medium flex items-center gap-1.5">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                              {t.assignedTech}
-                            </span>
+                            <span className="text-slate-800 font-medium">{t.assignedTech}</span>
                           )}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Link
                               href={`/customer/tickets/${t.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1 font-bold text-xs text-blue-400 hover:bg-slate-700 hover:text-white transition"
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-blue-600 hover:bg-blue-50 transition"
                             >
                               <span>View</span>
                               <span>→</span>
@@ -341,10 +328,10 @@ export default function CustomerTicketsPage() {
                               type="button"
                               onClick={() => handleDeleteTicket(t.id)}
                               disabled={deletingId === t.id}
-                              className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 hover:border-rose-500/50 transition text-xs"
-                              title={`Permanently delete Ticket #${t.id}`}
+                              className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
+                              title={`Delete Ticket #${t.id}`}
                             >
-                              {deletingId === t.id ? "..." : "🗑️"}
+                              🗑️
                             </button>
                           </div>
                         </td>

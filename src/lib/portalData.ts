@@ -8,9 +8,10 @@ export interface Ticket {
   category: "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT";
   deviceOrSubject: string;
   serialNumber?: string;
-  status: "Media Received" | "Cleanroom Diagnosis" | "PC-3000 Imaging" | "Integrity Verification" | "Resolved";
+  status: "Media Received" | "Cleanroom Diagnosis" | "PC-3000 Imaging" | "Integrity Verification" | "Resolved" | "Intake & Diagnostics" | "Threat Containment & Analysis" | "Architecture & Deployment" | string;
   priority: "CRITICAL" | "HIGH" | "STANDARD";
   assignedTech: string;
+  assignedBench?: string;
   clonedPercent?: number;
   recoveredSize?: string;
   createdAt: string;
@@ -163,6 +164,81 @@ export const initialTechnicians = [
 // ================= LIVE SUPABASE REAL-TIME HELPERS =================
 import { supabase, isSupabaseConfigured } from "./supabase";
 
+export function parseTicketRow(row: any): Ticket {
+  // 1. Detect Category
+  let category: "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT" = "Data Recovery";
+  const rawSubject = row.device_or_subject || "";
+  const mediaType = (row.media_type || "").toUpperCase();
+
+  if (row.category && ["Data Recovery", "Cloud Solutions", "Cybersecurity", "Managed IT"].includes(row.category)) {
+    category = row.category;
+  } else if (rawSubject.includes("[Cybersecurity]") || mediaType === "NETWORK") {
+    category = "Cybersecurity";
+  } else if (rawSubject.includes("[Cloud Solutions]") || mediaType === "SERVER") {
+    category = "Cloud Solutions";
+  } else if (rawSubject.includes("[Managed IT]") || mediaType === "GENERAL") {
+    category = "Managed IT";
+  }
+
+  // 2. Clean subject
+  const cleanSubject = rawSubject.replace(/^\[(Cybersecurity|Cloud Solutions|Managed IT|Data Recovery)\]\s*/, "") || "Service Target";
+
+  // 3. Sanitize Technician - remove any "Murugan" and default to Unassigned
+  let assignedTech = row.assigned_tech || "Unassigned";
+  if (assignedTech.toLowerCase().includes("murugan")) {
+    assignedTech = "Unassigned";
+  }
+
+  // 4. Cloned / Progress Percent
+  const clonedPercent = Number(row.cloned_percent) || 0;
+
+  // 5. Recovered Size or Progress Description
+  let recoveredSize = "Awaiting Diagnostics";
+  if (clonedPercent > 0) {
+    if (category === "Data Recovery") {
+      recoveredSize = `${clonedPercent}% cloned`;
+    } else if (category === "Cybersecurity") {
+      recoveredSize = `${clonedPercent}% remediated`;
+    } else {
+      recoveredSize = `${clonedPercent}% deployed`;
+    }
+  }
+
+  return {
+    id: row.id,
+    customerName: row.customer_name,
+    companyName: row.company_name,
+    customerEmail: row.customer_email,
+    category,
+    deviceOrSubject: cleanSubject,
+    serialNumber: row.serial_number,
+    status: row.status || "Intake & Diagnostics",
+    priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
+    assignedTech,
+    assignedBench:
+      row.assigned_bench ||
+      (category === "Cybersecurity"
+        ? "SOC Threat Isolation Station 01"
+        : category === "Cloud Solutions"
+        ? "Cloud Infrastructure Terminal 01"
+        : category === "Managed IT"
+        ? "Enterprise Fleet Support Bench 01"
+        : "PC-3000 Bench 01 (Class-5 Hood)"),
+    clonedPercent,
+    recoveredSize,
+    createdAt: row.created_at
+      ? new Date(row.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Today",
+    lastUpdated: "Live from Supabase",
+    symptoms: row.symptoms || "",
+    techNotes: row.tech_notes || "",
+  };
+}
+
 export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<Ticket[]> {
   try {
     if (typeof window !== "undefined") {
@@ -173,30 +249,7 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.tickets)) {
-          return json.tickets.map((row: any) => ({
-            id: row.id,
-            customerName: row.customer_name,
-            companyName: row.company_name,
-            customerEmail: row.customer_email,
-            category: "Data Recovery",
-            deviceOrSubject: row.device_or_subject,
-            serialNumber: row.serial_number,
-            status: (row.status as any) || "Cleanroom Diagnosis",
-            priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
-            assignedTech: row.assigned_tech || "Unassigned",
-            clonedPercent: Number(row.cloned_percent) || 0,
-            recoveredSize: `${row.cloned_percent}% cloned`,
-            createdAt: row.created_at
-              ? new Date(row.created_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })
-              : "Today",
-            lastUpdated: "Live from API",
-            symptoms: row.symptoms || "",
-            techNotes: row.tech_notes || "",
-          }));
+          return json.tickets.map(parseTicketRow);
         }
       }
     }
@@ -204,7 +257,7 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
     console.warn("Falling back to direct Supabase tickets query:", apiErr);
   }
 
-  if (!isSupabaseConfigured) return initialTickets;
+  if (!isSupabaseConfigured) return [];
   try {
     let query = supabase
       .from("tickets")
@@ -224,33 +277,10 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
 
     if (!data || data.length === 0) return [];
 
-    return data.map((row) => ({
-      id: row.id,
-      customerName: row.customer_name,
-      companyName: row.company_name,
-      customerEmail: row.customer_email,
-      category: "Data Recovery",
-      deviceOrSubject: row.device_or_subject,
-      serialNumber: row.serial_number,
-      status: (row.status as any) || "Cleanroom Diagnosis",
-      priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
-      assignedTech: row.assigned_tech || "Unassigned",
-      clonedPercent: Number(row.cloned_percent) || 0,
-      recoveredSize: `${row.cloned_percent}% cloned`,
-      createdAt: row.created_at
-        ? new Date(row.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "Today",
-      lastUpdated: "Live from Supabase",
-      symptoms: row.symptoms || "",
-      techNotes: row.tech_notes || "",
-    }));
+    return data.map(parseTicketRow);
   } catch (err) {
     console.error("Failed to fetch from Supabase:", err);
-    return initialTickets;
+    return [];
   }
 }
 
@@ -351,16 +381,33 @@ export interface NewTicketInput {
   companyName: string;
   customerName: string;
   customerEmail: string;
+  category?: "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT";
   deviceOrSubject: string;
   mediaType?: "HDD" | "SSD" | "RAID" | "FLASH" | "NETWORK" | "SERVER" | "GENERAL";
   serialNumber?: string;
   urgency?: "Critical" | "High" | "Standard";
   symptoms?: string;
   techNotes?: string;
+  assignedBench?: string;
+  assignedTech?: string;
 }
 
 export async function createTicketInSupabase(input: NewTicketInput): Promise<string> {
   const ticketId = input.id || `TDD-${Math.floor(1000 + Math.random() * 9000)}`;
+  const chosenCategory = input.category || "Data Recovery";
+  const mappedMediaType =
+    input.mediaType ||
+    (chosenCategory === "Cybersecurity"
+      ? "NETWORK"
+      : chosenCategory === "Cloud Solutions"
+      ? "SERVER"
+      : chosenCategory === "Managed IT"
+      ? "GENERAL"
+      : "HDD");
+
+  const formattedSubject = input.deviceOrSubject.startsWith("[")
+    ? input.deviceOrSubject
+    : `[${chosenCategory}] ${input.deviceOrSubject}`;
 
   try {
     if (typeof window !== "undefined") {
@@ -372,12 +419,17 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
           companyName: input.companyName,
           customerName: input.customerName,
           customerEmail: input.customerEmail,
-          deviceOrSubject: input.deviceOrSubject,
-          mediaType: input.mediaType || "HDD",
+          category: chosenCategory,
+          deviceOrSubject: formattedSubject,
+          mediaType: mappedMediaType,
           serialNumber: input.serialNumber || "N/A",
+          status: "Intake & Diagnostics",
+          clonedPercent: 0,
           urgency: input.urgency || "Standard",
           symptoms: input.symptoms || "",
-          techNotes: input.techNotes || "Awaiting hardware reception in Class-5 cleanroom.",
+          techNotes: input.techNotes || `New ${chosenCategory} ticket placed in Super Admin triage queue for dispatch.`,
+          assignedBench: "Pending Allocation",
+          assignedTech: "Unassigned",
         }),
       });
       if (res.ok) {
@@ -398,16 +450,16 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
         company_name: input.companyName,
         customer_name: input.customerName,
         customer_email: input.customerEmail,
-        device_or_subject: input.deviceOrSubject,
-        media_type: input.mediaType || "HDD",
+        device_or_subject: formattedSubject,
+        media_type: mappedMediaType,
         serial_number: input.serialNumber || "N/A",
         status: "Intake & Diagnostics",
         cloned_percent: 0,
         urgency: input.urgency || "Standard",
         symptoms: input.symptoms || "",
-        tech_notes: input.techNotes || "Awaiting Super Admin triage and technician dispatch.",
-        assigned_bench: (input as any).assignedBench || "Pending Allocation",
-        assigned_tech: (input as any).assignedTech || "Unassigned",
+        tech_notes: input.techNotes || `New ${chosenCategory} case placed in Super Admin triage queue for engineer dispatch.`,
+        assigned_bench: input.assignedBench || "Pending Allocation",
+        assigned_tech: input.assignedTech || "Unassigned",
       },
     ]);
 
@@ -431,6 +483,60 @@ export interface SupabaseBlogPost {
   excerpt: string;
   content?: string;
   created_at?: string;
+}
+
+export function getDeletedBlogIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem("tdd_deleted_blog_ids");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch (e) {
+    console.warn("Failed reading deleted blog ids:", e);
+  }
+  return new Set();
+}
+
+export async function deleteBlogPostFromSupabase(id: string, title?: string): Promise<boolean> {
+  // 1. Record in local blacklist
+  if (typeof window !== "undefined") {
+    try {
+      const current = getDeletedBlogIds();
+      current.add(id);
+      localStorage.setItem("tdd_deleted_blog_ids", JSON.stringify(Array.from(current)));
+    } catch (e) {
+      console.warn("Storage error for deleted blog:", e);
+    }
+  }
+
+  // 2. Call DELETE /api/blog
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(
+        `/api/blog?id=${encodeURIComponent(id)}&title=${encodeURIComponent(title || id)}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (res.ok) return true;
+    }
+  } catch (apiErr) {
+    console.warn("API delete blog error:", apiErr);
+  }
+
+  // 3. Direct Supabase delete fallback
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from("blog_posts").delete().eq("id", id);
+      return true;
+    } catch (err) {
+      console.error("Direct Supabase blog delete error:", err);
+    }
+  }
+
+  return true;
 }
 
 export async function fetchBlogPostsFromSupabase(): Promise<SupabaseBlogPost[]> {

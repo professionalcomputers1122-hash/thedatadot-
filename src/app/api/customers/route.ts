@@ -14,23 +14,22 @@ export const INITIAL_PRESETS = [
     status: "Active",
     activeTickets: 0,
   },
-  {
-    id: "CUST-8492",
-    name: "Dr. Aravind Swaminathan",
-    email: "aravind@scandiagnostics.com",
-    company: "Apex Healthcare Diagnostic Center",
-    phone: "+91 98402 11928",
-    accountNumber: "TDD-CLI-8492",
-    slaTier: "Enterprise 15-Min 24/7 SLA",
-    password: "Apex@Diagnostic2026",
-    status: "Active",
-    activeTickets: 1,
-  },
 ];
 
 export async function GET() {
   try {
     const supabase = createAdminClient();
+
+    // Query audit logs to identify accounts that have been explicitly deleted
+    const { data: delLogs } = await supabase
+      .from("audit_logs")
+      .select("target")
+      .eq("action", "DELETE_CUSTOMER_ACCOUNT_AND_TICKETS");
+
+    const deletedEmails = new Set<string>(
+      (delLogs || []).map((d: any) => (d.target || "").toLowerCase().trim())
+    );
+
     const { data: companies, error } = await supabase
       .from("companies")
       .select("*")
@@ -51,7 +50,10 @@ export async function GET() {
         }
 
         if (meta && meta.email) {
-          const emailNorm = meta.email.toLowerCase();
+          const emailNorm = meta.email.toLowerCase().trim();
+          // Skip if this customer was deleted by admin
+          if (deletedEmails.has(emailNorm)) continue;
+
           accountsMap.set(emailNorm, {
             id: comp.id,
             name: meta.contactName || meta.name || comp.name,
@@ -69,10 +71,11 @@ export async function GET() {
       }
     }
 
-    // Only add presets if not already overridden in database
+    // Only add presets if not deleted and not in database
     for (const preset of INITIAL_PRESETS) {
-      if (!accountsMap.has(preset.email.toLowerCase())) {
-        accountsMap.set(preset.email.toLowerCase(), preset);
+      const presetEmail = preset.email.toLowerCase().trim();
+      if (!deletedEmails.has(presetEmail) && !accountsMap.has(presetEmail)) {
+        accountsMap.set(presetEmail, preset);
       }
     }
 
@@ -317,12 +320,13 @@ export async function DELETE(req: Request) {
 
     const supabase = createAdminClient();
 
-    // 1. Delete company record
-    if (id && id.includes("-")) {
+    // 1. Delete company record & profiles
+    if (id && id.length > 20 && id.includes("-")) {
       await supabase.from("companies").delete().eq("id", id);
     }
     if (email) {
       await supabase.from("companies").delete().ilike("industry", `%"email":"${email}"%`);
+      await supabase.from("profiles").delete().ilike("email", email);
     }
     if (company) {
       await supabase.from("companies").delete().ilike("name", company);

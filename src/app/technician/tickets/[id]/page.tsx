@@ -47,10 +47,25 @@ export default function TechnicianTicketDetailPage({
     async function loadData() {
       setLoading(true);
       try {
-        const liveTickets = await fetchTicketsFromSupabase();
-        let found = liveTickets.find(
-          (t) => t.id.toLowerCase() === ticketId.toLowerCase()
-        );
+        let found = null;
+        try {
+          const res = await fetch(`/api/tickets/${ticketId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.ticket) {
+              found = data.ticket;
+            }
+          }
+        } catch (e) {
+          console.warn("Direct ticket fetch error:", e);
+        }
+
+        if (!found) {
+          const liveTickets = await fetchTicketsFromSupabase();
+          found = liveTickets.find(
+            (t) => t.id.toLowerCase() === ticketId.toLowerCase()
+          );
+        }
 
         if (!found) {
           found = initialTickets.find(
@@ -60,8 +75,8 @@ export default function TechnicianTicketDetailPage({
 
         if (found) {
           setTicket(found);
-          setStatus(found.status || "Cleanroom Diagnosis");
-          setProgress(found.clonedPercent || 0);
+          setStatus(found.status || "Intake & Diagnostics");
+          setProgress(Number(found.clonedPercent) || 0);
           setNotes(found.techNotes || "");
 
           const liveMsgs = await fetchMessagesFromSupabase(ticketId);
@@ -148,7 +163,55 @@ export default function TechnicianTicketDetailPage({
         clonedPercent: progress,
         techNotes: notes,
       });
-      setNotification("Hardware recovery status updated! Synced live to Customer Portal.");
+
+      setTicket((prev: any) => ({
+        ...prev,
+        status,
+        clonedPercent: progress,
+        techNotes: notes,
+      }));
+
+      // Broadcast official engineering status change directly to customer chat thread
+      const currentAuthor =
+        ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+          ? ticket.assignedTech
+          : "Technical Operations Specialist";
+
+      const progressLabel =
+        ticket.category === "Cybersecurity"
+          ? `${progress}% Remediated`
+          : ticket.category === "Cloud Solutions"
+          ? `${progress}% Deployed`
+          : ticket.category === "Managed IT"
+          ? `${progress}% Resolved`
+          : `${progress}% Cloned`;
+
+      const broadcastText = `Specialist Status Update: Stage updated to "${status}" • Progress calibrated at ${progressLabel}.${
+        notes ? ` Forensic Log: ${notes}` : ""
+      }`;
+
+      try {
+        await sendMessageToSupabase(
+          ticket.id,
+          "Technician",
+          currentAuthor,
+          broadcastText
+        );
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "Technician",
+            author: currentAuthor,
+            time: "Just now",
+            text: broadcastText,
+          },
+        ]);
+      } catch (chatErr) {
+        console.warn("Chat broadcast warning:", chatErr);
+      }
+
+      setNotification("Status & progress updated! Live telemetry pushed to Customer Portal.");
     } catch (err) {
       console.warn("Update sync warning:", err);
       setNotification("Status updated locally.");
@@ -278,31 +341,85 @@ export default function TechnicianTicketDetailPage({
           <div className="lg:col-span-7 space-y-6">
             <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 backdrop-blur-sm text-xs">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-5">
-                Forensic Extraction Controls &amp; Stage
+                Technical Execution Controls &amp; Stage
               </h2>
 
               <form onSubmit={handleSaveUpdate} className="space-y-5">
                 <div>
                   <label className="block font-semibold text-slate-300 mb-1.5">
-                    Hardware Recovery Stage
+                    {ticket.category === "Cybersecurity"
+                      ? "SOC Containment & Remediation Stage"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Cloud Architecture & Migration Stage"
+                      : ticket.category === "Managed IT"
+                      ? "Managed IT Service Resolution Stage"
+                      : "Hardware Recovery Stage"}
                   </label>
                   <select
                     value={status}
                     onChange={(e: any) => setStatus(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 font-medium"
                   >
-                    <option>Media Received</option>
-                    <option>Cleanroom Diagnosis</option>
-                    <option>PC-3000 Imaging</option>
-                    <option>Integrity Verification</option>
-                    <option>Resolved</option>
+                    {(() => {
+                      const stages =
+                        ticket.category === "Cybersecurity"
+                          ? [
+                              "Intake & Diagnostics",
+                              "Threat Containment & Analysis",
+                              "Security Forensics",
+                              "Containment & Remediation",
+                              "Policy Hardening",
+                              "Resolved",
+                            ]
+                          : ticket.category === "Cloud Solutions"
+                          ? [
+                              "Intake & Diagnostics",
+                              "Scope Intake & Discovery",
+                              "Cloud Architecture & Security",
+                              "Architecture & Deployment",
+                              "Handover & Audit",
+                              "Resolved",
+                            ]
+                          : ticket.category === "Managed IT"
+                          ? [
+                              "Intake & Diagnostics",
+                              "Technical Assessment",
+                              "Resolution & Rollout",
+                              "Quality Verification",
+                              "Resolved",
+                            ]
+                          : [
+                              "Intake & Diagnostics",
+                              "Media Received",
+                              "Cleanroom Diagnosis",
+                              "PC-3000 Imaging",
+                              "Integrity Verification",
+                              "Resolved",
+                            ];
+
+                      if (status && !stages.includes(status)) {
+                        stages.unshift(status);
+                      }
+
+                      return stages.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ));
+                    })()}
                   </select>
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="font-semibold text-slate-300">
-                      Sector Extraction Progress (% Cloned)
+                      {ticket.category === "Cybersecurity"
+                        ? "Remediation & Hardening Progress (% Remediated)"
+                        : ticket.category === "Cloud Solutions"
+                        ? "Architecture Deployment & Migration (% Deployed)"
+                        : ticket.category === "Managed IT"
+                        ? "Technical Resolution & Deployment (% Resolved)"
+                        : "Sector Extraction Progress (% Cloned)"}
                     </label>
                     <span className="text-sm font-black text-emerald-400">
                       {progress}%
@@ -312,7 +429,7 @@ export default function TechnicianTicketDetailPage({
                     type="range"
                     min="0"
                     max="100"
-                    step="0.1"
+                    step="0.5"
                     value={progress}
                     onChange={(e) => setProgress(parseFloat(e.target.value))}
                     className="w-full h-2 rounded-lg bg-slate-700 accent-indigo-500 cursor-pointer"
@@ -321,26 +438,33 @@ export default function TechnicianTicketDetailPage({
 
                 <div>
                   <label className="block font-semibold text-slate-300 mb-1.5">
-                    Internal Forensic Engineering Log / Donor Head Notes
+                    {ticket.category === "Cybersecurity"
+                      ? "Forensic Threat Analysis / Containment Notes"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Cloud Architecture Deployment & Configuration Log"
+                      : ticket.category === "Managed IT"
+                      ? "Engineering Field Notes / Technical Resolution Summary"
+                      : "Internal Forensic Engineering Log / Donor Head Notes"}
                   </label>
                   <textarea
                     rows={4}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Enter technical observations, forensic logs, or resolution steps..."
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 font-mono text-xs leading-relaxed"
                   />
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-[11px] text-slate-500">
-                    * Client timeline updates live upon save.
+                    * Client timeline &amp; communication thread update live upon save.
                   </span>
                   <button
                     type="submit"
                     disabled={saving}
                     className="rounded-xl bg-indigo-600 px-6 py-2.5 font-bold text-white shadow-md hover:bg-indigo-500 transition disabled:opacity-50"
                   >
-                    {saving ? "Saving Changes..." : "Save Hardware Update →"}
+                    {saving ? "Saving Changes..." : "Save Status & Sync to Client →"}
                   </button>
                 </div>
               </form>
@@ -357,7 +481,7 @@ export default function TechnicianTicketDetailPage({
                   <div className="p-6 text-center text-slate-500 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
                     <p className="font-semibold text-slate-400">No communication logs recorded yet</p>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Use the form below to dispatch an official cleanroom bench update to the customer.
+                      Use the form below to dispatch an official bench update to the customer.
                     </p>
                   </div>
                 ) : (
@@ -390,7 +514,7 @@ export default function TechnicianTicketDetailPage({
                 <textarea
                   rows={3}
                   required
-                  placeholder="Send an official laboratory update to the client..."
+                  placeholder="Send an official laboratory or engineering update to the client..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   className="w-full rounded-2xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 text-xs"
@@ -407,28 +531,44 @@ export default function TechnicianTicketDetailPage({
             </div>
           </div>
 
-          {/* RIGHT: HARDWARE SPECS (5 COLS) */}
+          {/* RIGHT: HARDWARE / TECHNICAL SPECS (5 COLS) */}
           <div className="lg:col-span-5 space-y-6 text-xs">
             <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 backdrop-blur-sm">
               <h3 className="font-bold text-white uppercase tracking-wider text-[11px] mb-4">
-                Media Technical Identity
+                {ticket.category === "Cybersecurity"
+                  ? "Target Infrastructure & Host Identity"
+                  : ticket.category === "Cloud Solutions"
+                  ? "Cloud Tenant & Environment Identity"
+                  : ticket.category === "Managed IT"
+                  ? "Fleet Asset & System Identity"
+                  : "Media Technical Identity"}
               </h3>
 
               <div className="space-y-3 text-slate-300">
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Device:</span>
-                  <span className="font-bold text-white">{ticket.deviceOrSubject}</span>
+                  <span className="text-slate-500">
+                    {ticket.category === "Data Recovery" ? "Device Target:" : "Subject / Scope:"}
+                  </span>
+                  <span className="font-bold text-white text-right">{ticket.deviceOrSubject}</span>
                 </div>
 
                 {ticket.serialNumber && (
                   <div className="flex justify-between border-b border-slate-800 pb-2">
-                    <span className="text-slate-500">Serial Number:</span>
+                    <span className="text-slate-500">
+                      {ticket.category === "Cybersecurity"
+                        ? "Host / Domain:"
+                        : ticket.category === "Cloud Solutions"
+                        ? "Tenant ID:"
+                        : ticket.category === "Managed IT"
+                        ? "Asset Tag:"
+                        : "Serial Number:"}
+                    </span>
                     <span className="font-mono text-emerald-400">{ticket.serialNumber}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Category:</span>
+                  <span className="text-slate-500">Service Category:</span>
                   <span className="font-semibold text-indigo-400">{ticket.category}</span>
                 </div>
 
@@ -438,17 +578,35 @@ export default function TechnicianTicketDetailPage({
                 </div>
 
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Intake Contact:</span>
+                  <span className="text-slate-500">Authorized Contact:</span>
                   <span className="text-white">{ticket.customerName}</span>
                 </div>
 
                 <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Assigned Bench:</span>
-                  <span className="text-indigo-300 font-mono">PC-3000 Flash / SAS Bench 01</span>
+                  <span className="text-slate-500">Assigned Station / Unit:</span>
+                  <span className="text-indigo-300 font-mono">
+                    {ticket.assignedBench && ticket.assignedBench !== "Pending Allocation"
+                      ? ticket.assignedBench
+                      : ticket.category === "Cybersecurity"
+                      ? "SOC Threat Isolation Pod 02"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Cloud Architecture Terminal 01"
+                      : ticket.category === "Managed IT"
+                      ? "Enterprise Fleet Workbench 03"
+                      : "PC-3000 Flash / SAS Bench 01"}
+                  </span>
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block mb-1">Reported Damage / Symptoms:</span>
+                  <span className="text-slate-500 block mb-1">
+                    {ticket.category === "Cybersecurity"
+                      ? "Threat Scope & Incident Indicators:"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Cloud Architecture Requirements:"
+                      : ticket.category === "Managed IT"
+                      ? "Fleet Hardware / Workstation Issues:"
+                      : "Reported Damage / Symptoms:"}
+                  </span>
                   <p className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300 leading-relaxed font-mono text-[11px]">
                     {ticket.symptoms}
                   </p>
@@ -457,9 +615,23 @@ export default function TechnicianTicketDetailPage({
             </div>
 
             <div className="rounded-3xl border border-indigo-500/20 bg-indigo-950/20 p-6 text-xs text-indigo-200">
-              <h4 className="font-bold text-indigo-300 mb-2">Class-5 Clean Bench Protocol</h4>
+              <h4 className="font-bold text-indigo-300 mb-2">
+                {ticket.category === "Cybersecurity"
+                  ? "SOC Rapid Incident Containment Protocol"
+                  : ticket.category === "Cloud Solutions"
+                  ? "Enterprise Cloud Architecture Guardrail"
+                  : ticket.category === "Managed IT"
+                  ? "Managed IT Infrastructure Protocol"
+                  : "Class-5 Clean Bench Protocol"}
+              </h4>
               <p className="text-[11px] leading-relaxed text-indigo-300/80">
-                Ensure grounding wrist strap is attached before unsealing drive top cover. All head transplants require donor slider gap verification under 100x microscope.
+                {ticket.category === "Cybersecurity"
+                  ? "Maintain forensic evidence chain of custody. Isolate affected subnets and preserve volatile RAM captures prior to applying containment scripts."
+                  : ticket.category === "Cloud Solutions"
+                  ? "Enforce least-privilege IAM and zero-trust network boundaries. Verify snapshot rollbacks before commencing tenant cutovers."
+                  : ticket.category === "Managed IT"
+                  ? "Verify configuration change requests against enterprise tickets. Run baseline latency and health tests before final sign-off."
+                  : "Ensure grounding wrist strap is attached before unsealing drive top cover. All head transplants require donor slider gap verification under 100x microscope."}
               </p>
             </div>
           </div>

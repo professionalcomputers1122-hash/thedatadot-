@@ -6,20 +6,34 @@ import AdminLayoutShell from "@/components/AdminLayoutShell";
 import { initialTickets, initialCustomers, fetchTicketsFromSupabase } from "@/lib/portalData";
 
 export default function AdminDashboardPage() {
-  const [tickets, setTickets] = useState(initialTickets);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [customerCount, setCustomerCount] = useState<number>(0);
 
   useEffect(() => {
     async function load() {
       try {
         const live = await fetchTicketsFromSupabase();
-        if (live && live.length > 0) {
-          setTickets(live);
-        }
+        setTickets(live || []);
       } catch (e) {
         console.warn(e);
       }
+
+      try {
+        const res = await fetch("/api/customers");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.customers)) {
+            setCustomerCount(data.customers.length);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed fetching customer count:", e);
+      }
     }
+
     load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -65,7 +79,7 @@ export default function AdminDashboardPage() {
               Client Organizations
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white">{initialCustomers.length}</span>
+              <span className="text-3xl font-black text-white">{customerCount}</span>
               <span className="text-xs text-slate-400 font-semibold">Enterprise</span>
             </div>
             <p className="mt-2 text-[11px] text-slate-500">All contracts in good standing</p>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { fetchBlogPostsFromSupabase } from "@/lib/portalData";
+import { fetchBlogPostsFromSupabase, getDeletedBlogIds } from "@/lib/portalData";
 
 // ================= ARTICLES (PRIMARY 3 MATCHING PANEL 7 EXACTLY) =================
 const primaryArticles = [
@@ -88,13 +88,19 @@ export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [showAllArticles, setShowAllArticles] = useState(false);
   const [liveArticles, setLiveArticles] = useState<any[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    const delSet = getDeletedBlogIds();
+    setDeletedIds(delSet);
+
     async function loadLive() {
       try {
         const posts = await fetchBlogPostsFromSupabase();
         if (posts && posts.length > 0) {
-          const published = posts.filter((p) => p.status === "Published");
+          const published = posts.filter(
+            (p) => p.status === "Published" && !delSet.has(p.id)
+          );
           if (published.length > 0) {
             setLiveArticles(
               published.map((p) => ({
@@ -122,13 +128,20 @@ export default function BlogPage() {
     loadLive();
   }, []);
 
-  const allArticles = liveArticles.length > 0 
-    ? [...liveArticles, ...primaryArticles.filter(p => !liveArticles.some(l => l.id === p.id)), ...additionalArticles]
-    : [...primaryArticles, ...additionalArticles];
+  const visiblePrimary = primaryArticles.filter((p) => !deletedIds.has(p.id));
+  const visibleAdditional = additionalArticles.filter((a) => !deletedIds.has(a.id));
+  const visibleLive = liveArticles.filter((l) => !deletedIds.has(l.id));
 
-  const primaryList = liveArticles.length > 0
-    ? allArticles.slice(0, 3)
-    : primaryArticles;
+  const allArticles =
+    visibleLive.length > 0
+      ? [
+          ...visibleLive,
+          ...visiblePrimary.filter((p) => !visibleLive.some((l) => l.id === p.id)),
+          ...visibleAdditional.filter((a) => !visibleLive.some((l) => l.id === a.id)),
+        ]
+      : [...visiblePrimary, ...visibleAdditional];
+
+  const primaryList = allArticles.slice(0, 3);
 
   const filteredArticles = showAllArticles
     ? allArticles.filter(

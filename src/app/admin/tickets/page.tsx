@@ -12,7 +12,7 @@ import {
 } from "@/lib/portalData";
 
 export default function AdminTicketsPage() {
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [technicians, setTechnicians] = useState(initialTechnicians);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -32,9 +32,7 @@ export default function AdminTicketsPage() {
     async function loadData() {
       try {
         const liveTickets = await fetchTicketsFromSupabase();
-        if (liveTickets && liveTickets.length > 0) {
-          setTickets(liveTickets);
-        }
+        setTickets(liveTickets || []);
       } catch (err) {
         console.warn("Failed to load tickets from Supabase:", err);
       } finally {
@@ -43,25 +41,9 @@ export default function AdminTicketsPage() {
     }
     loadData();
 
-    // Load available technicians from localStorage or fallback to roster
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("tdd_laboratory_technicians");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const cleanTechs = parsed.filter(
-              (t: any) =>
-                !t.name?.toLowerCase().includes("murugan") &&
-                !t.email?.toLowerCase().includes("murugan")
-            );
-            setTechnicians(cleanTechs);
-          }
-        }
-      } catch (e) {
-        console.warn("Failed reading technicians storage:", e);
-      }
-    }
+    // 10-second polling for real-time dispatch updates
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const unassignedCount = tickets.filter(
@@ -90,14 +72,30 @@ export default function AdminTicketsPage() {
         ? ticket.assignedTech
         : firstTech
     );
-    setSelectedStation("PC-3000 Bench 01 (Class-5 Hood)");
+    setSelectedStation(
+      ticket.assignedBench && ticket.assignedBench !== "Pending Allocation"
+        ? ticket.assignedBench
+        : ticket.category === "Cybersecurity"
+        ? "SOC Threat Isolation Station 01"
+        : ticket.category === "Cloud Solutions"
+        ? "Cloud Infrastructure Terminal 01"
+        : ticket.category === "Managed IT"
+        ? "Enterprise Fleet Support Bench 01"
+        : "PC-3000 Bench 01 (Class-5 Hood)"
+    );
     setSelectedStatus(
       (ticket.status as string) === "Intake & Diagnostics"
-        ? "Cleanroom Diagnosis"
+        ? ticket.category === "Cybersecurity"
+          ? "Threat Containment & Analysis"
+          : ticket.category === "Cloud Solutions"
+          ? "Cloud Architecture & Security"
+          : ticket.category === "Managed IT"
+          ? "Technical Assessment"
+          : "Cleanroom Diagnosis"
         : (ticket.status as string)
     );
     setTechDirective(
-      `Case dispatched by Super Admin. Hardware target: ${ticket.deviceOrSubject}. Immediate bench diagnostics authorized.`
+      `Case dispatched by Super Admin. Target: ${ticket.deviceOrSubject}. Immediate triage authorized.`
     );
   };
 
@@ -245,17 +243,37 @@ export default function AdminTicketsPage() {
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
-              💽 Cleanroom
+              💽 Recovery
+            </button>
+            <button
+              onClick={() => setFilter("Cybersecurity")}
+              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+                filter === "Cybersecurity"
+                  ? "bg-rose-600 text-white"
+                  : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+              }`}
+            >
+              🛡️ Cyber
             </button>
             <button
               onClick={() => setFilter("Cloud Solutions")}
               className={`rounded-xl px-3 py-1.5 font-bold transition ${
                 filter === "Cloud Solutions"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-indigo-600 text-white"
                   : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
               }`}
             >
               ☁️ Cloud
+            </button>
+            <button
+              onClick={() => setFilter("Managed IT")}
+              className={`rounded-xl px-3 py-1.5 font-bold transition ${
+                filter === "Managed IT"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+              }`}
+            >
+              🖥️ Managed IT
             </button>
           </div>
         </div>
@@ -438,10 +456,18 @@ export default function AdminTicketsPage() {
                     <option value="Forensic Hex Server Rack 04">
                       Forensic Hex Server Rack 04 (RAID / SAS Reconstruction)
                     </option>
+                    <option value="SOC Threat Isolation Station 01">
+                      SOC Threat Isolation Station 01 (Cybersecurity IR)
+                    </option>
+                    <option value="Cloud Infrastructure Terminal 01">
+                      Cloud Infrastructure Terminal 01 (Cloud Architecture)
+                    </option>
+                    <option value="Enterprise Fleet Support Bench 01">
+                      Enterprise Fleet Support Bench 01 (Managed IT)
+                    </option>
                     <option value="Soldering & Micro-inspection Station">
                       Soldering &amp; Micro-inspection Station
                     </option>
-                    <option value="SOC Terminal 03">SOC Terminal 03 (Cloud &amp; Security)</option>
                   </select>
                 </div>
 
@@ -454,11 +480,17 @@ export default function AdminTicketsPage() {
                     onChange={(e) => setSelectedStatus(e.target.value)}
                     className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-500"
                   >
-                    <option value="Cleanroom Diagnosis">Cleanroom Diagnosis (Bench Inspection)</option>
-                    <option value="PC-3000 Imaging">PC-3000 Imaging (Platter Mirroring)</option>
-                    <option value="Firmware Virtual Translator Rebuild">Firmware / Translator Repair</option>
-                    <option value="Hex Pattern XOR Parity Reconstruction">RAID Parity Reconstruction</option>
-                    <option value="Initial Hardware Intake & Diode Diagnostic">Initial Hardware Intake</option>
+                    <option value="Intake & Diagnostics">Intake &amp; Diagnostics</option>
+                    <option value="Cleanroom Diagnosis">Cleanroom Diagnosis (Data Recovery)</option>
+                    <option value="PC-3000 Imaging">PC-3000 Imaging (Data Recovery)</option>
+                    <option value="Threat Containment & Analysis">Threat Containment &amp; Analysis (Cybersecurity)</option>
+                    <option value="Security Forensics">Security Forensics (Cybersecurity)</option>
+                    <option value="Cloud Architecture & Security">Cloud Architecture &amp; Security (Cloud)</option>
+                    <option value="Architecture & Deployment">Architecture &amp; Deployment (Cloud)</option>
+                    <option value="Technical Assessment">Technical Assessment (Managed IT)</option>
+                    <option value="Resolution & Rollout">Resolution &amp; Rollout (Managed IT)</option>
+                    <option value="Integrity Verification">Integrity Verification</option>
+                    <option value="Resolved">Resolved</option>
                   </select>
                 </div>
 

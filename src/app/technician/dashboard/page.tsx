@@ -16,7 +16,8 @@ interface CaseItem {
   client: string;
   device: string;
   serial: string;
-  mediaType: "HDD" | "SSD" | "RAID" | "FLASH";
+  mediaType: "HDD" | "SSD" | "RAID" | "FLASH" | "NETWORK" | "SERVER" | "GENERAL";
+  category?: string;
   status: string;
   progress: number;
   priority: "CRITICAL" | "HIGH" | "STANDARD";
@@ -146,7 +147,15 @@ export default function TechnicianWorkbenchPage() {
                 client: t.companyName || t.customerName,
                 device: t.deviceOrSubject,
                 serial: t.serialNumber || "N/A",
-                mediaType: (t.deviceOrSubject.toLowerCase().includes("ssd")
+                category: t.category,
+                leadTech: t.assignedTech,
+                mediaType: (t.category === "Cybersecurity"
+                  ? "NETWORK"
+                  : t.category === "Cloud Solutions"
+                  ? "SERVER"
+                  : t.category === "Managed IT"
+                  ? "GENERAL"
+                  : t.deviceOrSubject.toLowerCase().includes("ssd")
                   ? "SSD"
                   : t.deviceOrSubject.toLowerCase().includes("raid")
                   ? "RAID"
@@ -157,8 +166,26 @@ export default function TechnicianWorkbenchPage() {
                 progress: Number(t.clonedPercent) || 0,
                 priority: (t.priority?.toUpperCase() as any) || "STANDARD",
                 notes: t.techNotes || t.symptoms || "",
-                bench: prevMatch?.bench || "PC-3000 Cleanroom Bench A",
-                headsHealth: prevMatch?.headsHealth || "Operational Cleanroom Link",
+                bench:
+                  t.assignedBench && t.assignedBench !== "Pending Allocation"
+                    ? t.assignedBench
+                    : prevMatch?.bench ||
+                      (t.category === "Cybersecurity"
+                        ? "SOC Threat Isolation Station 01"
+                        : t.category === "Cloud Solutions"
+                        ? "Cloud Infrastructure Terminal 01"
+                        : t.category === "Managed IT"
+                        ? "Enterprise Fleet Support Bench 01"
+                        : "PC-3000 Cleanroom Bench A"),
+                headsHealth:
+                  prevMatch?.headsHealth ||
+                  (t.category === "Cybersecurity"
+                    ? "Network Quarantine Link Active"
+                    : t.category === "Cloud Solutions"
+                    ? "IAM Policy & Tenant Enforced"
+                    : t.category === "Managed IT"
+                    ? "Fleet Hardware Health Synced"
+                    : "Operational Cleanroom Link"),
                 badSectorsRemapped: prevMatch?.badSectorsRemapped || 0,
                 temp: prevMatch?.temp || "28.5°C (Stable)",
               };
@@ -170,6 +197,10 @@ export default function TechnicianWorkbenchPage() {
       }
     }
     loadFromSupabase();
+
+    // 10-second polling for real-time dispatch updates
+    const interval = setInterval(loadFromSupabase, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch live chat messages from Supabase when ticket is selected
@@ -235,6 +266,34 @@ export default function TechnicianWorkbenchPage() {
       clonedPercent: newProgress,
       techNotes: newNotes,
     });
+
+    // Broadcast update to customer chat thread
+    const broadcastAuthor =
+      activeCase?.leadTech && activeCase.leadTech !== "Unassigned"
+        ? activeCase.leadTech
+        : "Technical Operations Specialist";
+
+    const progressUnit =
+      activeCase?.category === "Cybersecurity"
+        ? `${newProgress}% Remediated`
+        : activeCase?.category === "Cloud Solutions"
+        ? `${newProgress}% Deployed`
+        : activeCase?.category === "Managed IT"
+        ? `${newProgress}% Resolved`
+        : `${newProgress}% Cloned`;
+
+    try {
+      await sendMessageToSupabase(
+        selectedCaseId,
+        "Technician",
+        broadcastAuthor,
+        `Specialist Status Update: Stage updated to "${newStatus}" • Progress calibrated at ${progressUnit}.${
+          newNotes ? ` Notes: ${newNotes}` : ""
+        }`
+      );
+    } catch (msgErr) {
+      console.warn("Broadcast chat warning:", msgErr);
+    }
 
     setTimeout(() => setNotification(""), 4500);
   };
@@ -465,27 +524,81 @@ export default function TechnicianWorkbenchPage() {
                 <form onSubmit={handleSaveUpdate} className="mt-6 space-y-5 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-300 mb-1.5">
-                      Current Recovery Protocol / Stage
+                      {activeCase?.category === "Cybersecurity"
+                        ? "SOC Threat Containment & Remediation Stage"
+                        : activeCase?.category === "Cloud Solutions"
+                        ? "Cloud Architecture & Migration Stage"
+                        : activeCase?.category === "Managed IT"
+                        ? "Managed IT Service Resolution Stage"
+                        : "Current Recovery Protocol / Stage"}
                     </label>
                     <select
                       value={editStatus || activeCase.status}
                       onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-indigo-500 font-medium"
                     >
-                      <option>Initial Hardware Intake &amp; Diode Diagnostic</option>
-                      <option>ISO Class-5 Cleanroom Donor Head Replacement</option>
-                      <option>PC-3000 Raw Platter Mirrored Extraction</option>
-                      <option>Firmware Virtual Translator Rebuild</option>
-                      <option>Hex Pattern XOR Parity Reconstruction</option>
-                      <option>File System Verification &amp; File Tree Extracted</option>
-                      <option>Completed — Dispatched to Client</option>
+                      {(() => {
+                        const stages =
+                          activeCase?.category === "Cybersecurity"
+                            ? [
+                                "Intake & Diagnostics",
+                                "Threat Containment & Analysis",
+                                "Security Forensics",
+                                "Containment & Remediation",
+                                "Policy Hardening",
+                                "Resolved",
+                              ]
+                            : activeCase?.category === "Cloud Solutions"
+                            ? [
+                                "Intake & Diagnostics",
+                                "Scope Intake & Discovery",
+                                "Cloud Architecture & Security",
+                                "Architecture & Deployment",
+                                "Handover & Audit",
+                                "Resolved",
+                              ]
+                            : activeCase?.category === "Managed IT"
+                            ? [
+                                "Intake & Diagnostics",
+                                "Technical Assessment",
+                                "Resolution & Rollout",
+                                "Quality Verification",
+                                "Resolved",
+                              ]
+                            : [
+                                "Initial Hardware Intake & Diode Diagnostic",
+                                "Cleanroom Diagnosis",
+                                "ISO Class-5 Cleanroom Donor Head Replacement",
+                                "PC-3000 Raw Platter Mirrored Extraction",
+                                "Firmware Virtual Translator Rebuild",
+                                "Hex Pattern XOR Parity Reconstruction",
+                                "Integrity Verification",
+                                "File System Verification & File Tree Extracted",
+                                "Resolved",
+                              ];
+                        const currentVal = editStatus || activeCase.status;
+                        if (currentVal && !stages.includes(currentVal)) {
+                          stages.unshift(currentVal);
+                        }
+                        return stages.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ));
+                      })()}
                     </select>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="font-semibold text-slate-300">
-                        Sector Extraction Progress (% Complete)
+                        {activeCase?.category === "Cybersecurity"
+                          ? "Remediation & Hardening Progress (% Remediated)"
+                          : activeCase?.category === "Cloud Solutions"
+                          ? "Architecture Deployment & Migration (% Deployed)"
+                          : activeCase?.category === "Managed IT"
+                          ? "Technical Resolution & Deployment (% Resolved)"
+                          : "Sector Extraction Progress (% Complete)"}
                       </label>
                       <span className="text-sm font-black text-emerald-400">
                         {editProgress !== undefined && editProgress !== 0 ? editProgress : activeCase.progress}%

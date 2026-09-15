@@ -25,7 +25,6 @@ export default function CustomerTicketsPage() {
     const activeCust = cust;
     const userEmail = activeCust.email.toLowerCase();
     const userCompany = activeCust.company.toLowerCase();
-    const userName = activeCust.name.toLowerCase();
 
     async function load() {
       try {
@@ -51,12 +50,17 @@ export default function CustomerTicketsPage() {
       }
     }
     load();
-  }, []);
+
+    // 10-second polling for real-time technician telemetry & assignment propagation
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   const filtered = tickets.filter((t) => {
     const matchesSearch =
       t.id.toLowerCase().includes(search.toLowerCase()) ||
-      t.deviceOrSubject.toLowerCase().includes(search.toLowerCase());
+      t.deviceOrSubject.toLowerCase().includes(search.toLowerCase()) ||
+      (t.serialNumber && t.serialNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
     const matchesStatus =
       statusFilter === "ALL" ||
@@ -64,6 +68,49 @@ export default function CustomerTicketsPage() {
       (statusFilter === "RESOLVED" && t.status === "Resolved");
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat) {
+      case "Cybersecurity":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200">
+            <span>🛡️</span> Cybersecurity
+          </span>
+        );
+      case "Cloud Solutions":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 border border-indigo-200">
+            <span>☁️</span> Cloud Solutions
+          </span>
+        );
+      case "Managed IT":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+            <span>🖥️</span> Managed IT
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200">
+            <span>💽</span> Data Recovery
+          </span>
+        );
+    }
+  };
+
+  const getProgressLabel = (t: Ticket) => {
+    const pct = t.clonedPercent || 0;
+    if (t.category === "Cybersecurity") {
+      return `${pct}% Remediated`;
+    }
+    if (t.category === "Cloud Solutions") {
+      return `${pct}% Deployed`;
+    }
+    if (t.category === "Managed IT") {
+      return `${pct}% Resolved`;
+    }
+    return `${pct}% Cloned`;
+  };
 
   return (
     <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
@@ -74,10 +121,10 @@ export default function CustomerTicketsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-              Support &amp; Data Recovery Tickets
+              Enterprise Support &amp; Recovery Tickets
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Monitor cleanroom recovery progress and enterprise cloud tickets
+              Live telemetry for Data Recovery, Cybersecurity, Cloud Infrastructure, and Managed IT
             </p>
           </div>
 
@@ -94,7 +141,7 @@ export default function CustomerTicketsPage() {
           <div className="w-full sm:w-80">
             <input
               type="text"
-              placeholder="Search by Ticket ID, drive model, serial..."
+              placeholder="Search Ticket ID, hardware target, domain..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2 text-xs outline-none focus:border-blue-500 focus:bg-white"
@@ -120,7 +167,17 @@ export default function CustomerTicketsPage() {
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
-              💽 Data Recovery
+              💽 Recovery
+            </button>
+            <button
+              onClick={() => setCategoryFilter("Cybersecurity")}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                categoryFilter === "Cybersecurity"
+                  ? "bg-rose-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              🛡️ Cyber
             </button>
             <button
               onClick={() => setCategoryFilter("Cloud Solutions")}
@@ -132,82 +189,127 @@ export default function CustomerTicketsPage() {
             >
               ☁️ Cloud
             </button>
+            <button
+              onClick={() => setCategoryFilter("Managed IT")}
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                categoryFilter === "Managed IT"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              🖥️ Managed IT
+            </button>
           </div>
         </div>
 
         {/* TICKETS TABLE */}
         <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-3.5">Ticket ID</th>
-                  <th className="px-5 py-3.5">Service Category</th>
-                  <th className="px-5 py-3.5">Hardware / Subject</th>
-                  <th className="px-5 py-3.5">Urgency</th>
-                  <th className="px-5 py-3.5">Current Status</th>
-                  <th className="px-5 py-3.5">Lead Tech</th>
-                  <th className="px-5 py-3.5 text-right">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50/60 transition">
-                    <td className="px-5 py-4 font-bold text-blue-600">
-                      #{t.id}
-                    </td>
-                    <td className="px-5 py-4 font-semibold text-slate-900">
-                      {t.category}
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-slate-900">{t.deviceOrSubject}</p>
-                      {t.serialNumber && (
-                        <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
-                          SN: {t.serialNumber}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                          t.priority === "CRITICAL"
-                            ? "bg-red-100 text-red-800"
-                            : t.priority === "HIGH"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                          t.status === "Resolved"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {t.status} {t.clonedPercent ? `(${t.clonedPercent}%)` : ""}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600 font-medium">
-                      {t.assignedTech}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <Link
-                        href={`/customer/tickets/${t.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-blue-600 hover:bg-blue-50 transition"
-                      >
-                        <span>View</span>
-                        <span>→</span>
-                      </Link>
-                    </td>
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-3" />
+              <p className="text-xs text-slate-400 font-mono">Synchronizing live portal tickets...</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">
+              <p className="font-semibold text-slate-700">No tickets found</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {search ? "No cases match your search criteria." : "You have no active support tickets in this view."}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="px-5 py-3.5">Ticket ID</th>
+                    <th className="px-5 py-3.5">Service Category</th>
+                    <th className="px-5 py-3.5">Target / Subject</th>
+                    <th className="px-5 py-3.5">Urgency</th>
+                    <th className="px-5 py-3.5">Current Status</th>
+                    <th className="px-5 py-3.5">Lead Specialist</th>
+                    <th className="px-5 py-3.5 text-right">Details</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((t) => {
+                    const isUnassigned =
+                      !t.assignedTech ||
+                      t.assignedTech === "Unassigned" ||
+                      t.assignedTech.toLowerCase().includes("unassigned");
+
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-50/60 transition">
+                        <td className="px-5 py-4 font-bold text-blue-600">
+                          #{t.id}
+                        </td>
+                        <td className="px-5 py-4">
+                          {getCategoryBadge(t.category)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-bold text-slate-900">{t.deviceOrSubject}</p>
+                          {t.serialNumber && (
+                            <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
+                              ID: {t.serialNumber}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                              t.priority === "CRITICAL"
+                                ? "bg-red-100 text-red-800"
+                                : t.priority === "HIGH"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`inline-block w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                t.status === "Resolved"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-blue-100 text-blue-800"
+                              }`}
+                            >
+                              {t.status}
+                            </span>
+                            {Number(t.clonedPercent) > 0 && (
+                              <span className="text-[10px] font-semibold text-emerald-600">
+                                {getProgressLabel(t)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          {isUnassigned ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              Pending Dispatch
+                            </span>
+                          ) : (
+                            <span className="text-slate-800 font-medium">{t.assignedTech}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <Link
+                            href={`/customer/tickets/${t.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-blue-600 hover:bg-blue-50 transition"
+                          >
+                            <span>View</span>
+                            <span>→</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
 

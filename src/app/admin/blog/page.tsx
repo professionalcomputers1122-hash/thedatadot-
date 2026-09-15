@@ -7,6 +7,8 @@ import AdminLayoutShell from "@/components/AdminLayoutShell";
 import {
   fetchBlogPostsFromSupabase,
   createOrUpdateBlogPostInSupabase,
+  deleteBlogPostFromSupabase,
+  getDeletedBlogIds,
 } from "@/lib/portalData";
 
 interface BlogPost {
@@ -21,53 +23,55 @@ interface BlogPost {
   content?: string;
 }
 
+const DEFAULT_ARTICLES: BlogPost[] = [
+  {
+    id: "cybersecurity-tips",
+    title: "10 Cybersecurity Tips for Small Businesses",
+    category: "Cybersecurity",
+    date: "Sep 10, 2026",
+    readTime: "5 min read",
+    status: "Published",
+    coverImage: "/images/blog/cybersecurity-tips.jpg",
+    excerpt: "Practical defense tactics to protect workstations, credentials, and customer data.",
+    content: "Small businesses are currently the prime target for automated ransomware attacks. Implementing multi-factor authentication (MFA) and DNS filtering alone reduces threat vulnerability by over 80%. In this comprehensive guide, our cybersecurity engineers walk through the top 10 defense protocols.",
+  },
+  {
+    id: "cloud-solutions-benefits",
+    title: "The Benefits of Cloud Solutions for Growing Companies",
+    category: "Cloud Solutions",
+    date: "Sep 05, 2026",
+    readTime: "4 min read",
+    status: "Published",
+    coverImage: "/images/blog/cloud-solutions.jpg",
+    excerpt: "How modern cloud infrastructure and Microsoft 365 eliminate server headaches.",
+    content: "Migrating from on-premise legacy towers to hybrid cloud infrastructure reduces operational maintenance overhead by 45%. Learn how Microsoft Azure and 365 deliver scalable uptime.",
+  },
+  {
+    id: "choose-it-partner",
+    title: "How to Choose the Right IT Support Partner",
+    category: "Managed IT",
+    date: "Aug 28, 2026",
+    readTime: "6 min read",
+    status: "Published",
+    coverImage: "/images/blog/it-partner.jpg",
+    excerpt: "The critical criteria to evaluate: response SLAs and flat-rate billing.",
+    content: "When evaluating managed service providers (MSPs), always scrutinize contractual response time guarantees. An IT partner should offer transparent flat-rate agreements with zero surprise hourly overages.",
+  },
+  {
+    id: "cleanroom-recovery-guide",
+    title: "Inside an ISO Class-5 Cleanroom: Platter Swaps & PC-3000 Telemetry",
+    category: "Data Recovery",
+    date: "Draft",
+    readTime: "7 min read",
+    status: "Draft",
+    coverImage: "/images/blog/cybersecurity-tips.jpg",
+    excerpt: "A deep dive into donor head calibration and PC-3000 mirror imaging.",
+    content: "Exposing sensitive hard drive platters to open air causes catastrophic head crashes. Learn how laminar airflow filtration eliminates airborne dust particles down to 0.5 microns.",
+  },
+];
+
 export default function AdminBlogPage() {
-  const [articles, setArticles] = useState<BlogPost[]>([
-    {
-      id: "cybersecurity-tips",
-      title: "10 Cybersecurity Tips for Small Businesses",
-      category: "Cybersecurity",
-      date: "Sep 10, 2026",
-      readTime: "5 min read",
-      status: "Published",
-      coverImage: "/images/blog/cybersecurity-tips.jpg",
-      excerpt: "Practical defense tactics to protect workstations, credentials, and customer data.",
-      content: "Small businesses are currently the prime target for automated ransomware attacks. Implementing multi-factor authentication (MFA) and DNS filtering alone reduces threat vulnerability by over 80%. In this comprehensive guide, our cybersecurity engineers walk through the top 10 defense protocols.",
-    },
-    {
-      id: "cloud-solutions-benefits",
-      title: "The Benefits of Cloud Solutions for Growing Companies",
-      category: "Cloud Solutions",
-      date: "Sep 05, 2026",
-      readTime: "4 min read",
-      status: "Published",
-      coverImage: "/images/blog/cloud-solutions.jpg",
-      excerpt: "How modern cloud infrastructure and Microsoft 365 eliminate server headaches.",
-      content: "Migrating from on-premise legacy towers to hybrid cloud infrastructure reduces operational maintenance overhead by 45%. Learn how Microsoft Azure and 365 deliver scalable uptime.",
-    },
-    {
-      id: "choose-it-partner",
-      title: "How to Choose the Right IT Support Partner",
-      category: "Managed IT",
-      date: "Aug 28, 2026",
-      readTime: "6 min read",
-      status: "Published",
-      coverImage: "/images/blog/it-partner.jpg",
-      excerpt: "The critical criteria to evaluate: response SLAs and flat-rate billing.",
-      content: "When evaluating managed service providers (MSPs), always scrutinize contractual response time guarantees. An IT partner should offer transparent flat-rate agreements with zero surprise hourly overages.",
-    },
-    {
-      id: "cleanroom-recovery-guide",
-      title: "Inside an ISO Class-5 Cleanroom: Platter Swaps & PC-3000 Telemetry",
-      category: "Data Recovery",
-      date: "Draft",
-      readTime: "7 min read",
-      status: "Draft",
-      coverImage: "/images/blog/cybersecurity-tips.jpg",
-      excerpt: "A deep dive into donor head calibration and PC-3000 mirror imaging.",
-      content: "Exposing sensitive hard drive platters to open air causes catastrophic head crashes. Learn how laminar airflow filtration eliminates airborne dust particles down to 0.5 microns.",
-    },
-  ]);
+  const [articles, setArticles] = useState<BlogPost[]>([]);
 
   const [filter, setFilter] = useState<"All" | "Published" | "Draft">("All");
   const [search, setSearch] = useState("");
@@ -89,11 +93,13 @@ export default function AdminBlogPage() {
   // Sync live blog posts from Supabase on mount
   useEffect(() => {
     async function loadLivePosts() {
+      const deletedIds = getDeletedBlogIds();
       try {
         const livePosts = await fetchBlogPostsFromSupabase();
         if (livePosts && livePosts.length > 0) {
+          const visible = livePosts.filter((p) => !deletedIds.has(p.id));
           setArticles(
-            livePosts.map((p) => ({
+            visible.map((p) => ({
               id: p.id,
               title: p.title,
               category: p.category,
@@ -111,9 +117,13 @@ export default function AdminBlogPage() {
               content: p.content,
             }))
           );
+        } else {
+          // Fallback to defaults excluding deleted
+          setArticles(DEFAULT_ARTICLES.filter((a) => !deletedIds.has(a.id)));
         }
       } catch (err) {
         console.error("Failed to load blog posts from Supabase:", err);
+        setArticles(DEFAULT_ARTICLES.filter((a) => !deletedIds.has(a.id)));
       }
     }
     loadLivePosts();
@@ -250,11 +260,12 @@ export default function AdminBlogPage() {
     setTimeout(() => setNotification(""), 4000);
   };
 
-  const handleDelete = (id: string, postTitle: string) => {
-    if (confirm(`Are you sure you want to delete "${postTitle}"?`)) {
-      setArticles(articles.filter((a) => a.id !== id));
-      setNotification(`Deleted article "${postTitle}".`);
-      setTimeout(() => setNotification(""), 4000);
+  const handleDelete = async (id: string, postTitle: string) => {
+    if (confirm(`Are you sure you want to permanently delete "${postTitle}"?\n\nThis will remove it from the live public blog (/blog) immediately.`)) {
+      setArticles((prev) => prev.filter((a) => a.id !== id));
+      await deleteBlogPostFromSupabase(id, postTitle);
+      setNotification(`✓ Deleted article "${postTitle}" from CMS & live site.`);
+      setTimeout(() => setNotification(""), 5000);
     }
   };
 

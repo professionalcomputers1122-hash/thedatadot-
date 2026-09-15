@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
-import { initialCustomers } from "@/lib/portalData";
-import { registerCustomerAccount, deleteCustomerAccount } from "@/lib/clientAuth";
+import { registerCustomerAccount, deleteCustomerAccount, getDeletedEmails } from "@/lib/clientAuth";
 
 interface CustomerRecord {
   id: string;
@@ -19,11 +18,11 @@ interface CustomerRecord {
 }
 
 export default function AdminCustomersPage() {
-  const [customers, setCustomers] = useState<CustomerRecord[]>(initialCustomers);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [notification, setNotification] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -46,25 +45,28 @@ export default function AdminCustomersPage() {
   useEffect(() => {
     async function loadCustomers() {
       setLoading(true);
+      const deletedSet = getDeletedEmails();
       try {
         const res = await fetch("/api/customers");
         const json = await res.json();
-        if (json?.success && Array.isArray(json.customers) && json.customers.length > 0) {
-          const formatted: CustomerRecord[] = json.customers.map((c: any) => ({
-            id: c.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-            name: c.name || "Client Executive",
-            company: c.company || "Enterprise Client",
-            email: c.email,
-            phone: c.phone || "+91 6380488373",
-            sla: c.slaTier || c.sla || "Enterprise 15-Min 24/7 SLA",
-            password: c.password,
-            activeTickets: c.activeTickets || 0,
-            status: c.status || "Active",
-          }));
+        if (json?.success && Array.isArray(json.customers)) {
+          const formatted: CustomerRecord[] = json.customers
+            .filter((c: any) => c.email && !deletedSet.has(c.email.toLowerCase().trim()))
+            .map((c: any) => ({
+              id: c.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+              name: c.name || "Client Executive",
+              company: c.company || "Enterprise Client",
+              email: c.email,
+              phone: c.phone || "+91 6380488373",
+              sla: c.slaTier || c.sla || "Enterprise 15-Min 24/7 SLA",
+              password: c.password,
+              activeTickets: c.activeTickets || 0,
+              status: c.status || "Active",
+            }));
           setCustomers(formatted);
         }
       } catch (err) {
-        console.warn("Using default fallback customers:", err);
+        console.warn("API load error, falling back to local storage:", err);
       } finally {
         setLoading(false);
       }

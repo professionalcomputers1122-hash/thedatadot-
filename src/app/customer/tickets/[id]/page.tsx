@@ -10,6 +10,7 @@ import {
   fetchTicketsFromSupabase,
   fetchMessagesFromSupabase,
   sendMessageToSupabase,
+  parseTicketRow,
 } from "@/lib/portalData";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 
@@ -37,6 +38,7 @@ export default function CustomerTicketDetailPage({
   const [messages, setMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Sync ticket details and perform authorization boundary check
   useEffect(() => {
@@ -50,17 +52,37 @@ export default function CustomerTicketDetailPage({
     const activeCust = currentCustomer;
     const custEmail = activeCust.email.toLowerCase();
     const custCompany = activeCust.company.toLowerCase();
-    const custName = activeCust.name.toLowerCase();
 
-    async function loadData() {
-      setLoading(true);
+    async function loadData(silent: boolean = false) {
+      if (!silent) setLoading(true);
+      else setIsSyncing(true);
+
       try {
-        const liveTickets = await fetchTicketsFromSupabase();
-        let found = liveTickets.find(
-          (t) => t.id.toLowerCase() === ticketId.toLowerCase()
-        );
+        let found: any = null;
 
+        // 1. Direct single-ticket endpoint fetch for instant live telemetry
+        try {
+          const res = await fetch(`/api/tickets/${ticketId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.ticket) {
+              found = parseTicketRow(data.ticket);
+            }
+          }
+        } catch (apiErr) {
+          console.warn("Direct ticket API fetch warn:", apiErr);
+        }
+
+        // 2. Fallback to list query
         if (!found) {
+          const liveTickets = await fetchTicketsFromSupabase();
+          found = liveTickets.find(
+            (t) => t.id.toLowerCase() === ticketId.toLowerCase()
+          );
+        }
+
+        // 3. Fallback to initialTickets only for demo account Aravind
+        if (!found && ticketId.toUpperCase() === "TDD-8942") {
           found = initialTickets.find(
             (t) => t.id.toLowerCase() === ticketId.toLowerCase()
           );
@@ -69,6 +91,7 @@ export default function CustomerTicketDetailPage({
         if (!found) {
           setIsNotFound(true);
           setLoading(false);
+          setIsSyncing(false);
           return;
         }
 
@@ -84,6 +107,7 @@ export default function CustomerTicketDetailPage({
           );
           setIsUnauthorized(true);
           setLoading(false);
+          setIsSyncing(false);
           return;
         }
 
@@ -106,7 +130,7 @@ export default function CustomerTicketDetailPage({
             }))
           );
         } else if (ticketId.toUpperCase() === "TDD-8942") {
-          // Dr. Aravind Swaminathan's demo seed ticket ONLY
+          // Dr. Aravind demo ticket ONLY
           setMessages([
             {
               sender: "Customer",
@@ -134,7 +158,7 @@ export default function CustomerTicketDetailPage({
             },
           ]);
         } else {
-          // For all other client tickets: synthesize clean intake notes from THIS specific ticket
+          // For all other tickets: synthesize clean intake notes from THIS specific ticket
           const thread: Message[] = [];
           if (found.symptoms) {
             thread.push({
@@ -147,7 +171,10 @@ export default function CustomerTicketDetailPage({
           if (found.techNotes) {
             thread.push({
               sender: "Technician",
-              author: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Triage & Intake Desk",
+              author:
+                found.assignedTech && found.assignedTech !== "Unassigned"
+                  ? found.assignedTech
+                  : "Triage & Intake Desk",
               time: "Cleanroom Intake",
               text: found.techNotes,
             });
@@ -158,10 +185,15 @@ export default function CustomerTicketDetailPage({
         console.error("Failed to load live Supabase ticket:", err);
       } finally {
         setLoading(false);
+        setIsSyncing(false);
       }
     }
 
     loadData();
+
+    // Auto-poll live ticket telemetry from technician every 10 seconds
+    const interval = setInterval(() => loadData(true), 10000);
+    return () => clearInterval(interval);
   }, [ticketId, router]);
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -291,10 +323,19 @@ export default function CustomerTicketDetailPage({
             >
               ← Back to Tickets List
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-slate-950">
                 Ticket #{ticket.id}
               </h1>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-0.5 text-xs font-bold text-slate-800">
+                {ticket.category === "Cybersecurity"
+                  ? "🛡️ Cybersecurity"
+                  : ticket.category === "Cloud Solutions"
+                  ? "☁️ Cloud Solutions"
+                  : ticket.category === "Managed IT"
+                  ? "🖥️ Managed IT"
+                  : "💽 Data Recovery"}
+              </span>
               <span
                 className={`rounded-full px-3 py-0.5 text-xs font-extrabold ${
                   ticket.status === "Resolved"
@@ -302,7 +343,7 @@ export default function CustomerTicketDetailPage({
                     : "bg-blue-100 text-blue-800"
                 }`}
               >
-                {ticket.status} {ticket.clonedPercent ? `(${ticket.clonedPercent}%)` : ""}
+                {ticket.status} {ticket.clonedPercent && ticket.clonedPercent > 0 ? `(${ticket.clonedPercent}%)` : ""}
               </span>
               <span className="rounded-full bg-red-100 text-red-800 px-2.5 py-0.5 text-[10px] font-bold">
                 {ticket.priority} SLA
@@ -310,32 +351,76 @@ export default function CustomerTicketDetailPage({
             </div>
           </div>
 
-          <a
-            href="tel:+916380488373"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-xs"
-          >
-            📞 Call Lab Hotline: +91 6380488373
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const activeCust = customer;
+                if (!activeCust) return;
+                // Trigger manual sync
+                fetch(`/api/tickets/${ticket.id}`)
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d?.ticket) setTicket(parseTicketRow(d.ticket));
+                  })
+                  .catch(() => {});
+              }}
+              disabled={isSyncing}
+              className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-xs flex items-center gap-1.5"
+              title="Sync live status and technician progress score"
+            >
+              <span className={isSyncing ? "animate-spin" : ""}>⚡</span>
+              <span>{isSyncing ? "Syncing..." : "Sync Live Status"}</span>
+            </button>
+
+            <a
+              href="tel:+916380488373"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-xs"
+            >
+              📞 Hotline: +91 6380488373
+            </a>
+          </div>
         </div>
 
         {/* TICKET DETAILS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* LEFT: HARDWARE & STATUS (2 COLS) */}
+          {/* LEFT: TARGET & STATUS (2 COLS) */}
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">
-                Hardware Target &amp; Failure Analysis
+                {ticket.category === "Cybersecurity"
+                  ? "Security Incident & Threat Profile"
+                  : ticket.category === "Cloud Solutions"
+                  ? "Cloud Infrastructure & Scope Analysis"
+                  : ticket.category === "Managed IT"
+                  ? "Systems Specification & Issue Analysis"
+                  : "Hardware Target & Failure Analysis"}
               </h2>
 
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
-                  <span className="text-slate-500 font-medium">Device:</span>
+                  <span className="text-slate-500 font-medium">
+                    {ticket.category === "Cybersecurity"
+                      ? "Target Host / IP:"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Target Cloud Platform:"
+                      : ticket.category === "Managed IT"
+                      ? "Equipment / Fleet Target:"
+                      : "Device Make & Model:"}
+                  </span>
                   <span className="font-bold text-slate-950">{ticket.deviceOrSubject}</span>
                 </div>
 
                 {ticket.serialNumber && (
                   <div className="flex justify-between border-b border-slate-100 pb-2.5">
-                    <span className="text-slate-500 font-medium">Serial Number:</span>
+                    <span className="text-slate-500 font-medium">
+                      {ticket.category === "Cybersecurity"
+                        ? "Host / Segment ID:"
+                        : ticket.category === "Cloud Solutions"
+                        ? "Tenant ID / Domain:"
+                        : ticket.category === "Managed IT"
+                        ? "Asset Tag / Location:"
+                        : "Serial Number:"}
+                    </span>
                     <span className="font-mono font-bold text-slate-900">{ticket.serialNumber}</span>
                   </div>
                 )}
@@ -346,12 +431,34 @@ export default function CustomerTicketDetailPage({
                 </div>
 
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
-                  <span className="text-slate-500 font-medium">Extracted Data Volume:</span>
-                  <span className="font-bold text-emerald-600">{ticket.recoveredSize || `${ticket.clonedPercent || 0}% cloned`}</span>
+                  <span className="text-slate-500 font-medium">
+                    {ticket.category === "Cybersecurity"
+                      ? "Threat Remediation Progress:"
+                      : ticket.category === "Cloud Solutions"
+                      ? "Deployment Progress:"
+                      : ticket.category === "Managed IT"
+                      ? "Resolution Progress:"
+                      : "Extracted Data Volume:"}
+                  </span>
+                  <span className="font-bold text-emerald-600">
+                    {ticket.clonedPercent && ticket.clonedPercent > 0
+                      ? ticket.category === "Cybersecurity"
+                        ? `${ticket.clonedPercent}% Remediated`
+                        : ticket.category === "Data Recovery"
+                        ? `${ticket.clonedPercent}% Cloned`
+                        : `${ticket.clonedPercent}% Deployed`
+                      : "Awaiting Bench Diagnostics (Intake Phase)"}
+                  </span>
                 </div>
 
                 <div>
-                  <span className="text-slate-500 font-medium block mb-1">Reported Symptoms:</span>
+                  <span className="text-slate-500 font-medium block mb-1">
+                    {ticket.category === "Cybersecurity"
+                      ? "Reported Threat Indicators:"
+                      : ticket.category === "Cloud Solutions" || ticket.category === "Managed IT"
+                      ? "Requirements & Scope:"
+                      : "Reported Symptoms:"}
+                  </span>
                   <p className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 leading-relaxed">
                     {ticket.symptoms}
                   </p>
@@ -359,7 +466,13 @@ export default function CustomerTicketDetailPage({
 
                 {ticket.techNotes && (
                   <div>
-                    <span className="text-slate-500 font-medium block mb-1">Forensic Lab Findings:</span>
+                    <span className="text-slate-500 font-medium block mb-1">
+                      {ticket.category === "Cybersecurity"
+                        ? "SOC Cyber Findings & Directives:"
+                        : ticket.category === "Cloud Solutions" || ticket.category === "Managed IT"
+                        ? "Systems Engineering Directives:"
+                        : "Forensic Lab Findings:"}
+                    </span>
                     <p className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 leading-relaxed font-mono text-[11px]">
                       {ticket.techNotes}
                     </p>
@@ -371,7 +484,13 @@ export default function CustomerTicketDetailPage({
             {/* INTERACTIVE MESSAGE THREAD */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">
-                Direct Communication Thread with Forensic Engineer
+                {ticket.category === "Cybersecurity"
+                  ? "Direct Communication Thread with Security Lead"
+                  : ticket.category === "Cloud Solutions"
+                  ? "Direct Communication Thread with Cloud Architect"
+                  : ticket.category === "Managed IT"
+                  ? "Direct Communication Thread with Systems Engineer"
+                  : "Direct Communication Thread with Forensic Engineer"}
               </h2>
 
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-1 text-xs">
@@ -379,7 +498,7 @@ export default function CustomerTicketDetailPage({
                   <div className="p-6 text-center text-slate-400 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
                     <p className="font-semibold text-slate-600">No chat messages in this case yet</p>
                     <p className="mt-1 text-[11px] text-slate-400">
-                      Send a message below to communicate directly with your assigned cleanroom technician.
+                      Send a message below to communicate directly with your assigned specialist.
                     </p>
                   </div>
                 ) : (
@@ -396,7 +515,13 @@ export default function CustomerTicketDetailPage({
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="font-bold text-[11px]">
-                            {isTech ? "🔬 " : "👤 "}
+                            {isTech
+                              ? ticket.category === "Cybersecurity"
+                                ? "🛡️ "
+                                : ticket.category === "Cloud Solutions"
+                                ? "☁️ "
+                                : "🔬 "
+                              : "👤 "}
                             {m.author}
                           </span>
                           <span className="text-[10px] text-slate-400">{m.time}</span>
@@ -413,7 +538,7 @@ export default function CustomerTicketDetailPage({
                 <textarea
                   rows={3}
                   required
-                  placeholder="Type a message or inquiry to your assigned technician..."
+                  placeholder="Type a message or inquiry to your assigned specialist..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   className="w-full rounded-2xl border border-slate-300 p-3 text-xs outline-none focus:border-blue-600"
@@ -424,18 +549,24 @@ export default function CustomerTicketDetailPage({
                     disabled={sending}
                     className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition disabled:opacity-50"
                   >
-                    {sending ? "Sending..." : "Send Reply to Lab →"}
+                    {sending ? "Sending..." : "Send Reply to Engineering →"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
 
-          {/* RIGHT: ENGINEER & TIMELINE (1 COL) */}
+          {/* RIGHT: SPECIALIST & SERVICE LEVEL (1 COL) */}
           <div className="space-y-6">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-xs">
               <h3 className="font-bold text-slate-950 uppercase tracking-wider text-[11px] mb-3">
-                Assigned Forensic Staff
+                {ticket.category === "Cybersecurity"
+                  ? "Assigned Security Lead"
+                  : ticket.category === "Cloud Solutions"
+                  ? "Assigned Cloud Architect"
+                  : ticket.category === "Managed IT"
+                  ? "Assigned Systems Lead"
+                  : "Assigned Forensic Staff"}
               </h3>
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-600 font-bold flex items-center justify-center text-sm border border-blue-200">
@@ -447,12 +578,18 @@ export default function CustomerTicketDetailPage({
                   <p className="font-bold text-slate-900">
                     {ticket.assignedTech && ticket.assignedTech !== "Unassigned"
                       ? ticket.assignedTech
-                      : "Pending Technician Dispatch"}
+                      : "Pending Specialist Dispatch"}
                   </p>
                   <span className="text-slate-500 text-[11px]">
                     {ticket.assignedTech && ticket.assignedTech !== "Unassigned"
-                      ? "Assigned Laboratory Bench"
-                      : "Triage & Allocation Queue"}
+                      ? ticket.category === "Cybersecurity"
+                        ? "SOC Operations Center"
+                        : ticket.category === "Cloud Solutions"
+                        ? "Cloud Architecture Desk"
+                        : ticket.category === "Managed IT"
+                        ? "Managed Infrastructure Hub"
+                        : "Class-5 Cleanroom Bench"
+                      : "Super Admin Triage Queue"}
                   </span>
                 </div>
               </div>
@@ -467,7 +604,11 @@ export default function CustomerTicketDetailPage({
             <div className="rounded-3xl border border-blue-200 bg-blue-50/60 p-6 text-xs text-blue-950">
               <h4 className="font-bold text-blue-900 mb-1">Guaranteed Service Standard</h4>
               <p className="text-[11px] leading-relaxed text-blue-800">
-                All data recovery tickets at The Data Dot are backed by our strict <strong>No Data, No Recovery Fee</strong> guarantee. You only pay if files are 100% verified.
+                {ticket.category === "Data Recovery"
+                  ? "All data recovery tickets at The Data Dot are backed by our strict No Data, No Recovery Fee guarantee. You only pay if files are 100% verified."
+                  : ticket.category === "Cybersecurity"
+                  ? "All incident responses are executed in accordance with ISO 27001 zero-trust containment protocols with contractual non-disclosure assurance."
+                  : "All cloud and infrastructure deployments are backed by our 99.99% enterprise uptime commitment and 15-minute response SLA."}
               </p>
             </div>
           </div>

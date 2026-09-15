@@ -9,6 +9,17 @@ export async function GET(req: Request) {
     const includeDrafts = searchParams.get("includeDrafts") === "true" || status === "all";
 
     const supabase = createAdminClient();
+
+    // Query audit logs to identify explicitly deleted articles
+    const { data: delLogs } = await supabase
+      .from("audit_logs")
+      .select("target")
+      .eq("action", "DELETE_BLOG_POST");
+
+    const deletedIds = new Set<string>(
+      (delLogs || []).map((d: any) => (d.target || "").trim())
+    );
+
     let query = supabase
       .from("blog_posts")
       .select("*")
@@ -31,10 +42,13 @@ export async function GET(req: Request) {
       );
     }
 
+    const filtered = (data || []).filter((p: any) => !deletedIds.has(p.id));
+
     return NextResponse.json({
       success: true,
-      count: data?.length || 0,
-      posts: data || [],
+      count: filtered.length,
+      posts: filtered,
+      deletedIds: Array.from(deletedIds),
     });
   } catch (err: any) {
     console.error("[API /api/blog GET exception]:", err);
@@ -99,6 +113,58 @@ export async function POST(req: Request) {
     console.error("[API /api/blog POST exception]:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const title = searchParams.get("title") || id || "Blog Article";
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Blog post ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createAdminClient();
+
+    // 1. Delete from blog_posts table
+    await supabase.from("blog_posts").delete().eq("id", id);
+
+    // 2. Insert into audit_logs so it remains permanently deleted
+    try {
+      await supabase.from("audit_logs").insert([
+        {
+          id: `LOG-BLOG-DEL-${Date.now().toString(36).toUpperCase()}`,
+          actor: "Super Admin",
+          action: "DELETE_BLOG_POST",
+          target: id,
+          ip: clientIp,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (auditErr) {
+      console.warn("Audit log insert error for blog delete:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Blog post "${title}" (${id}) permanently deleted.`,
+    });
+  } catch (err: any) {
+    console.error("[API /api/blog DELETE exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to delete blog post" },
       { status: 500 }
     );
   }

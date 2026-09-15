@@ -357,7 +357,7 @@ export default function TechnicianTicketDetailPage({
                         ticket.category === "Cybersecurity"
                           ? [
                               "Intake & Diagnostics",
-                              "Threat Containment & Analysis",
+                              "Threat Intake & Triage",
                               "Security Forensics",
                               "Containment & Remediation",
                               "Policy Hardening",
@@ -367,14 +367,15 @@ export default function TechnicianTicketDetailPage({
                           ? [
                               "Intake & Diagnostics",
                               "Scope Intake & Discovery",
-                              "Cloud Architecture & Security",
-                              "Architecture & Deployment",
+                              "Cloud Architecture",
+                              "Deployment & Migration",
                               "Handover & Audit",
                               "Resolved",
                             ]
                           : ticket.category === "Managed IT"
                           ? [
                               "Intake & Diagnostics",
+                              "Service Intake & Triage",
                               "Technical Assessment",
                               "Resolution & Rollout",
                               "Quality Verification",
@@ -384,8 +385,9 @@ export default function TechnicianTicketDetailPage({
                               "Intake & Diagnostics",
                               "Media Received",
                               "Cleanroom Diagnosis",
-                              "PC-3000 Imaging",
-                              "Integrity Verification",
+                              "PC-3000 Raw Platter Mirrored Extraction",
+                              "Firmware Virtual Translator Rebuild",
+                              "File System Verification & File Tree Extracted",
                               "Resolved",
                             ];
 

@@ -36,6 +36,213 @@ interface ChatMessage {
   text: string;
 }
 
+interface TimelineStage {
+  title: string;
+  description: string;
+  state: "done" | "active" | "pending";
+}
+
+interface CategoryConfig {
+  category: string;
+  badgeColor: string;
+  tabTitle: string;
+  protocolLabel: string;
+  progressLabel: string;
+  notesLabel: string;
+  notesPlaceholder: string;
+  telemetryTabTitle: string;
+  telemetryCards: { label: string; value: string; color?: string }[];
+  stages: { value: string; label: string }[];
+  stepper: TimelineStage[];
+}
+
+function getCategoryConfig(
+  category?: string,
+  status: string = "",
+  progress: number = 0,
+  currentBench?: string
+): CategoryConfig {
+  const norm = (status || "").toLowerCase();
+  const cat = category || "Data Recovery";
+
+  const isResolved =
+    norm.includes("resolved") ||
+    norm.includes("completed") ||
+    norm.includes("closed");
+
+  if (cat === "Cybersecurity") {
+    const isStage4 = isResolved || norm.includes("hardening") || norm.includes("closure");
+    const isStage3 = isStage4 || norm.includes("containment") || norm.includes("remediation") || norm.includes("patch");
+    const isStage2 = isStage3 || norm.includes("forensic") || norm.includes("analysis") || norm.includes("threat");
+
+    const s1State: "done" | "active" | "pending" = isResolved || isStage2 ? "done" : "active";
+    const s2State: "done" | "active" | "pending" = isResolved || isStage3 ? "done" : isStage2 ? "active" : "pending";
+    const s3State: "done" | "active" | "pending" = isResolved || isStage4 ? "done" : isStage3 ? "active" : "pending";
+    const s4State: "done" | "active" | "pending" = isResolved ? "done" : isStage4 ? "active" : "pending";
+
+    const stepper: TimelineStage[] = [
+      { title: "Threat Intake", description: "Perimeter Isolation", state: s1State },
+      { title: "Security Forensics", description: "Vector & Log Audit", state: s2State },
+      { title: "Containment & Remediation", description: `${progress}% Mitigated`, state: s3State },
+      { title: "Policy Hardening", description: isResolved ? "Breach Closed" : "Final Sign-off", state: s4State },
+    ];
+
+    return {
+      category: "Cybersecurity",
+      badgeColor: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      tabTitle: "Remediation & Stage",
+      protocolLabel: "Workflow Phase / Security Remediation Protocol",
+      progressLabel: "Threat Remediation & Containment Progress (% Remediated):",
+      notesLabel: "Forensic Threat Analysis & Containment Directives:",
+      notesPlaceholder: "Vector isolation, memory dumps, IOC indicators, firewall rules updated, audit logs...",
+      telemetryTabTitle: "Security Telemetry",
+      telemetryCards: [
+        { label: "SOC Incident Pod", value: currentBench || "SOC Threat Pod 01", color: "text-rose-400" },
+        { label: "Containment Status", value: isResolved ? "100% Neutralized" : "Quarantined", color: "text-emerald-400" },
+        { label: "Perimeter Firewall", value: "Zero-Trust Active", color: "text-blue-400" },
+        { label: "Threat Level", value: "P1 Active Breach Mitigation", color: "text-amber-400" },
+      ],
+      stages: [
+        { value: "Threat Intake & Triage", label: "1. Threat Intake & Perimeter Quarantine" },
+        { value: "Security Forensics", label: "2. Security Forensics & Memory Analysis" },
+        { value: "Containment & Remediation", label: "3. Containment & Vector Neutralization" },
+        { value: "Policy Hardening", label: "4. Policy Hardening & Compliance Audit" },
+        { value: "Resolved", label: "5. Threat Fully Mitigated (Resolved)" },
+      ],
+      stepper,
+    };
+  }
+
+  if (cat === "Cloud Solutions") {
+    const isStage4 = isResolved || norm.includes("handover") || norm.includes("audit");
+    const isStage3 = isStage4 || norm.includes("deployment") || norm.includes("migration");
+    const isStage2 = isStage3 || norm.includes("architecture") || norm.includes("planning") || norm.includes("security");
+
+    const s1State: "done" | "active" | "pending" = isResolved || isStage2 ? "done" : "active";
+    const s2State: "done" | "active" | "pending" = isResolved || isStage3 ? "done" : isStage2 ? "active" : "pending";
+    const s3State: "done" | "active" | "pending" = isResolved || isStage4 ? "done" : isStage3 ? "active" : "pending";
+    const s4State: "done" | "active" | "pending" = isResolved ? "done" : isStage4 ? "active" : "pending";
+
+    const stepper: TimelineStage[] = [
+      { title: "Scope Intake", description: "Tenant Specifications", state: s1State },
+      { title: "Cloud Architecture", description: "IAM & VPC Planning", state: s2State },
+      { title: "Deployment & Migration", description: `${progress}% Deployed`, state: s3State },
+      { title: "Handover & Audit", description: isResolved ? "Services Active" : "Uptime Verification", state: s4State },
+    ];
+
+    return {
+      category: "Cloud Solutions",
+      badgeColor: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+      tabTitle: "Migration & Stage",
+      protocolLabel: "Workflow Phase / Cloud Architecture Protocol",
+      progressLabel: "Cloud Architecture & Migration Progress (% Deployed):",
+      notesLabel: "Architecture Deployment & Migration Directives:",
+      notesPlaceholder: "Tenant provisioned, IAM policies mapped, VPC peering, migration sync progress...",
+      telemetryTabTitle: "Cloud Telemetry",
+      telemetryCards: [
+        { label: "Cloud Terminal", value: currentBench || "Cloud Terminal 01", color: "text-sky-400" },
+        { label: "Tenant Health", value: "Multi-Region Redundant", color: "text-emerald-400" },
+        { label: "IAM Policy Audit", value: "CIS Benchmark Level 2", color: "text-blue-400" },
+        { label: "Uptime SLA Target", value: "99.99% Operational", color: "text-emerald-400" },
+      ],
+      stages: [
+        { value: "Scope Intake & Discovery", label: "1. Scope Intake & Tenant Discovery" },
+        { value: "Cloud Architecture", label: "2. Cloud Architecture & Network Planning" },
+        { value: "Deployment & Migration", label: "3. Deployment & Cloud Asset Migration" },
+        { value: "Handover & Audit", label: "4. Uptime Verification & Client Handover" },
+        { value: "Resolved", label: "5. Cloud Deployment Active (Resolved)" },
+      ],
+      stepper,
+    };
+  }
+
+  if (cat === "Managed IT") {
+    const isStage4 = isResolved || norm.includes("quality") || norm.includes("verification") || norm.includes("handover");
+    const isStage3 = isStage4 || norm.includes("rollout") || norm.includes("deploy") || norm.includes("patch") || norm.includes("repair");
+    const isStage2 = isStage3 || norm.includes("assessment") || norm.includes("diagnos");
+
+    const s1State: "done" | "active" | "pending" = isResolved || isStage2 ? "done" : "active";
+    const s2State: "done" | "active" | "pending" = isResolved || isStage3 ? "done" : isStage2 ? "active" : "pending";
+    const s3State: "done" | "active" | "pending" = isResolved || isStage4 ? "done" : isStage3 ? "active" : "pending";
+    const s4State: "done" | "active" | "pending" = isResolved ? "done" : isStage4 ? "active" : "pending";
+
+    const stepper: TimelineStage[] = [
+      { title: "Service Intake", description: "Incident Triage", state: s1State },
+      { title: "Technical Assessment", description: "Bench Diagnostics", state: s2State },
+      { title: "Resolution & Rollout", description: `${progress}% Resolved`, state: s3State },
+      { title: "Quality Verification", description: isResolved ? "Client Sign-off" : "Validation Pending", state: s4State },
+    ];
+
+    return {
+      category: "Managed IT",
+      badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      tabTitle: "Execution & Stage",
+      protocolLabel: "Workflow Phase / Managed IT Service Protocol",
+      progressLabel: "Technical Resolution & Rollout Progress (% Resolved):",
+      notesLabel: "Technical Assessment & Workstation Directives:",
+      notesPlaceholder: "Hardware/OS diagnosis, patch deployment, driver repairs, client verification steps...",
+      telemetryTabTitle: "System Telemetry",
+      telemetryCards: [
+        { label: "Fleet Support Bench", value: currentBench || "Fleet Support Bench 01", color: "text-amber-400" },
+        { label: "OS Diagnostics", value: "Kernel / Hardware Pass", color: "text-emerald-400" },
+        { label: "Driver & Firmware", value: "Up to Date", color: "text-blue-400" },
+        { label: "SLA Response", value: "< 15-Min Guaranteed", color: "text-emerald-400" },
+      ],
+      stages: [
+        { value: "Service Intake & Triage", label: "1. Service Intake & Ticket Triage" },
+        { value: "Technical Assessment", label: "2. Technical Assessment & Bench Diagnostics" },
+        { value: "Resolution & Rollout", label: "3. System Resolution, Patching & Rollout" },
+        { value: "Quality Verification", label: "4. Quality Verification & Client Handover" },
+        { value: "Resolved", label: "5. Ticket Resolved & System Operational" },
+      ],
+      stepper,
+    };
+  }
+
+  // Data Recovery (Default)
+  const isStage4 = isResolved || norm.includes("tree") || norm.includes("return") || norm.includes("file system");
+  const isStage3 = isStage4 || norm.includes("pc-3000") || norm.includes("mirror") || norm.includes("translator") || norm.includes("imaging") || norm.includes("clon");
+  const isStage2 = isStage3 || norm.includes("cleanroom") || norm.includes("diagnos");
+
+  const s1State: "done" | "active" | "pending" = isResolved || isStage2 ? "done" : "active";
+  const s2State: "done" | "active" | "pending" = isResolved || isStage3 ? "done" : isStage2 ? "active" : "pending";
+  const s3State: "done" | "active" | "pending" = isResolved || isStage4 ? "done" : isStage3 ? "active" : "pending";
+  const s4State: "done" | "active" | "pending" = isResolved ? "done" : isStage4 ? "active" : "pending";
+
+  const stepper: TimelineStage[] = [
+    { title: "Media Received", description: "Cleanroom Barcode Intake", state: s1State },
+    { title: "Cleanroom Diagnostics", description: "ISO Class-5 Inspection", state: s2State },
+    { title: "PC-3000 Raw Extraction", description: progress > 0 ? `${progress}% Cloned` : "Platter Mirror Queued", state: s3State },
+    { title: "Integrity Verification", description: isResolved ? "Data Recovered" : "File Tree Audit", state: s4State },
+  ];
+
+  return {
+    category: "Data Recovery",
+    badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    tabTitle: "Extraction & Stage",
+    protocolLabel: "Workflow Phase / Hardware Recovery Protocol",
+    progressLabel: "Precision Extraction Progress (% Complete):",
+    notesLabel: "Internal Cleanroom Directives & Donor Head Findings:",
+    notesPlaceholder: "Donor head calibration, bad sector offsets, PCB repair notes, sector map status...",
+    telemetryTabTitle: "Hardware Telemetry",
+    telemetryCards: [
+      { label: "Cleanroom Station", value: currentBench || "Cleanroom Bench 01", color: "text-blue-400" },
+      { label: "Drive Temperature", value: "28.4°C (Normal)", color: "text-emerald-400" },
+      { label: "Platter Integrity", value: "99% Operational", color: "text-emerald-400" },
+      { label: "Write-Block Protection", value: "Hardware 256-Bit Active", color: "text-emerald-400" },
+    ],
+    stages: [
+      { value: "Media Received", label: "1. Media Received (Cleanroom Intake)" },
+      { value: "Cleanroom Diagnosis", label: "2. Cleanroom Diagnosis (ISO Class-5)" },
+      { value: "PC-3000 Raw Platter Mirrored Extraction", label: "3. PC-3000 Raw Platter Mirrored Extraction" },
+      { value: "Firmware Virtual Translator Rebuild", label: "4. Firmware Virtual Translator Rebuild" },
+      { value: "File System Verification & File Tree Extracted", label: "5. File System Verification & File Tree Extracted" },
+      { value: "Resolved", label: "6. Completed & Recovered (Resolved)" },
+    ],
+    stepper,
+  };
+}
+
 export default function TechnicianWorkbenchPage() {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +277,15 @@ export default function TechnicianWorkbenchPage() {
             progress: progress,
             priority: priority,
             notes: t.techNotes || "",
-            bench: t.assignedBench || "PC-3000 Bench 01 (Cleanroom Hood A)",
+            bench:
+              t.assignedBench ||
+              (t.category === "Cybersecurity"
+                ? "SOC Threat Isolation Station 01"
+                : t.category === "Cloud Solutions"
+                ? "Cloud Infrastructure Terminal 01"
+                : t.category === "Managed IT"
+                ? "Enterprise Fleet Support Bench 01"
+                : "PC-3000 Bench 01 (Cleanroom Hood A)"),
             headsHealth: "Hardware Calibrated",
             badSectorsRemapped: 0,
             temp: "28.4°C (Normal)",
@@ -234,10 +449,37 @@ export default function TechnicianWorkbenchPage() {
           sender: "Customer",
           author: activeCase.client,
           time: "Today",
-          text: "Awaiting cleanroom intake analysis report.",
+          text:
+            activeCase.category === "Cybersecurity"
+              ? "Awaiting forensic threat analysis report."
+              : activeCase.category === "Cloud Solutions"
+              ? "Awaiting cloud tenant architecture review."
+              : activeCase.category === "Managed IT"
+              ? "Awaiting system diagnostic report."
+              : "Awaiting cleanroom intake analysis report.",
         },
       ]
     : [];
+
+  const currentConfig = activeCase
+    ? getCategoryConfig(
+        activeCase.category,
+        editStatus || activeCase.status,
+        editProgress !== undefined ? editProgress : activeCase.progress,
+        activeCase.bench
+      )
+    : null;
+
+  const availableStages = currentConfig ? [...currentConfig.stages] : [];
+  if (activeCase && currentConfig) {
+    const currentVal = editStatus || activeCase.status;
+    if (currentVal && !availableStages.some((s) => s.value === currentVal)) {
+      availableStages.unshift({
+        value: currentVal,
+        label: `Current: ${currentVal}`,
+      });
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#0b1324] text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
@@ -341,8 +583,21 @@ export default function TechnicianWorkbenchPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono text-xs font-bold text-blue-400">#{c.id}</span>
+                        <span
+                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold border ${
+                            c.category === "Cybersecurity"
+                              ? "bg-rose-500/10 text-rose-300 border-rose-500/20"
+                              : c.category === "Cloud Solutions"
+                              ? "bg-sky-500/10 text-sky-300 border-sky-500/20"
+                              : c.category === "Managed IT"
+                              ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+                              : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                          }`}
+                        >
+                          {c.category || "Data Recovery"}
+                        </span>
                         <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300">
                           {c.mediaType}
                         </span>
@@ -388,8 +643,17 @@ export default function TechnicianWorkbenchPage() {
               {/* TARGET HEADER */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-5 mb-5">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-mono text-blue-400 mb-1.5">
-                    <span>Diagnostic Command Center #{activeCase.id}</span>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-mono text-blue-400">
+                      Diagnostic Command Center #{activeCase.id}
+                    </span>
+                    {currentConfig && (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${currentConfig.badgeColor}`}
+                      >
+                        {activeCase.category || "Data Recovery"}
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-lg font-bold text-white">{activeCase.device}</h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -403,39 +667,56 @@ export default function TechnicianWorkbenchPage() {
                 </div>
               </div>
 
-              {/* WORKFLOW STEPPER */}
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  activeCase.status === "Media Received" || activeCase.progress > 0
-                    ? "border-emerald-500/30 bg-emerald-500/10"
-                    : "border-slate-800 bg-slate-950/50"
-                }`}>
-                  <span className="text-xs font-bold text-emerald-300 block">[Media Received]</span>
-                  <span className="text-[10px] font-mono text-emerald-400">
-                    {activeCase.status === "Media Received" ? "Active" : "Completed"}
-                  </span>
+              {/* DYNAMIC CATEGORY WORKFLOW STEPPER */}
+              {currentConfig && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+                  {currentConfig.stepper.map((step, idx) => {
+                    const isDone = step.state === "done";
+                    const isActive = step.state === "active";
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-xl border text-center transition ${
+                          isDone
+                            ? "border-emerald-500/30 bg-emerald-500/10"
+                            : isActive
+                            ? "border-blue-500/40 bg-blue-500/15 ring-1 ring-blue-400/30 shadow-sm"
+                            : "border-slate-800 bg-slate-950/50 opacity-60"
+                        }`}
+                      >
+                        <span
+                          className={`text-xs font-bold block truncate ${
+                            isDone
+                              ? "text-emerald-300"
+                              : isActive
+                              ? "text-blue-300"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          [{step.title}]
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono block mt-0.5 ${
+                            isDone
+                              ? "text-emerald-400"
+                              : isActive
+                              ? "text-blue-400 font-bold"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          {isDone
+                            ? "Completed"
+                            : isActive
+                            ? (editProgress !== undefined ? editProgress : activeCase.progress) > 0
+                              ? `${editProgress !== undefined ? editProgress : activeCase.progress}% Active`
+                              : "Active"
+                            : "Pending"}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  activeCase.status.includes("Cleanroom") || activeCase.status.includes("PC-3000")
-                    ? "border-blue-500/40 bg-blue-500/15 ring-1 ring-blue-400/30"
-                    : "border-slate-800 bg-slate-950/50"
-                }`}>
-                  <span className="text-xs font-bold text-blue-300 block">[Cleanroom Diagnostics & Mirror]</span>
-                  <span className="text-[10px] font-mono text-blue-400 font-bold">
-                    {activeCase.progress > 0 ? `${activeCase.progress}% Complete` : "In Queue"}
-                  </span>
-                </div>
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  activeCase.status === "Resolved" || activeCase.progress === 100
-                    ? "border-emerald-500/30 bg-emerald-500/10"
-                    : "border-slate-800 bg-slate-950/50 opacity-70"
-                }`}>
-                  <span className="text-xs font-bold text-slate-400 block">[Integrity Verification]</span>
-                  <span className="text-[10px] font-mono text-slate-500">
-                    {activeCase.status === "Resolved" ? "Verified" : "Pending"}
-                  </span>
-                </div>
-              </div>
+              )}
 
               {/* TABS */}
               <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 mb-5 text-xs">
@@ -448,7 +729,7 @@ export default function TechnicianWorkbenchPage() {
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Extraction &amp; Stage
+                  {currentConfig ? currentConfig.tabTitle : "Execution & Stage"}
                 </button>
                 <button
                   type="button"
@@ -470,42 +751,37 @@ export default function TechnicianWorkbenchPage() {
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Hardware Telemetry
+                  {currentConfig ? currentConfig.telemetryTabTitle : "Telemetry"}
                 </button>
               </div>
 
-              {/* TAB 1: EXTRACTION & STAGE */}
-              {activeWorkbenchTab === "controls" && (
+              {/* TAB 1: PROTOCOL CONTROLS & STAGE */}
+              {activeWorkbenchTab === "controls" && currentConfig && (
                 <form onSubmit={handleSaveUpdate} className="space-y-4 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-300 mb-1">
-                      Workflow Phase / Recovery Protocol:
+                      {currentConfig.protocolLabel}:
                     </label>
                     <select
                       value={editStatus || activeCase.status}
                       onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
                     >
-                      <option value="Media Received">1. Media Received</option>
-                      <option value="Cleanroom Diagnosis">2. Cleanroom Diagnosis (ISO Class-5)</option>
-                      <option value="PC-3000 Raw Platter Mirrored Extraction">3. PC-3000 Raw Platter Mirrored Extraction</option>
-                      <option value="Firmware Virtual Translator Rebuild">4. Firmware Virtual Translator Rebuild</option>
-                      <option value="File System Verification & File Tree Extracted">5. File System Verification &amp; File Tree Extracted</option>
-                      <option value="Threat Containment & Analysis">Threat Containment &amp; Analysis (Cyber)</option>
-                      <option value="Security Forensics">Security Forensics (Cyber)</option>
-                      <option value="Architecture & Deployment">Architecture &amp; Deployment (Cloud)</option>
-                      <option value="Resolution & Rollout">Resolution &amp; Rollout (Managed IT)</option>
-                      <option value="Resolved">6. Completed / Resolved</option>
+                      {availableStages.map((st) => (
+                        <option key={st.value} value={st.value}>
+                          {st.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="font-semibold text-slate-300">
-                        Precision Extraction Progress (% Complete):
+                        {currentConfig.progressLabel}
                       </label>
                       <span className="text-sm font-mono font-bold text-emerald-400">
-                        {editProgress !== undefined && editProgress !== 0 ? editProgress : activeCase.progress}%
+                        {editProgress !== undefined ? editProgress : activeCase.progress}%
                       </span>
                     </div>
                     <input
@@ -513,7 +789,7 @@ export default function TechnicianWorkbenchPage() {
                       min="0"
                       max="100"
                       step="0.1"
-                      value={editProgress !== undefined && editProgress !== 0 ? editProgress : activeCase.progress}
+                      value={editProgress !== undefined ? editProgress : activeCase.progress}
                       onChange={(e) => setEditProgress(parseFloat(e.target.value))}
                       className="w-full h-2 rounded-lg bg-slate-800 accent-blue-500 cursor-pointer"
                     />
@@ -521,13 +797,13 @@ export default function TechnicianWorkbenchPage() {
 
                   <div>
                     <label className="block font-semibold text-slate-300 mb-1">
-                      Internal Diagnostic Directives &amp; Findings:
+                      {currentConfig.notesLabel}
                     </label>
                     <textarea
                       rows={3}
-                      value={editNotes || activeCase.notes}
+                      value={editNotes !== undefined ? editNotes : activeCase.notes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      placeholder="Donor head calibration, bad sector offsets, PCB repair notes..."
+                      placeholder={currentConfig.notesPlaceholder}
                       className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-slate-200 outline-none font-mono text-xs focus:border-blue-500"
                     />
                     <span className="text-[10px] text-slate-500 mt-1 block">
@@ -593,34 +869,25 @@ export default function TechnicianWorkbenchPage() {
               )}
 
               {/* TAB 3: TELEMETRY METRICS */}
-              {activeWorkbenchTab === "telemetry" && (
+              {activeWorkbenchTab === "telemetry" && currentConfig && (
                 <div className="space-y-3 text-xs">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Bench Allocation</span>
-                      <span className="text-xs font-bold text-blue-300 mt-1 block">Cleanroom Bench 01</span>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Drive Temperature</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 block">28.4°C (Normal)</span>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Platter Integrity Health</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 block">99% Operational</span>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Write-Block Protection</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 block">Hardware 256-Bit Active</span>
-                    </div>
+                    {currentConfig.telemetryCards.map((card, idx) => (
+                      <div key={idx} className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">{card.label}</span>
+                        <span className={`text-xs font-bold mt-1 block ${card.color || "text-emerald-400"}`}>
+                          {card.value}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 flex items-center justify-between">
                     <div>
                       <span className="font-bold text-white block">Full Incident Specs</span>
-                      <span className="text-slate-400 text-[11px]">Serial: {activeCase.serial} • Station: {activeCase.bench}</span>
+                      <span className="text-slate-400 text-[11px]">
+                        Target: {activeCase.device} • Category: {activeCase.category || "Data Recovery"} • Station: {activeCase.bench}
+                      </span>
                     </div>
                     <Link
                       href={`/technician/tickets/${activeCase.id}`}

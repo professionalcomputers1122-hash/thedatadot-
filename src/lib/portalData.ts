@@ -66,6 +66,86 @@ export const initialCustomers = [
   },
 ];
 
+export interface CompanyRecord {
+  id: string;
+  name: string;
+  industry: string;
+  plan: string;
+  accountManager: string;
+  devicesRecovered: number;
+  contractStatus: "Active Retainer" | "On-Demand SLA";
+}
+
+export const initialCompanies: CompanyRecord[] = [
+  {
+    id: "ORG-101",
+    name: "Apex Healthcare Diagnostic Center",
+    industry: "Healthcare & Diagnostics",
+    plan: "Enterprise 15-Min 24/7 SLA",
+    accountManager: "K. Vignesh",
+    devicesRecovered: 14,
+    contractStatus: "Active Retainer",
+  },
+  {
+    id: "ORG-102",
+    name: "Nexus Legal Advisors LLP",
+    industry: "Corporate & Patent Law",
+    plan: "Priority 4-Hour Response",
+    accountManager: "K. Vignesh",
+    devicesRecovered: 6,
+    contractStatus: "Active Retainer",
+  },
+  {
+    id: "ORG-103",
+    name: "Metropolitan Logistics Warehousing",
+    industry: "Supply Chain & Storage",
+    plan: "Enterprise 15-Min 24/7 SLA",
+    accountManager: "M. Rajesh",
+    devicesRecovered: 22,
+    contractStatus: "Active Retainer",
+  },
+  {
+    id: "ORG-104",
+    name: "Sri Lakshmi Tax & Audits",
+    industry: "Financial Services",
+    plan: "Standard Business Support",
+    accountManager: "R. Balaji",
+    devicesRecovered: 3,
+    contractStatus: "On-Demand SLA",
+  },
+];
+
+export const DELETED_COMPANIES_KEY = "tdd_deleted_company_ids";
+export const COMPANIES_STORAGE_KEY = "tdd_admin_companies";
+
+export function getDeletedCompanyIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DELETED_COMPANIES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.map((item: string) => item.toLowerCase().trim()));
+      }
+    }
+  } catch (e) {
+    console.warn("Failed reading deleted companies:", e);
+  }
+  return new Set();
+}
+
+export function deleteCompanyRecord(idOrName: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const set = getDeletedCompanyIds();
+    set.add(idOrName.toLowerCase().trim());
+    localStorage.setItem(DELETED_COMPANIES_KEY, JSON.stringify(Array.from(set)));
+    window.dispatchEvent(new Event("companies-updated"));
+  } catch (e) {
+    console.warn("Failed deleting company from storage:", e);
+  }
+}
+
 export interface TechnicianRecord {
   id: string;
   name: string;

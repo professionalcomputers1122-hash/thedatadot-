@@ -66,7 +66,19 @@ export const initialCustomers = [
   },
 ];
 
-export const initialTechnicians = [
+export interface TechnicianRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  station: string;
+  activeCases: number;
+  status: string;
+  pin?: string;
+  password?: string;
+}
+
+export const initialTechnicians: TechnicianRecord[] = [
   {
     id: "TECH-052",
     name: "K. Vignesh",
@@ -75,6 +87,8 @@ export const initialTechnicians = [
     station: "PC-3000 Flash & Portable III",
     activeCases: 1,
     status: "On Bench",
+    pin: "8942",
+    password: "Tech@DataDot2026!",
   },
   {
     id: "TECH-064",
@@ -84,6 +98,8 @@ export const initialTechnicians = [
     station: "PC-3000 Bench 01 (Class-5 Hood)",
     activeCases: 1,
     status: "On Bench",
+    pin: "7103",
+    password: "Rajesh@DataDot2026!",
   },
   {
     id: "TECH-039",
@@ -93,8 +109,38 @@ export const initialTechnicians = [
     station: "SOC Terminal 03",
     activeCases: 1,
     status: "Available",
+    pin: "5519",
+    password: "Balaji@DataDot2026!",
   },
 ];
+
+export const TECHNICIANS_STORAGE_KEY = "tdd_laboratory_technicians";
+
+export function getStoredTechnicians(): TechnicianRecord[] {
+  if (typeof window === "undefined") return initialTechnicians;
+  try {
+    const raw = localStorage.getItem(TECHNICIANS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed loading technicians from storage:", e);
+  }
+  return initialTechnicians;
+}
+
+export function saveStoredTechnicians(technicians: TechnicianRecord[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TECHNICIANS_STORAGE_KEY, JSON.stringify(technicians));
+    window.dispatchEvent(new Event("technicians-updated"));
+  } catch (e) {
+    console.warn("Failed saving technicians to storage:", e);
+  }
+}
 
 // ================= LIVE SUPABASE REAL-TIME HELPERS =================
 import { supabase, isSupabaseConfigured } from "./supabase";

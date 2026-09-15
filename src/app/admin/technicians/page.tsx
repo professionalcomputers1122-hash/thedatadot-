@@ -2,79 +2,219 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
-import { initialTechnicians } from "@/lib/portalData";
+import {
+  initialTechnicians,
+  TechnicianRecord,
+  getStoredTechnicians,
+  saveStoredTechnicians,
+} from "@/lib/portalData";
 
 export default function AdminTechniciansPage() {
-  const [technicians, setTechnicians] = useState(initialTechnicians);
+  const [technicians, setTechnicians] = useState<TechnicianRecord[]>(initialTechnicians);
   const [showAddModal, setShowAddModal] = useState(false);
   const [notification, setNotification] = useState("");
 
+  // Password / PIN Reset Modal State
+  const [passwordModalTech, setPasswordModalTech] = useState<TechnicianRecord | null>(null);
+  const [newPinValue, setNewPinValue] = useState("");
+  const [newPasswordValue, setNewPasswordValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  // New Technician Form State
   const [newTech, setNewTech] = useState({
     name: "",
     email: "",
     role: "Forensic Cleanroom Technician",
     station: "PC-3000 Bench 02",
+    pin: "8942",
+    password: "Tech@DataDot2026!",
   });
 
-  // Load persisted technicians from localStorage on mount
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("tdd_laboratory_technicians");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter(
-            (t: any) =>
-              !t.name?.toLowerCase().includes("murugan") &&
-              !t.email?.toLowerCase().includes("murugan")
-          );
-          setTechnicians(filtered);
-          localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(filtered));
-        }
-      }
-    } catch (e) {
-      console.warn("Failed loading technicians from storage:", e);
+  // Random generators
+  const generateRandomPin = () => {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  };
+
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let randomPart = "";
+    for (let i = 0; i < 4; i++) {
+      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return `Tech@${randomPart}!`;
+  };
+
+  // Load technicians from localStorage on mount and sync with events
+  useEffect(() => {
+    const loadData = () => {
+      const stored = getStoredTechnicians();
+      if (stored && stored.length > 0) {
+        // Sanitize: ensure no legacy dummy names
+        const filtered = stored.filter(
+          (t: TechnicianRecord) =>
+            !t.name?.toLowerCase().includes("murugan") &&
+            !t.email?.toLowerCase().includes("murugan")
+        );
+        // Ensure every tech has at least a default PIN
+        const normalized = filtered.map((t, index) => ({
+          ...t,
+          pin: t.pin || ["8942", "7103", "5519"][index % 3] || "8942",
+          password: t.password || `Tech@DataDot${index + 1}!`,
+        }));
+        setTechnicians(normalized);
+      }
+    };
+
+    loadData();
+    window.addEventListener("technicians-updated", loadData);
+    window.addEventListener("storage", loadData);
+
+    return () => {
+      window.removeEventListener("technicians-updated", loadData);
+      window.removeEventListener("storage", loadData);
+    };
   }, []);
 
-  const handleAdd = (e: React.FormEvent) => {
+  // Copy technician login credentials to clipboard
+  const copyCredentials = (t: TechnicianRecord) => {
+    const pin = t.pin || "8942";
+    const pw = t.password || "Tech@DataDot2026!";
+    const text = `The Data Dot Laboratory Technician Access\nWorkbench URL: https://thedatadot.vercel.app/technician/login\nStaff Corporate Email: ${t.email}\nWorkbench Access PIN: ${pin}\nPortal Password: ${pw}\nAssigned Hardware Bench: ${t.station}\nEngineering Specialization: ${t.role}`;
+    navigator.clipboard.writeText(text);
+    setNotification(`✓ Login credentials for "${t.name}" copied to clipboard.`);
+    setTimeout(() => setNotification(""), 5000);
+  };
+
+  // Open password reset modal
+  const openPasswordModal = (t: TechnicianRecord) => {
+    setPasswordModalTech(t);
+    setNewPinValue(t.pin || generateRandomPin());
+    setNewPasswordValue(t.password || generateRandomPassword());
+  };
+
+  // Save technician password / PIN reset
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created = {
+    if (!passwordModalTech) return;
+
+    const assignedPin = newPinValue.trim();
+    const assignedPassword = newPasswordValue.trim();
+
+    if (!assignedPin && !assignedPassword) {
+      setNotification("Please specify a new PIN or Password.");
+      return;
+    }
+
+    setSavingPassword(true);
+
+    try {
+      // Call backend API for audit logging & server persistence
+      await fetch("/api/technicians", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: passwordModalTech.email,
+          pin: assignedPin,
+          password: assignedPassword,
+        }),
+      });
+
+      // Update local state and localStorage
+      const updated = technicians.map((tech) => {
+        if (tech.id === passwordModalTech.id || tech.email.toLowerCase() === passwordModalTech.email.toLowerCase()) {
+          return {
+            ...tech,
+            pin: assignedPin || tech.pin,
+            password: assignedPassword || tech.password,
+          };
+        }
+        return tech;
+      });
+
+      setTechnicians(updated);
+      saveStoredTechnicians(updated);
+
+      setNotification(
+        `✓ Password & PIN updated for ${passwordModalTech.name}. New PIN: ${assignedPin} | Password: ${assignedPassword}`
+      );
+      setPasswordModalTech(null);
+      setTimeout(() => setNotification(""), 6000);
+    } catch (err) {
+      console.error("Failed to reset technician password/PIN:", err);
+      setNotification("Failed to update credentials. Please try again.");
+      setTimeout(() => setNotification(""), 4000);
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  // Add new technician
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = newTech.email.trim().toLowerCase();
+    const assignedPin = newTech.pin.trim() || generateRandomPin();
+    const assignedPw = newTech.password.trim() || generateRandomPassword();
+
+    const created: TechnicianRecord = {
       id: `TECH-0${technicians.length + 50}`,
       name: newTech.name.trim(),
-      email: newTech.email.trim(),
+      email: cleanEmail,
       role: newTech.role,
       station: newTech.station,
       activeCases: 0,
       status: "Available",
+      pin: assignedPin,
+      password: assignedPw,
     };
+
+    try {
+      await fetch("/api/technicians", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(created),
+      });
+    } catch (e) {
+      console.warn("Server technician register warning:", e);
+    }
 
     const updated = [...technicians, created];
     setTechnicians(updated);
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(updated));
-    }
+    saveStoredTechnicians(updated);
 
     setShowAddModal(false);
-    setNewTech({ name: "", email: "", role: "Forensic Cleanroom Technician", station: "PC-3000 Bench 02" });
-    setNotification(`✓ Technician ${created.name} registered and bench credentials generated.`);
-    setTimeout(() => setNotification(""), 4000);
+    setNewTech({
+      name: "",
+      email: "",
+      role: "Forensic Cleanroom Technician",
+      station: "PC-3000 Bench 02",
+      pin: generateRandomPin(),
+      password: generateRandomPassword(),
+    });
+    setNotification(`✓ Technician ${created.name} registered. Access PIN: ${created.pin}`);
+    setTimeout(() => setNotification(""), 5000);
   };
 
-  const handleDeleteTechnician = (t: any) => {
+  // Delete technician
+  const handleDeleteTechnician = async (t: TechnicianRecord) => {
     const confirmed = window.confirm(
       `Are you sure you want to remove technician "${t.name}" (${t.role}) from the laboratory roster?\n\nTheir assigned hardware bench (${t.station}) will be unallocated.`
     );
     if (!confirmed) return;
 
-    const updated = technicians.filter((tech) => tech.id !== t.id && tech.email !== t.email);
-    setTechnicians(updated);
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tdd_laboratory_technicians", JSON.stringify(updated));
+    try {
+      await fetch(`/api/technicians?email=${encodeURIComponent(t.email)}`, {
+        method: "DELETE",
+      });
+    } catch (e) {
+      console.warn("Server technician deletion warning:", e);
     }
+
+    const updated = technicians.filter(
+      (tech) => tech.id !== t.id && tech.email.toLowerCase() !== t.email.toLowerCase()
+    );
+    setTechnicians(updated);
+    saveStoredTechnicians(updated);
 
     setNotification(`✓ Technician "${t.name}" removed from laboratory roster.`);
     setTimeout(() => setNotification(""), 4000);
@@ -83,10 +223,17 @@ export default function AdminTechniciansPage() {
   return (
     <AdminLayoutShell
       title="Laboratory Technicians &amp; Workbenches"
-      subtitle="Cleanroom forensic staff roster, ISO Class-5 laminar station allocations, and active workload"
+      subtitle="Cleanroom forensic staff roster, ISO Class-5 laminar station allocations, and secure workbench access PIN management"
       actions={
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setNewTech((prev) => ({
+              ...prev,
+              pin: generateRandomPin(),
+              password: generateRandomPassword(),
+            }));
+            setShowAddModal(true);
+          }}
           className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
         >
           <span>+</span> Add Laboratory Technician
@@ -112,6 +259,7 @@ export default function AdminTechniciansPage() {
                   <th className="px-5 py-3.5">Technician Name</th>
                   <th className="px-5 py-3.5">Engineering Specialization</th>
                   <th className="px-5 py-3.5">Assigned Hardware Workbench</th>
+                  <th className="px-5 py-3.5">Workbench Credentials</th>
                   <th className="px-5 py-3.5">Active Cases</th>
                   <th className="px-5 py-3.5">Bench Status</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
@@ -123,10 +271,16 @@ export default function AdminTechniciansPage() {
                     <td className="px-5 py-4 font-mono font-bold text-indigo-400">{t.id}</td>
                     <td className="px-5 py-4">
                       <p className="font-bold text-white">{t.name}</p>
-                      <span className="text-[11px] text-slate-500">{t.email}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">{t.email}</span>
                     </td>
                     <td className="px-5 py-4 text-slate-300 font-medium">{t.role}</td>
                     <td className="px-5 py-4 text-indigo-300 font-semibold">{t.station}</td>
+                    <td className="px-5 py-4">
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-[11px] font-mono">
+                        <span className="text-slate-400 font-sans text-[10px]">PIN:</span>
+                        <span className="font-bold text-emerald-400">{t.pin || "8942"}</span>
+                      </div>
+                    </td>
                     <td className="px-5 py-4 font-bold text-emerald-400">
                       {t.activeCases} Devices
                     </td>
@@ -144,13 +298,18 @@ export default function AdminTechniciansPage() {
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => {
-                            setNotification(`Temporary PIN re-issued for ${t.name}`);
-                            setTimeout(() => setNotification(""), 4000);
-                          }}
-                          className="text-[11px] font-bold text-blue-400 hover:underline px-1.5"
+                          onClick={() => copyCredentials(t)}
+                          className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition"
+                          title="Copy technician login credentials"
                         >
-                          Reset PIN
+                          📋 Copy Info
+                        </button>
+                        <button
+                          onClick={() => openPasswordModal(t)}
+                          className="rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1"
+                          title="Reset PIN / Password for this technician"
+                        >
+                          <span>🔑</span> Reset PIN / PW
                         </button>
                         <button
                           onClick={() => handleDeleteTechnician(t)}
@@ -168,7 +327,117 @@ export default function AdminTechniciansPage() {
           </div>
         </div>
 
-        {/* ADD MODAL */}
+        {/* RESET PASSWORD / PIN MODAL */}
+        {passwordModalTech && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
+            <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>🔑</span> Reset Technician Credentials
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Update workbench access PIN and portal password for {passwordModalTech.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPasswordModalTech(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-slate-300 space-y-1">
+                  <p><strong>Staff Member:</strong> {passwordModalTech.name} ({passwordModalTech.id})</p>
+                  <p><strong>Workbench Station:</strong> {passwordModalTech.station}</p>
+                  <p className="font-mono text-[11px]"><strong>Corporate Email:</strong> {passwordModalTech.email}</p>
+                </div>
+
+                {/* PIN FIELD */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-semibold text-slate-300">
+                      Workbench Access PIN (4-Digit)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setNewPinValue(generateRandomPin())}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      ⚡ Generate Random PIN
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={8}
+                    placeholder="e.g. 8942"
+                    value={newPinValue}
+                    onChange={(e) => setNewPinValue(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white font-mono text-sm tracking-widest outline-none focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Used by the technician to unlock their cleanroom PC-3000 bench on login.
+                  </p>
+                </div>
+
+                {/* PASSWORD FIELD */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-semibold text-slate-300">
+                      Portal Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setNewPasswordValue(generateRandomPassword())}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      ⚡ Generate Secure PW
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="Enter new technician password"
+                      value={newPasswordValue}
+                      onChange={(e) => setNewPasswordValue(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-12 text-white font-mono outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs"
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordModalTech(null)}
+                    className="px-4 py-2 text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPassword}
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                  >
+                    {savingPassword ? "Updating Credentials..." : "Save & Update Credentials"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ADD TECHNICIAN MODAL */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
             <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
@@ -228,6 +497,28 @@ export default function AdminTechniciansPage() {
                     <option>Flash / Monolith Extraction Bay</option>
                     <option>High-Throughput SAS Imaging Rack</option>
                   </select>
+                </div>
+
+                {/* INITIAL PIN FIELD */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-300">Workbench Access PIN</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewTech({ ...newTech, pin: generateRandomPin() })}
+                      className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      ⚡ Generate PIN
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 8942"
+                    value={newTech.pin}
+                    onChange={(e) => setNewTech({ ...newTech, pin: e.target.value })}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white font-mono outline-none focus:border-blue-500"
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">

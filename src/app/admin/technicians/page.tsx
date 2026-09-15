@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   initialTechnicians,
   TechnicianRecord,
@@ -195,12 +196,14 @@ export default function AdminTechniciansPage() {
     setTimeout(() => setNotification(""), 5000);
   };
 
-  // Delete technician
-  const handleDeleteTechnician = async (t: TechnicianRecord) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to remove technician "${t.name}" (${t.role}) from the laboratory roster?\n\nTheir assigned hardware bench (${t.station}) will be unallocated.`
-    );
-    if (!confirmed) return;
+  const [deleteModalTech, setDeleteModalTech] = useState<TechnicianRecord | null>(null);
+  const [isDeletingTech, setIsDeletingTech] = useState(false);
+
+  // Confirm delete technician
+  const handleConfirmDeleteTech = async () => {
+    if (!deleteModalTech) return;
+    const t = deleteModalTech;
+    setIsDeletingTech(true);
 
     try {
       await fetch(`/api/technicians?email=${encodeURIComponent(t.email)}`, {
@@ -217,6 +220,8 @@ export default function AdminTechniciansPage() {
     saveStoredTechnicians(updated);
 
     setNotification(`✓ Technician "${t.name}" removed from laboratory roster.`);
+    setDeleteModalTech(null);
+    setIsDeletingTech(false);
     setTimeout(() => setNotification(""), 4000);
   };
 
@@ -312,8 +317,8 @@ export default function AdminTechniciansPage() {
                           <span>🔑</span> Reset PIN / PW
                         </button>
                         <button
-                          onClick={() => handleDeleteTechnician(t)}
-                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          onClick={() => setDeleteModalTech(t)}
+                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
                           title="Remove technician from roster"
                         >
                           🗑️ Remove
@@ -540,6 +545,22 @@ export default function AdminTechniciansPage() {
             </div>
           </div>
         )}
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalTech}
+          onClose={() => setDeleteModalTech(null)}
+          onConfirm={handleConfirmDeleteTech}
+          title="Remove Laboratory Technician"
+          itemType="Technician"
+          itemName={deleteModalTech ? `${deleteModalTech.name} (${deleteModalTech.id})` : ""}
+          description={
+            deleteModalTech
+              ? `Are you sure you want to remove technician "${deleteModalTech.name}" (${deleteModalTech.role}) from the laboratory roster? Their assigned hardware workbench (${deleteModalTech.station}) will be unallocated.`
+              : ""
+          }
+          confirmButtonText="Remove Technician"
+          isDeleting={isDeletingTech}
+        />
       </div>
     </AdminLayoutShell>
   );

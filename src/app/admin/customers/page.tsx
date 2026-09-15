@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import { registerCustomerAccount, deleteCustomerAccount, getDeletedEmails } from "@/lib/clientAuth";
 
 interface CustomerRecord {
@@ -103,11 +104,13 @@ export default function AdminCustomersPage() {
     setTimeout(() => setNotification(""), 5000);
   };
 
-  const handleDeleteCustomer = async (c: CustomerRecord) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete customer account for "${c.name}" (${c.company})?\n\nThis will immediately revoke their portal login AND delete all their recovery tickets. If they onboard again later, they will start completely clean as a new client.`
-    );
-    if (!confirmed) return;
+  const [deleteModalCustomer, setDeleteModalCustomer] = useState<CustomerRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDeleteCustomer = async () => {
+    if (!deleteModalCustomer) return;
+    const c = deleteModalCustomer;
+    setIsDeleting(true);
 
     try {
       await fetch(
@@ -120,11 +123,14 @@ export default function AdminCustomersPage() {
       deleteCustomerAccount(c.email);
       setCustomers((prev) => prev.filter((item) => item.email !== c.email && item.id !== c.id));
       setNotification(`✓ Customer "${c.name}" (${c.company}) and all associated tickets permanently deleted.`);
+      setDeleteModalCustomer(null);
       setTimeout(() => setNotification(""), 6000);
     } catch (err) {
       console.error("Failed to delete customer:", err);
       setNotification("Failed to delete customer. Please try again.");
       setTimeout(() => setNotification(""), 5000);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -347,8 +353,8 @@ export default function AdminCustomersPage() {
                           🔑 Change PW
                         </button>
                         <button
-                          onClick={() => handleDeleteCustomer(c)}
-                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          onClick={() => setDeleteModalCustomer(c)}
+                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
                           title="Delete customer and revoke portal access"
                         >
                           🗑️ Delete
@@ -573,6 +579,21 @@ export default function AdminCustomersPage() {
             </div>
           </div>
         )}
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalCustomer}
+          onClose={() => setDeleteModalCustomer(null)}
+          onConfirm={handleConfirmDeleteCustomer}
+          title="Delete Customer Account"
+          itemType="Customer Account"
+          itemName={deleteModalCustomer ? `${deleteModalCustomer.name} (${deleteModalCustomer.company})` : ""}
+          description={
+            deleteModalCustomer
+              ? `Are you sure you want to permanently delete the customer account for "${deleteModalCustomer.name}"? This will immediately revoke their portal login and permanently delete all their recovery tickets.`
+              : ""
+          }
+          isDeleting={isDeleting}
+        />
       </div>
     </AdminLayoutShell>
   );

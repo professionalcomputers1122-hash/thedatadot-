@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   Ticket,
   fetchTicketsFromSupabase,
@@ -19,22 +20,22 @@ export default function AdminTicketsPage() {
   const [filter, setFilter] = useState("ALL");
   const [notification, setNotification] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModalTicket, setDeleteModalTicket] = useState<Ticket | null>(null);
 
-  const handleDeleteTicket = async (ticketId: string) => {
-    const ok = window.confirm(
-      `PERMANENT PURGE: Are you sure you want to permanently delete Ticket #${ticketId}? All messages, diagnostics, and records will be permanently removed.`
-    );
-    if (!ok) return;
+  const handleConfirmDeleteTicket = async () => {
+    if (!deleteModalTicket) return;
+    const ticketId = deleteModalTicket.id;
 
     setDeletingId(ticketId);
     try {
       await deleteTicketFromSupabase(ticketId);
       setTickets((prev) => prev.filter((t) => t.id !== ticketId));
       setNotification(`✓ Case #${ticketId} permanently deleted and removed from system.`);
+      setDeleteModalTicket(null);
       setTimeout(() => setNotification(""), 5000);
     } catch (err) {
       console.error("Delete ticket error:", err);
-      alert("Failed to delete ticket.");
+      setNotification("Failed to delete ticket.");
     } finally {
       setDeletingId(null);
     }
@@ -417,12 +418,12 @@ export default function AdminTicketsPage() {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => handleDeleteTicket(t.id)}
+                            onClick={() => setDeleteModalTicket(t)}
                             disabled={deletingId === t.id}
-                            className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition text-xs"
+                            className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition text-xs cursor-pointer"
                             title="Permanently Delete Ticket"
                           >
-                            {deletingId === t.id ? "..." : "🗑️"}
+                            🗑️
                           </button>
                         </div>
                       </td>
@@ -588,6 +589,22 @@ export default function AdminTicketsPage() {
             </div>
           </div>
         )}
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalTicket}
+          onClose={() => setDeleteModalTicket(null)}
+          onConfirm={handleConfirmDeleteTicket}
+          title="Delete Master Ticket"
+          itemType="Ticket"
+          itemName={deleteModalTicket ? `Ticket #${deleteModalTicket.id} - ${deleteModalTicket.companyName}` : ""}
+          description={
+            deleteModalTicket
+              ? `Are you sure you want to permanently purge Ticket #${deleteModalTicket.id} (${deleteModalTicket.deviceOrSubject})? All forensic diagnostics, communications, and tracking records will be permanently removed.`
+              : ""
+          }
+          confirmButtonText="Permanently Delete Ticket"
+          isDeleting={!!deletingId}
+        />
       </div>
     </AdminLayoutShell>
   );

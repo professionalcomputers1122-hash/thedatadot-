@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
 import { getCustomerSession } from "@/lib/clientAuth";
 
@@ -56,22 +57,21 @@ export default function CustomerTicketsPage() {
     return () => clearInterval(interval);
   }, [router]);
 
-  const handleDeleteTicket = async (ticketId: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete Ticket #${ticketId}? This action cannot be undone.`)) {
-      return;
-    }
+  const [deleteModalTicket, setDeleteModalTicket] = useState<Ticket | null>(null);
+
+  const handleConfirmDeleteTicket = async () => {
+    if (!deleteModalTicket) return;
+    const ticketId = deleteModalTicket.id;
 
     setDeletingId(ticketId);
     try {
       const ok = await deleteTicketFromSupabase(ticketId);
       if (ok) {
         setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-      } else {
-        alert("Failed to delete ticket. Please check connection and try again.");
       }
+      setDeleteModalTicket(null);
     } catch (err) {
       console.error("Delete ticket error:", err);
-      alert("Error occurred while deleting ticket.");
     } finally {
       setDeletingId(null);
     }
@@ -326,9 +326,9 @@ export default function CustomerTicketsPage() {
                             </Link>
                             <button
                               type="button"
-                              onClick={() => handleDeleteTicket(t.id)}
+                              onClick={() => setDeleteModalTicket(t)}
                               disabled={deletingId === t.id}
-                              className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
+                              className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                               title={`Delete Ticket #${t.id}`}
                             >
                               🗑️
@@ -343,6 +343,23 @@ export default function CustomerTicketsPage() {
             </div>
           )}
         </div>
+
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalTicket}
+          onClose={() => setDeleteModalTicket(null)}
+          onConfirm={handleConfirmDeleteTicket}
+          title="Delete Support Ticket"
+          itemType="Ticket"
+          itemName={deleteModalTicket ? `Ticket #${deleteModalTicket.id} - ${deleteModalTicket.deviceOrSubject}` : ""}
+          description={
+            deleteModalTicket
+              ? `Are you sure you want to permanently delete Ticket #${deleteModalTicket.id}? This will remove the case from your ticket directory and purge all diagnostic logs.`
+              : ""
+          }
+          confirmButtonText="Permanently Delete Ticket"
+          isDeleting={!!deletingId}
+        />
       </main>
 
       <Footer />

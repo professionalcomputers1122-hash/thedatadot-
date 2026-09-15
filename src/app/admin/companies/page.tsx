@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   initialCompanies,
   CompanyRecord,
@@ -76,13 +77,12 @@ export default function AdminCompaniesPage() {
     };
   }, []);
 
-  // Permanent Delete Company Organization Handler
-  const handleDeleteCompany = async (c: CompanyRecord) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete organization "${c.name}" (${c.id})?\n\nThis will remove the company portfolio and SLA agreements from the Admin Console.`
-    );
-    if (!confirmed) return;
+  const [deleteModalTarget, setDeleteModalTarget] = useState<CompanyRecord | null>(null);
 
+  // Permanent Delete Company Organization Handler
+  const handleConfirmDelete = async () => {
+    if (!deleteModalTarget) return;
+    const c = deleteModalTarget;
     setDeletingId(c.id);
 
     try {
@@ -108,6 +108,7 @@ export default function AdminCompaniesPage() {
       );
 
       setNotification(`✓ Organization "${c.name}" permanently deleted.`);
+      setDeleteModalTarget(null);
       setTimeout(() => setNotification(""), 5000);
     } catch (err) {
       console.error("Failed to delete company:", err);
@@ -256,13 +257,13 @@ export default function AdminCompaniesPage() {
                       <td className="px-5 py-4 text-right whitespace-nowrap">
                         <button
                           type="button"
-                          onClick={() => handleDeleteCompany(c)}
+                          onClick={() => setDeleteModalTarget(c)}
                           disabled={deletingId === c.id}
-                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 ml-auto disabled:opacity-50"
+                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 ml-auto disabled:opacity-50 cursor-pointer"
                           title={`Permanently delete organization "${c.name}"`}
                         >
                           <span>🗑️</span>
-                          <span>{deletingId === c.id ? "Deleting..." : "Delete"}</span>
+                          <span>Delete</span>
                         </button>
                       </td>
                     </tr>
@@ -383,6 +384,22 @@ export default function AdminCompaniesPage() {
             </div>
           </div>
         )}
+
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalTarget}
+          onClose={() => setDeleteModalTarget(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Client Organization"
+          itemType="Organization"
+          itemName={deleteModalTarget ? `${deleteModalTarget.name} (${deleteModalTarget.id})` : ""}
+          description={
+            deleteModalTarget
+              ? `Are you sure you want to permanently delete organization "${deleteModalTarget.name}"? This will remove the company portfolio and contract SLA agreements from the Admin Console.`
+              : ""
+          }
+          isDeleting={!!deletingId}
+        />
       </div>
     </AdminLayoutShell>
   );

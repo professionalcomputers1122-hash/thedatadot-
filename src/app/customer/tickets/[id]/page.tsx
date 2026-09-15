@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   initialTickets,
   fetchTicketsFromSupabase,
@@ -198,24 +199,22 @@ export default function CustomerTicketDetailPage({
     }
   };
 
-  const handleDeleteTicket = async () => {
-    if (!window.confirm(`Are you sure you want to permanently delete Ticket #${ticket.id}? This will purge all message history and tracking telemetry.`)) {
-      return;
-    }
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  const handleConfirmDelete = async () => {
+    if (!ticket) return;
     setIsDeleting(true);
+
     try {
       const ok = await deleteTicketFromSupabase(ticket.id);
       if (ok) {
-        alert(`Ticket #${ticket.id} has been permanently deleted.`);
+        setShowDeleteModal(false);
         router.push("/customer/tickets");
       } else {
-        alert("Failed to delete ticket. Please check connection and try again.");
         setIsDeleting(false);
       }
     } catch (err) {
       console.error("Delete ticket error:", err);
-      alert("Error deleting ticket.");
       setIsDeleting(false);
     }
   };
@@ -353,13 +352,13 @@ export default function CustomerTicketDetailPage({
             </button>
 
             <button
-              onClick={handleDeleteTicket}
+              onClick={() => setShowDeleteModal(true)}
               disabled={isDeleting}
-              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition shadow-xs flex items-center gap-1.5"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Permanently remove this ticket"
             >
               <span>🗑️</span>
-              <span>{isDeleting ? "Deleting..." : "Delete Ticket"}</span>
+              <span>Delete Ticket</span>
             </button>
 
             <a
@@ -603,6 +602,19 @@ export default function CustomerTicketDetailPage({
             </div>
           </div>
         </div>
+
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Support Ticket"
+          itemType="Ticket"
+          itemName={`Ticket #${ticket.id} - ${ticket.deviceOrSubject}`}
+          description={`Are you sure you want to permanently delete Ticket #${ticket.id}? This will purge all message history, diagnostic scans, and tracking telemetry.`}
+          confirmButtonText="Permanently Delete Ticket"
+          isDeleting={isDeleting}
+        />
       </main>
 
       <Footer />

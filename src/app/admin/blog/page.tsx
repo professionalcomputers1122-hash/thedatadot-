@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   fetchBlogPostsFromSupabase,
   createOrUpdateBlogPostInSupabase,
@@ -260,12 +261,24 @@ export default function AdminBlogPage() {
     setTimeout(() => setNotification(""), 4000);
   };
 
-  const handleDelete = async (id: string, postTitle: string) => {
-    if (confirm(`Are you sure you want to permanently delete "${postTitle}"?\n\nThis will remove it from the live public blog (/blog) immediately.`)) {
+  const [deleteModalPost, setDeleteModalPost] = useState<BlogPost | null>(null);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  const handleConfirmDeletePost = async () => {
+    if (!deleteModalPost) return;
+    const { id, title: postTitle } = deleteModalPost;
+    setIsDeletingPost(true);
+
+    try {
       setArticles((prev) => prev.filter((a) => a.id !== id));
       await deleteBlogPostFromSupabase(id, postTitle);
       setNotification(`✓ Deleted article "${postTitle}" from CMS & live site.`);
+      setDeleteModalPost(null);
       setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      console.error("Delete article error:", err);
+    } finally {
+      setIsDeletingPost(false);
     }
   };
 
@@ -455,8 +468,8 @@ export default function AdminBlogPage() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => handleDelete(art.id, art.title)}
-                          className="rounded-lg px-2.5 py-1 text-[11px] text-red-400 hover:bg-red-950/40 transition"
+                          onClick={() => setDeleteModalPost(art)}
+                          className="rounded-lg px-2.5 py-1 text-[11px] text-red-400 hover:bg-red-950/40 transition cursor-pointer"
                         >
                           Delete
                         </button>
@@ -784,6 +797,22 @@ export default function AdminBlogPage() {
           </div>
         )}
 
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalPost}
+          onClose={() => setDeleteModalPost(null)}
+          onConfirm={handleConfirmDeletePost}
+          title="Delete Blog Article"
+          itemType="Article"
+          itemName={deleteModalPost ? deleteModalPost.title : ""}
+          description={
+            deleteModalPost
+              ? `Are you sure you want to permanently delete the article "${deleteModalPost.title}"? This will remove it from the CMS and the live public website immediately.`
+              : ""
+          }
+          confirmButtonText="Permanently Delete Article"
+          isDeleting={isDeletingPost}
+        />
       </div>
     </AdminLayoutShell>
   );

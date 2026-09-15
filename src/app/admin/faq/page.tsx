@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import { fetchFaqsFromSupabase, createOrUpdateFaqInSupabase } from "@/lib/portalData";
 
 export type FAQCategoryName =
@@ -223,12 +224,14 @@ export default function AdminFAQPage() {
     setTimeout(() => setNotification(""), 4000);
   };
 
-  const handleDelete = (id: string, q: string) => {
-    if (confirm(`Delete this FAQ: "${q.slice(0, 40)}..."?`)) {
-      setFaqs(faqs.filter((item) => item.id !== id));
-      setNotification("FAQ item deleted.");
-      setTimeout(() => setNotification(""), 4000);
-    }
+  const [deleteModalFaq, setDeleteModalFaq] = useState<FAQItem | null>(null);
+
+  const handleConfirmDeleteFaq = () => {
+    if (!deleteModalFaq) return;
+    setFaqs((prev) => prev.filter((item) => item.id !== deleteModalFaq.id));
+    setNotification("FAQ item deleted.");
+    setDeleteModalFaq(null);
+    setTimeout(() => setNotification(""), 4000);
   };
 
   return (
@@ -349,8 +352,8 @@ export default function AdminFAQPage() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(f.id, f.question)}
-                      className="text-[11px] text-red-400 hover:underline"
+                      onClick={() => setDeleteModalFaq(f)}
+                      className="text-[11px] text-red-400 hover:underline cursor-pointer"
                     >
                       Delete
                     </button>
@@ -437,6 +440,21 @@ export default function AdminFAQPage() {
           </div>
         )}
 
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalFaq}
+          onClose={() => setDeleteModalFaq(null)}
+          onConfirm={handleConfirmDeleteFaq}
+          title="Delete FAQ Entry"
+          itemType="FAQ"
+          itemName={deleteModalFaq ? `"${deleteModalFaq.question}" (${deleteModalFaq.category})` : ""}
+          description={
+            deleteModalFaq
+              ? `Are you sure you want to permanently delete this FAQ item? It will be removed from all customer and public knowledge base views.`
+              : ""
+          }
+          confirmButtonText="Permanently Delete FAQ"
+        />
       </div>
     </AdminLayoutShell>
   );

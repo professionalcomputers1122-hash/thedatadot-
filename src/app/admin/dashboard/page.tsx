@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import ModernDeleteModal from "@/components/ModernDeleteModal";
 import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
 
 export default function AdminDashboardPage() {
@@ -40,22 +41,21 @@ export default function AdminDashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleDeleteTicket = async (ticketId: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete Ticket #${ticketId}? This action cannot be undone.`)) {
-      return;
-    }
+  const [deleteModalTicket, setDeleteModalTicket] = useState<Ticket | null>(null);
+
+  const handleConfirmDeleteTicket = async () => {
+    if (!deleteModalTicket) return;
+    const ticketId = deleteModalTicket.id;
 
     setDeletingId(ticketId);
     try {
       const ok = await deleteTicketFromSupabase(ticketId);
       if (ok) {
         setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-      } else {
-        alert("Failed to delete ticket. Please check connection.");
       }
+      setDeleteModalTicket(null);
     } catch (err) {
       console.error("Delete ticket error:", err);
-      alert("Error deleting ticket.");
     } finally {
       setDeletingId(null);
     }
@@ -235,12 +235,12 @@ export default function AdminDashboardPage() {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => handleDeleteTicket(t.id)}
+                            onClick={() => setDeleteModalTicket(t)}
                             disabled={deletingId === t.id}
-                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition text-xs"
+                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition text-xs cursor-pointer"
                             title={`Delete Ticket #${t.id}`}
                           >
-                            {deletingId === t.id ? "..." : "🗑️"}
+                            🗑️
                           </button>
                         </div>
                       </td>
@@ -306,6 +306,23 @@ export default function AdminDashboardPage() {
             </p>
           </Link>
         </div>
+
+        {/* MODERN DELETE MODAL */}
+        <ModernDeleteModal
+          isOpen={!!deleteModalTicket}
+          onClose={() => setDeleteModalTicket(null)}
+          onConfirm={handleConfirmDeleteTicket}
+          title="Delete Ticket"
+          itemType="Ticket"
+          itemName={deleteModalTicket ? `Ticket #${deleteModalTicket.id} - ${deleteModalTicket.companyName}` : ""}
+          description={
+            deleteModalTicket
+              ? `Are you sure you want to permanently delete Ticket #${deleteModalTicket.id} (${deleteModalTicket.deviceOrSubject})? This action cannot be undone.`
+              : ""
+          }
+          confirmButtonText="Permanently Delete Ticket"
+          isDeleting={!!deletingId}
+        />
       </div>
     </AdminLayoutShell>
   );

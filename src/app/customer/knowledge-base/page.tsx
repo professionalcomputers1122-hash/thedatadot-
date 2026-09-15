@@ -56,29 +56,36 @@ export default function CustomerKnowledgeBasePage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased relative selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden">
+      {/* AMBIENT GLOW MESH */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-10%] left-[20%] w-[550px] h-[550px] bg-blue-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-[40%] right-[-5%] w-[450px] h-[450px] bg-indigo-600/8 rounded-full blur-[140px]" />
+      </div>
+
       <CustomerNav />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* HERO SEARCH */}
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 mb-3">
-            <span>Customer Knowledge Base &amp; Troubleshooting</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-mono text-blue-400 mb-3">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span>Knowledge Base &amp; Technical Playbooks</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-            How can our engineering team help you?
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            How can our engineering desk assist you?
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 mt-2">
-            Verified recovery procedures, packaging instructions, and cloud IT tutorials.
+          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+            Verified hardware protocols, ransomware checklists, and cloud infrastructure playbooks.
           </p>
 
           <div className="mt-6 relative">
             <input
               type="text"
-              placeholder="Search guides (e.g. clicking drive, ransomware, packing, M365)..."
+              placeholder="Search playbooks (e.g. clicking drive, ransomware, packing, M365)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-white p-3.5 pl-11 text-xs shadow-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-2xl border border-slate-800 bg-slate-900/90 p-3.5 pl-11 text-xs text-slate-200 shadow-2xl outline-none placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition"
             />
             <span className="absolute left-4 top-3.5 text-slate-400 text-sm">🔍</span>
           </div>
@@ -91,24 +98,24 @@ export default function CustomerKnowledgeBasePage() {
             return (
               <div
                 key={item.id}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs transition hover:border-slate-300"
+                className="rounded-3xl border border-slate-800/80 bg-slate-900/80 backdrop-blur-xl p-6 shadow-2xl transition hover:border-slate-700/80"
               >
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : item.id)}
                   className="flex items-start justify-between gap-4 cursor-pointer"
                 >
                   <div className="flex items-start gap-3.5">
-                    <span className="text-2xl p-2 rounded-2xl bg-blue-50 border border-blue-100 shrink-0">
+                    <span className="text-2xl p-2.5 rounded-2xl bg-slate-950/70 border border-slate-800 shrink-0">
                       {item.icon}
                     </span>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400">
                           {item.category}
                         </span>
                       </div>
-                      <h2 className="text-base font-bold text-slate-950">{item.title}</h2>
-                      <p className="text-xs text-slate-500 mt-1">{item.summary}</p>
+                      <h2 className="text-base font-bold text-white">{item.title}</h2>
+                      <p className="text-xs text-slate-400 mt-1">{item.summary}</p>
                     </div>
                   </div>
 
@@ -118,7 +125,7 @@ export default function CustomerKnowledgeBasePage() {
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-700 leading-relaxed whitespace-pre-line pl-12">
+                  <div className="mt-5 pt-4 border-t border-slate-800 text-xs text-slate-300 leading-relaxed whitespace-pre-line pl-12 font-sans">
                     {item.content}
                   </div>
                 )}
@@ -128,16 +135,16 @@ export default function CustomerKnowledgeBasePage() {
         </div>
 
         {/* STILL NEED ASSISTANCE CALLOUT */}
-        <div className="mt-10 rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 p-6 sm:p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="mt-10 rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950/70 p-6 sm:p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl">
           <div>
             <h3 className="text-lg font-bold">Have a critical emergency not listed here?</h3>
-            <p className="text-xs text-slate-300 mt-1">
-              Connect directly with our 24/7 emergency cleanroom dispatch.
+            <p className="text-xs text-slate-400 mt-1">
+              Connect directly with our 24/7 emergency cleanroom and SOC dispatch.
             </p>
           </div>
           <a
             href="tel:+916380488373"
-            className="rounded-xl bg-blue-600 px-6 py-3 text-xs font-bold text-white hover:bg-blue-500 shadow-md transition shrink-0"
+            className="rounded-xl bg-blue-600 px-6 py-3 text-xs font-bold text-white hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)] transition shrink-0"
           >
             Call Hotline: +91 6380488373
           </a>

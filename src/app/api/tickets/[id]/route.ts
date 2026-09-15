@@ -139,3 +139,68 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await props.params;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Ticket ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const supabase = createAdminClient();
+
+    // 1. Delete associated chat messages
+    await supabase.from("ticket_messages").delete().eq("ticket_id", id);
+
+    // 2. Delete ticket record from tickets table
+    const { error } = await supabase.from("tickets").delete().eq("id", id);
+
+    if (error) {
+      console.error("[API /api/tickets/[id] DELETE error]:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    // 3. Record permanent deletion in audit_logs
+    try {
+      await supabase.from("audit_logs").insert([
+        {
+          id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+          actor: "Admin / Client User",
+          action: "DELETE_TICKET",
+          target: `Ticket #${id}`,
+          ip: clientIp,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (auditErr) {
+      console.warn("[API /api/tickets/[id] DELETE audit warn]:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Ticket #${id} permanently purged`,
+    });
+  } catch (err: any) {
+    console.error("[API /api/tickets/[id] DELETE exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+

@@ -9,6 +9,7 @@ import {
   fetchTicketsFromSupabase,
   initialTechnicians,
   sendMessageToSupabase,
+  deleteTicketFromSupabase,
 } from "@/lib/portalData";
 
 export default function AdminTicketsPage() {
@@ -18,6 +19,23 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [notification, setNotification] = useState("");
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    const ok = window.confirm(
+      `⚠️ PERMANENT PURGE: Are you sure you want to permanently delete Ticket #${ticketId}? All messages, diagnostics, and records will be purged.`
+    );
+    if (!ok) return;
+
+    try {
+      await deleteTicketFromSupabase(ticketId);
+      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+      setNotification(`✓ Case #${ticketId} permanently deleted and removed from system.`);
+      setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      console.error("Delete ticket error:", err);
+      alert("Failed to delete ticket.");
+    }
+  };
 
   // Assign Modal State
   const [assignModalTicket, setAssignModalTicket] = useState<Ticket | null>(null);
@@ -364,6 +382,13 @@ export default function AdminTicketsPage() {
                         >
                           Workbench →
                         </Link>
+                        <button
+                          onClick={() => handleDeleteTicket(t.id)}
+                          className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 font-bold text-rose-400 hover:bg-rose-500/20 transition"
+                          title="Permanently Delete Ticket"
+                        >
+                          🗑️
+                        </button>
                       </td>
                     </tr>
                   );

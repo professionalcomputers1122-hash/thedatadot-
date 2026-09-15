@@ -239,7 +239,64 @@ export function parseTicketRow(row: any): Ticket {
   };
 }
 
+const DELETED_TICKETS_KEY = "tdd_deleted_ticket_ids";
+
+export function getDeletedTicketIds(): Set<string> {
+  const set = new Set<string>();
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(DELETED_TICKETS_KEY);
+      if (stored) {
+        JSON.parse(stored).forEach((id: string) => set.add(id.trim().toUpperCase()));
+      }
+    } catch (e) {
+      console.warn("Failed reading deleted tickets from storage:", e);
+    }
+  }
+  return set;
+}
+
+export async function deleteTicketFromSupabase(ticketId: string): Promise<boolean> {
+  const cleanId = ticketId.trim();
+  // 1. Mark in localStorage cache
+  if (typeof window !== "undefined") {
+    try {
+      const current = getDeletedTicketIds();
+      current.add(cleanId.toUpperCase());
+      localStorage.setItem(DELETED_TICKETS_KEY, JSON.stringify(Array.from(current)));
+    } catch (e) {
+      console.warn("Storage update warning:", e);
+    }
+  }
+
+  // 2. Call backend API DELETE /api/tickets/[id]
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/tickets/${encodeURIComponent(cleanId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) return true;
+    }
+  } catch (apiErr) {
+    console.warn("API ticket delete fallback:", apiErr);
+  }
+
+  // 3. Fallback direct Supabase delete if configured
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from("ticket_messages").delete().eq("ticket_id", cleanId);
+      await supabase.from("tickets").delete().eq("id", cleanId);
+      return true;
+    } catch (err) {
+      console.error("Direct Supabase ticket delete error:", err);
+    }
+  }
+  return true;
+}
+
 export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<Ticket[]> {
+  const deletedIds = getDeletedTicketIds();
+
   try {
     if (typeof window !== "undefined") {
       const url = customerEmail
@@ -249,7 +306,9 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.tickets)) {
-          return json.tickets.map(parseTicketRow);
+          return json.tickets
+            .map(parseTicketRow)
+            .filter((t: Ticket) => !deletedIds.has(t.id.trim().toUpperCase()));
         }
       }
     }
@@ -277,7 +336,9 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
 
     if (!data || data.length === 0) return [];
 
-    return data.map(parseTicketRow);
+    return data
+      .map(parseTicketRow)
+      .filter((t: Ticket) => !deletedIds.has(t.id.trim().toUpperCase()));
   } catch (err) {
     console.error("Failed to fetch from Supabase:", err);
     return [];

@@ -44,10 +44,34 @@ export async function GET(req: Request) {
       );
     }
 
+    // Read any permanently deleted ticket IDs from audit_logs to prevent auto-restoration
+    const deletedTicketIds = new Set<string>();
+    try {
+      const { data: deleteLogs } = await supabase
+        .from("audit_logs")
+        .select("target")
+        .eq("action", "DELETE_TICKET");
+
+      if (deleteLogs) {
+        deleteLogs.forEach((l) => {
+          const match = l.target?.match(/Ticket\s*#?([A-Za-z0-9\-]+)/i);
+          if (match && match[1]) {
+            deletedTicketIds.add(match[1].trim().toUpperCase());
+          }
+        });
+      }
+    } catch (logErr) {
+      console.warn("Audit logs check note in tickets GET:", logErr);
+    }
+
+    const cleanTickets = (data || []).filter(
+      (t) => !deletedTicketIds.has((t.id || "").trim().toUpperCase())
+    );
+
     return NextResponse.json({
       success: true,
-      count: data?.length || 0,
-      tickets: data || [],
+      count: cleanTickets.length,
+      tickets: cleanTickets,
     });
   } catch (err: any) {
     console.error("[API /api/tickets GET exception]:", err);
@@ -210,3 +234,75 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch (e) {
+        // ignore body parse error
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Ticket ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const supabase = createAdminClient();
+
+    // 1. Delete associated messages
+    await supabase.from("ticket_messages").delete().eq("ticket_id", id);
+
+    // 2. Delete ticket record
+    const { error } = await supabase.from("tickets").delete().eq("id", id);
+
+    if (error) {
+      console.error("[API /api/tickets DELETE error]:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    // 3. Record permanent deletion in audit_logs
+    try {
+      await supabase.from("audit_logs").insert([
+        {
+          id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+          actor: "Admin / Client User",
+          action: "DELETE_TICKET",
+          target: `Ticket #${id}`,
+          ip: clientIp,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (auditErr) {
+      console.warn("[API /api/tickets DELETE audit warn]:", auditErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Ticket #${id} permanently purged`,
+    });
+  } catch (err: any) {
+    console.error("[API /api/tickets DELETE exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+

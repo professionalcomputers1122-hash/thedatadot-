@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
-import { fetchTicketsFromSupabase, Ticket } from "@/lib/portalData";
+import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
 
 interface TimelineStage {
   title: string;
@@ -303,7 +303,6 @@ function getTimelineStages(
     s3 = "pending";
     s4 = "pending";
   } else {
-    // Intake
     s1 = "active";
     s2 = "pending";
     s3 = "pending";
@@ -358,6 +357,7 @@ export default function CustomerDashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFileModal, setShowFileModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
@@ -370,22 +370,17 @@ export default function CustomerDashboardPage() {
 
     const userEmail = activeCust.email.toLowerCase();
     const userCompany = activeCust.company.toLowerCase();
-    const userName = activeCust.name.toLowerCase();
 
     async function loadTickets() {
       try {
         const allTickets = await fetchTicketsFromSupabase(userEmail);
-        // Filter tickets belonging strictly to this customer
         const myTickets = allTickets.filter((t) => {
-          // 1. Strict match on customer email
           if ((t as any).customerEmail && (t as any).customerEmail.toLowerCase() === userEmail) {
             return true;
           }
-          // 2. Demo account Aravind special case
           if (userEmail.includes("aravind") && (t.id === "TDD-8942" || t.companyName.toLowerCase().includes("apex"))) {
             return true;
           }
-          // 3. Strict match on company name (only if company is valid string)
           if (userCompany && userCompany.trim().length > 2 && t.companyName.toLowerCase().trim() === userCompany.trim()) {
             return true;
           }
@@ -401,11 +396,30 @@ export default function CustomerDashboardPage() {
     }
 
     loadTickets();
-
-    // Auto-poll live ticket telemetry from technician every 10 seconds
     const interval = setInterval(loadTickets, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete Ticket #${ticketId}? This action will permanently remove all ticket messages and forensic telemetry.`)) {
+      return;
+    }
+
+    setDeletingId(ticketId);
+    try {
+      const ok = await deleteTicketFromSupabase(ticketId);
+      if (ok) {
+        setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+      } else {
+        alert("Failed to delete ticket. Please check connection and try again.");
+      }
+    } catch (err) {
+      console.error("Delete ticket error:", err);
+      alert("Error occurred while deleting ticket.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const activeTicket = tickets.length > 0 ? (tickets.find((t) => t.status !== "Resolved") || tickets[0]) : null;
   const activeCount = tickets.filter((t) => t.status !== "Resolved").length;
@@ -421,31 +435,65 @@ export default function CustomerDashboardPage() {
     { name: "Authentication_Credentials_Backup.xlsx", size: "12 MB", status: "100% Intact" },
   ];
 
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat) {
+      case "Cybersecurity":
+        return "bg-rose-500/15 text-rose-300 border border-rose-500/30";
+      case "Cloud Solutions":
+        return "bg-indigo-500/15 text-indigo-300 border border-indigo-500/30";
+      case "Managed IT":
+        return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+      default:
+        return "bg-blue-500/15 text-blue-300 border border-blue-500/30";
+    }
+  };
+
+  const getCategoryIcon = (cat?: string) => {
+    switch (cat) {
+      case "Cybersecurity":
+        return "🛡️";
+      case "Cloud Solutions":
+        return "☁️";
+      case "Managed IT":
+        return "🖥️";
+      default:
+        return "💽";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#070e17] text-slate-100 flex flex-col antialiased relative selection:bg-blue-500/30 selection:text-blue-200 overflow-x-hidden">
+      {/* AMBIENT GLOW MESH */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-10%] left-[20%] w-[550px] h-[550px] bg-blue-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-[40%] right-[-5%] w-[450px] h-[450px] bg-indigo-600/8 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[10%] left-[-5%] w-[400px] h-[400px] bg-emerald-600/5 rounded-full blur-[140px]" />
+      </div>
+
       <CustomerNav />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* WELCOME BANNER */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 mb-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-mono text-blue-400 mb-2 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
               <span>
                 {customer?.company || "Enterprise Client Desk"} • Account #{customer?.accountNumber || "TDD-CLI-8492"}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Welcome back, {customer?.name || "Client"}
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Welcome back, <span className="bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">{customer?.name || "Client"}</span>
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-600">
-              Live dashboard for your hardware cases, SOC incidents, and cloud tickets.
+            <p className="mt-1 text-xs sm:text-sm text-slate-400">
+              Live executive desk for cleanroom hardware recovery, SOC incident defense, and enterprise cloud operations.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
               href="/customer/tickets/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_0_25px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition"
             >
               <span>+ Open New Support Ticket</span>
             </Link>
@@ -454,22 +502,22 @@ export default function CustomerDashboardPage() {
 
         {/* METRICS OVERVIEW */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-5 shadow-2xl hover:border-slate-700/80 transition group">
+            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">
               {activeTicket?.category === "Cybersecurity"
-                ? "Active Incident"
+                ? "Active SOC Incident"
                 : activeTicket?.category === "Cloud Solutions"
                 ? "Active Cloud Ticket"
                 : activeTicket?.category === "Managed IT"
                 ? "Active Fleet Ticket"
                 : "Active Recovery"}
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-blue-600">
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-black text-blue-400">
                 {activeCount} {activeCount === 1 ? "Case" : "Cases"}
               </span>
               {activeTicket && (
-                <span className="text-[11px] font-semibold text-emerald-600">
+                <span className="text-[11px] font-semibold text-emerald-400 font-mono">
                   {activeTicket.clonedPercent && activeTicket.clonedPercent > 0
                     ? activeTicket.category === "Cybersecurity"
                       ? `${activeTicket.clonedPercent}% Remediated`
@@ -482,25 +530,25 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">SLA Response Guarantee</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-950">15-Min</span>
-              <span className="text-[11px] font-semibold text-blue-600">24/7/365</span>
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-5 shadow-2xl hover:border-slate-700/80 transition">
+            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">SLA Response Guarantee</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-black text-white">15-Min</span>
+              <span className="text-[11px] font-mono font-semibold text-blue-400">24/7/365</span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Service Standard</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-emerald-600">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-5 shadow-2xl hover:border-slate-700/80 transition">
+            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">Service Standard</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-black text-emerald-400">
                 {activeTicket?.category === "Cybersecurity"
                   ? "Zero Breach"
                   : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
                   ? "99.99%"
                   : "99.98%"}
               </span>
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className="text-[11px] font-mono text-slate-400">
                 {activeTicket?.category === "Cybersecurity"
                   ? "SOC Assurance"
                   : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
@@ -510,11 +558,11 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Total Cases</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-950">{tickets.length} Cases</span>
-              <span className="text-[11px] font-semibold text-slate-500">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl p-5 shadow-2xl hover:border-slate-700/80 transition">
+            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider">Total Enterprise Cases</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-2xl font-black text-white">{tickets.length}</span>
+              <span className="text-[11px] font-mono text-slate-400">
                 {activeCount} Active · {tickets.length - activeCount} Closed
               </span>
             </div>
@@ -523,41 +571,44 @@ export default function CustomerDashboardPage() {
 
         {/* ACTIVE CASE SPOTLIGHT OR EMPTY STATE */}
         {activeTicket ? (
-          <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20 p-6 sm:p-8 shadow-sm mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5 mb-6">
+          <div className="rounded-3xl border border-slate-800/90 bg-slate-900/80 backdrop-blur-xl p-6 sm:p-8 shadow-2xl mb-8 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5 mb-6">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700 mb-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-mono font-bold text-blue-400 mb-2.5">
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
                   </span>
                   <span>
+                    {getCategoryIcon(activeTicket.category)}{" "}
                     {activeTicket.category === "Cybersecurity"
-                      ? "🛡️ Cybersecurity Response Target"
+                      ? "Cybersecurity Response Target"
                       : activeTicket.category === "Cloud Solutions"
-                      ? "☁️ Cloud Infrastructure Target"
+                      ? "Cloud Infrastructure Target"
                       : activeTicket.category === "Managed IT"
-                      ? "🖥️ Managed IT System"
-                      : "💽 Forensic Hardware Target"}{" "}
+                      ? "Managed IT Workstation"
+                      : "Forensic Hardware Target"}{" "}
                     • Case #{activeTicket.id}
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-950">
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                   {activeTicket.deviceOrSubject}
                 </h2>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   {activeTicket.category === "Cybersecurity" ? (
-                    <>Target Segment / Host: <strong>{activeTicket.serialNumber || "Corporate Network"}</strong> • Indicators: {activeTicket.symptoms || "Threat analysis in progress"}</>
+                    <>Target Segment / Host: <strong className="text-slate-200">{activeTicket.serialNumber || "Corporate Network"}</strong> • Indicators: {activeTicket.symptoms || "Threat analysis in progress"}</>
                   ) : activeTicket.category === "Cloud Solutions" || activeTicket.category === "Managed IT" ? (
-                    <>System Target: <strong>{activeTicket.serialNumber || "Enterprise Tenant"}</strong> • Scope: {activeTicket.symptoms || "Technical deployment underway"}</>
+                    <>System Target: <strong className="text-slate-200">{activeTicket.serialNumber || "Enterprise Tenant"}</strong> • Scope: {activeTicket.symptoms || "Technical deployment underway"}</>
                   ) : (
-                    <>Serial: <strong>{activeTicket.serialNumber || "N/A"}</strong> • Reported: {activeTicket.symptoms || "Hardware failure diagnostics"}</>
+                    <>Serial: <strong className="text-slate-200">{activeTicket.serialNumber || "N/A"}</strong> • Reported: {activeTicket.symptoms || "Hardware failure diagnostics"}</>
                   )}
                 </p>
               </div>
 
               <div className="sm:text-right">
-                <span className="text-xs text-slate-500 block">
+                <span className="text-[11px] font-mono text-slate-400 block uppercase">
                   {activeTicket.category === "Cybersecurity"
                     ? "Assigned Security Lead"
                     : activeTicket.category === "Cloud Solutions"
@@ -566,14 +617,15 @@ export default function CustomerDashboardPage() {
                     ? "Assigned Systems Lead"
                     : "Assigned Lead Engineer"}
                 </span>
-                <span className="text-sm font-bold text-slate-900">
+                <span className="text-sm font-bold text-white flex items-center gap-1.5 sm:justify-end mt-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
                     ? activeTicket.assignedTech
                     : "Pending Admin Dispatch"}
                 </span>
-                <p className="text-xs font-bold text-blue-600 mt-0.5">
+                <p className="text-xs font-mono text-blue-400 mt-0.5">
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
-                    ? "Direct Desk Hotline: +91 6380488373"
+                    ? "Direct Desk: +91 6380488373"
                     : "Triage Queue • Specialist Pending"}
                 </p>
               </div>
@@ -584,64 +636,64 @@ export default function CustomerDashboardPage() {
               {stages.map((stg, sIdx) => {
                 if (stg.state === "done") {
                   return (
-                    <div key={sIdx} className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
-                      <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                        ✓ {stg.title}
+                    <div key={sIdx} className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
+                      <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                        <span className="text-emerald-400">✓</span> {stg.title}
                       </span>
-                      <p className="text-[11px] text-emerald-900 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-emerald-700 block mt-2 font-bold">Done</span>
+                      <p className="text-[11px] text-emerald-200/80 mt-1">{stg.description}</p>
+                      <span className="text-[10px] font-mono text-emerald-400 block mt-2 font-bold">COMPLETED</span>
                     </div>
                   );
                 }
                 if (stg.state === "active") {
                   return (
-                    <div key={sIdx} className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4 shadow-sm relative overflow-hidden">
-                      <span className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
+                    <div key={sIdx} className="rounded-2xl border border-blue-500 bg-blue-500/15 p-4 shadow-[0_0_25px_rgba(59,130,246,0.25)] ring-1 ring-blue-400/40 relative overflow-hidden">
+                      <span className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping" />
                         {stg.title}
                       </span>
-                      <p className="text-[11px] text-blue-950 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-blue-700 block mt-2 font-extrabold">
-                        Active In Progress
+                      <p className="text-[11px] text-blue-100 mt-1">{stg.description}</p>
+                      <span className="text-[10px] font-mono text-blue-300 block mt-2 font-extrabold tracking-wider">
+                        ● ACTIVE IN PROGRESS
                       </span>
                     </div>
                   );
                 }
                 return (
-                  <div key={sIdx} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 opacity-70">
-                    <span className="text-xs font-bold text-slate-600">○ {stg.title}</span>
+                  <div key={sIdx} className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 opacity-60">
+                    <span className="text-xs font-bold text-slate-400">○ {stg.title}</span>
                     <p className="text-[11px] text-slate-500 mt-1">{stg.description}</p>
-                    <span className="text-[10px] text-slate-400 block mt-2">Pending</span>
+                    <span className="text-[10px] font-mono text-slate-500 block mt-2">QUEUED</span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
-              <span className="text-xs text-slate-600">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-800/80">
+              <span className="text-xs text-slate-400">
                 {activeTicket.category === "Data Recovery" ? (
-                  <>Protected by <strong>No Data, No Recovery Fee</strong> guarantee.</>
+                  <>Protected by <strong className="text-slate-200">No Data, No Recovery Fee</strong> cleanroom guarantee.</>
                 ) : activeTicket.category === "Cybersecurity" ? (
-                  <>Protected by <strong>Enterprise SOC & Incident Containment SLA</strong>.</>
+                  <>Protected by <strong className="text-slate-200">Enterprise SOC &amp; Zero-Trust Containment SLA</strong>.</>
                 ) : (
-                  <>Backed by <strong>Dedicated Enterprise SLA & Guaranteed Uptime</strong>.</>
+                  <>Backed by <strong className="text-slate-200">Dedicated Enterprise SLA &amp; Guaranteed Uptime</strong>.</>
                 )}
               </span>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {activeTicket.category === "Data Recovery" ? (
                   <button
                     type="button"
                     onClick={() => setShowFileModal(true)}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
+                    className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-sm"
                   >
-                    🔍 Verify Recovered File List
+                    🔍 Verify Recovered Files
                   </button>
                 ) : activeTicket.category === "Cybersecurity" ? (
                   <button
                     type="button"
                     onClick={() => alert("Security Containment Checklist:\n✓ Segment Isolated\n✓ Compromised IPs Blocked\n✓ Memory Dump Analyzed\n✓ Persistence Vectors Neutralized")}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
+                    className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-sm"
                   >
                     🛡️ View Security Checklist
                   </button>
@@ -649,15 +701,25 @@ export default function CustomerDashboardPage() {
                   <button
                     type="button"
                     onClick={() => alert("Deployment Quality Checklist:\n✓ DNS & MX Propagated\n✓ MFA Security Enforced\n✓ Mail Flow Certified\n✓ End-User Access Validated")}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
+                    className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition shadow-sm"
                   >
                     📋 View Deployment Checklist
                   </button>
                 )}
 
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTicket(activeTicket.id)}
+                  disabled={deletingId === activeTicket.id}
+                  className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 hover:border-rose-500/60 transition shadow-sm"
+                  title="Permanently remove this ticket"
+                >
+                  {deletingId === activeTicket.id ? "Purging..." : "🗑️ Delete Ticket"}
+                </button>
+
                 <Link
                   href={`/customer/tickets/${activeTicket.id}`}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)] transition"
                 >
                   View Full Ticket Thread →
                 </Link>
@@ -665,18 +727,18 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-xs mb-8">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 text-xl font-bold mb-3">
+          <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center shadow-2xl mb-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 text-2xl font-bold mb-3 border border-blue-500/20">
               📦
             </div>
-            <h3 className="text-base font-bold text-slate-950">No Active Service Cases</h3>
-            <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
-              Your organization currently has no open tickets. If you experience hardware failure, security alerts, or cloud service outages, open a ticket for immediate dispatch.
+            <h3 className="text-base font-bold text-white">No Active Service Cases</h3>
+            <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
+              Your organization currently has no open tickets. If you experience storage failure, security incidents, or cloud outages, open a ticket for immediate dispatch.
             </p>
             <div className="mt-5">
               <Link
                 href="/customer/tickets/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-500 shadow-[0_0_25px_rgba(37,99,235,0.4)] transition"
               >
                 + Open Your First Ticket
               </Link>
@@ -685,86 +747,101 @@ export default function CustomerDashboardPage() {
         )}
 
         {/* RECENT TICKETS */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
+        <div className="rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl p-6 sm:p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-lg font-bold text-slate-950">Your Tickets</h3>
-              <p className="text-xs text-slate-500">Active and recent support requests</p>
+              <h3 className="text-lg font-bold text-white">Your Service Cases</h3>
+              <p className="text-xs text-slate-400">Active and archived support requests</p>
             </div>
             <Link
               href="/customer/tickets"
-              className="text-xs font-bold text-blue-600 hover:underline"
+              className="text-xs font-mono font-bold text-blue-400 hover:text-blue-300 transition"
             >
-              View All Tickets ({tickets.length}) →
+              View All Cases ({tickets.length}) →
             </Link>
           </div>
 
           <div className="overflow-x-auto">
             {tickets.length > 0 ? (
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 border-b border-slate-200">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/60 text-[10px] font-mono font-bold uppercase text-slate-400 border-b border-slate-800">
                   <tr>
                     <th className="px-4 py-3">Ticket ID</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Subject</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-800/60">
                   {tickets.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/60 transition">
-                      <td className="px-4 py-3.5 font-bold text-blue-600">#{t.id}</td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-900">{t.category}</td>
-                      <td className="px-4 py-3.5 font-medium text-slate-900">{t.deviceOrSubject}</td>
+                    <tr key={t.id} className="hover:bg-slate-800/40 transition">
+                      <td className="px-4 py-3.5 font-mono font-bold text-blue-400">#{t.id}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-bold ${getCategoryBadge(t.category)}`}>
+                          <span>{getCategoryIcon(t.category)}</span>
+                          <span>{t.category}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-slate-200">{t.deviceOrSubject}</td>
                       <td className="px-4 py-3.5">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
                             t.status === "Resolved"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-blue-100 text-blue-800"
+                              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                              : "bg-blue-500/15 text-blue-300 border border-blue-500/30"
                           }`}
                         >
                           {t.status} {t.clonedPercent ? `(${t.clonedPercent}%)` : ""}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <Link
-                          href={`/customer/tickets/${t.id}`}
-                          className="font-bold text-blue-600 hover:underline"
-                        >
-                          Inspect →
-                        </Link>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/customer/tickets/${t.id}`}
+                            className="font-bold text-blue-400 hover:text-blue-300 transition"
+                          >
+                            Inspect →
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTicket(t.id)}
+                            disabled={deletingId === t.id}
+                            className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition"
+                            title={`Delete ticket #${t.id}`}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="py-8 text-center text-slate-400 text-xs">
+              <div className="py-8 text-center text-slate-500 text-xs font-mono">
                 No tickets registered yet for {customer?.company || "your account"}.
               </div>
             )}
           </div>
         </div>
-
       </main>
 
       {/* RECOVERED FILES MODAL */}
       {showFileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-800 bg-[#0c1421] p-6 shadow-2xl sm:p-8 text-xs text-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
               <div>
-                <h4 className="text-base font-bold text-slate-950">
+                <h4 className="text-base font-bold text-white">
                   Recovered Files Verification — Case #{activeTicket?.id || "TDD"}
                 </h4>
-                <p className="text-slate-500 text-xs">Reconstructed files verified in forensic isolation.</p>
+                <p className="text-slate-400 text-xs mt-0.5">Reconstructed files verified in cleanroom forensic isolation.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowFileModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition"
               >
                 ✕
               </button>
@@ -772,27 +849,27 @@ export default function CustomerDashboardPage() {
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {files.map((f, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/90 border border-slate-800/80">
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">📄</span>
                     <div>
-                      <p className="font-bold text-slate-900">{f.name}</p>
-                      <span className="text-[11px] text-slate-500">{f.size}</span>
+                      <p className="font-bold text-white">{f.name}</p>
+                      <span className="text-[11px] font-mono text-slate-400">{f.size}</span>
                     </div>
                   </div>
-                  <span className="rounded-full bg-emerald-100 text-emerald-800 font-extrabold px-2.5 py-0.5 text-[10px]">
+                  <span className="rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono font-bold px-2.5 py-0.5 text-[10px]">
                     {f.status}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 flex items-center justify-between pt-4 border-t border-slate-200">
-              <span className="text-slate-500">Total Cloned: <strong>{activeTicket?.clonedPercent || 100}% Integrity</strong></span>
+            <div className="mt-5 flex items-center justify-between pt-4 border-t border-slate-800">
+              <span className="text-slate-400 font-mono">Total Cloned: <strong className="text-emerald-400">{activeTicket?.clonedPercent || 100}% Integrity</strong></span>
               <button
                 type="button"
                 onClick={() => setShowFileModal(false)}
-                className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.4)] transition"
               >
                 Close Preview
               </button>

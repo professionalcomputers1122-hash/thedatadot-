@@ -488,7 +488,15 @@ export default function TechnicianWorkbenchPage() {
         };
       });
 
-      setCases(mapped);
+      setCases((prev) => {
+        return mapped.map((m) => {
+          const cur = prev.find((p) => p.id === m.id);
+          if (cur && cur.id === selectedCaseId && (cur.status !== m.status || cur.progress !== m.progress)) {
+            return { ...m, status: cur.status, progress: cur.progress, notes: cur.notes, bench: cur.bench };
+          }
+          return m;
+        });
+      });
       if (mapped.length > 0 && !selectedCaseId) {
         setSelectedCaseId(mapped[0].id);
         setEditStatus(mapped[0].status);
@@ -694,11 +702,12 @@ export default function TechnicianWorkbenchPage() {
   }, [selectedCaseId, activeCase?.id]);
 
   // Save Telemetry & Update to Supabase
-  const handleSaveUpdate = async (e?: React.FormEvent) => {
+  const handleSaveUpdate = async (e?: React.FormEvent, overrideStatus?: string) => {
     if (e) e.preventDefault();
     if (!activeCase) return;
 
-    const newStatus = editStatus || activeCase.status;
+    const newStatus = overrideStatus || editStatus || activeCase.status;
+    setEditStatus(newStatus);
     const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
     const newNotes = editNotes !== undefined ? editNotes : activeCase.notes;
     const newBench = editBench || activeCase.bench;
@@ -718,7 +727,11 @@ export default function TechnicianWorkbenchPage() {
         id: Date.now(),
         text: `You updated #${selectedCaseId} to "${newStatus}"`,
         time: "Just now",
-        dotColor: "bg-blue-500",
+        dotColor: newStatus.toLowerCase().includes("closed")
+          ? "bg-slate-500"
+          : newStatus.toLowerCase().includes("resolved")
+          ? "bg-emerald-500"
+          : "bg-blue-500",
       },
       ...prev.slice(0, 4),
     ]);
@@ -735,7 +748,7 @@ export default function TechnicianWorkbenchPage() {
         selectedCaseId,
         "Technician",
         techUser.name,
-        `Specialist Telemetry: Station "${newBench}" • Stage "${newStatus}" • Progress at ${newProgress}%. ${
+        `Specialist Telemetry: Station "${newBench}" • Status "${newStatus}" • Progress at ${newProgress}%.${
           newNotes ? ` Notes: ${newNotes}` : ""
         }`
       );
@@ -746,7 +759,6 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  // Live Reply to Customer
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !activeCase) return;
@@ -848,6 +860,16 @@ export default function TechnicianWorkbenchPage() {
     };
   }, [cases]);
 
+  // Standard ITIL / MSP Ticket Lifecycle Stages (Steps 1 - 6)
+  const CORE_STAGES = [
+    { value: "Open", label: "Step 1: Open" },
+    { value: "Assigned", label: "Step 2: Assigned" },
+    { value: "In Progress", label: "Step 3: In Progress" },
+    { value: "Waiting for Customer", label: "Step 4: Waiting for Customer" },
+    { value: "Resolved", label: "Step 5: Resolved" },
+    { value: "Closed", label: "Step 6: Closed" },
+  ];
+
   // Category Configuration for Active Ticket
   const currentConfig = activeCase
     ? getCategoryConfig(
@@ -858,16 +880,18 @@ export default function TechnicianWorkbenchPage() {
       )
     : null;
 
-  const availableStages = currentConfig ? [...currentConfig.stages] : [];
-  if (activeCase && currentConfig) {
-    const currentVal = editStatus || activeCase.status;
-    if (currentVal && !availableStages.some((s) => s.value === currentVal)) {
-      availableStages.unshift({
-        value: currentVal,
-        label: `Current: ${currentVal}`,
-      });
-    }
-  }
+  const availableStages = useMemo(() => {
+    const core = [...CORE_STAGES];
+    const techStages = currentConfig ? currentConfig.stages : [];
+    const extras = techStages.filter(
+      (ts) => !core.some((c) => c.value.toLowerCase() === ts.value.toLowerCase())
+    );
+    return {
+      core,
+      extras,
+      all: [...core, ...extras],
+    };
+  }, [currentConfig]);
 
   const currentMessages = activeCase
     ? chatMessages[selectedCaseId] || [
@@ -1484,11 +1508,22 @@ export default function TechnicianWorkbenchPage() {
                             onChange={(e) => setEditStatus(e.target.value)}
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
                           >
-                            {availableStages.map((st) => (
-                              <option key={st.value} value={st.value}>
-                                {st.label}
-                              </option>
-                            ))}
+                            <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                              {availableStages.core.map((st) => (
+                                <option key={st.value} value={st.value}>
+                                  {st.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {availableStages.extras.length > 0 && (
+                              <optgroup label={`${activeCase.category} Execution Stages`}>
+                                {availableStages.extras.map((st) => (
+                                  <option key={st.value} value={st.value}>
+                                    {st.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
                         </div>
 
@@ -1823,22 +1858,29 @@ export default function TechnicianWorkbenchPage() {
                   </div>
                 </div>
 
-                {/* WORKFLOW STEPPER (Matching Panel 7) */}
+                {/* WORKFLOW STEPPER (Interactive Steps 1-6 Matching Panel 7) */}
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-4 border-t border-slate-100">
                   {["Open", "Assigned", "In Progress", "Waiting for Customer", "Resolved", "Closed"].map((st, i) => {
-                    const isCurrent = editStatus === st || (!editStatus && activeCase.status === st);
+                    const currentStatus = (editStatus || activeCase.status || "").toLowerCase();
+                    const isCurrent = currentStatus === st.toLowerCase();
                     return (
-                      <div
+                      <button
                         key={st}
-                        className={`text-center p-2.5 rounded-xl border text-xs font-semibold ${
+                        type="button"
+                        onClick={() => {
+                          setEditStatus(st);
+                          handleSaveUpdate(undefined, st);
+                        }}
+                        title={`Click to set status to Step ${i + 1}: ${st}`}
+                        className={`text-center p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
                           isCurrent
-                            ? "bg-blue-50 border-blue-300 text-blue-700"
-                            : "bg-slate-50 border-slate-200 text-slate-500"
+                            ? "bg-blue-50 border-blue-400 text-blue-700 shadow-sm ring-2 ring-blue-500/20"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                         }`}
                       >
-                        <span className="text-[10px] block font-mono text-slate-400">Step {i + 1}</span>
-                        <span className="truncate block mt-0.5">{st}</span>
-                      </div>
+                        <span className="text-[10px] block font-mono text-slate-400 font-bold">Step {i + 1}</span>
+                        <span className="truncate block mt-0.5 font-bold">{st}</span>
+                      </button>
                     );
                   })}
                 </div>
@@ -1972,13 +2014,24 @@ export default function TechnicianWorkbenchPage() {
                       <select
                         value={editStatus || activeCase.status}
                         onChange={(e) => setEditStatus(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
                       >
-                        {availableStages.map((st) => (
-                          <option key={st.value} value={st.value}>
-                            {st.label}
-                          </option>
-                        ))}
+                        <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                          {availableStages.core.map((st) => (
+                            <option key={st.value} value={st.value}>
+                              {st.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                        {availableStages.extras.length > 0 && (
+                          <optgroup label={`${activeCase.category} Execution Stages`}>
+                            {availableStages.extras.map((st) => (
+                              <option key={st.value} value={st.value}>
+                                {st.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
 
@@ -2032,11 +2085,8 @@ export default function TechnicianWorkbenchPage() {
                         <span>Add Attachment</span>
                       </button>
                       <button
-                        onClick={() => {
-                          setEditStatus("Closed");
-                          handleSaveUpdate();
-                        }}
-                        className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2 font-bold text-rose-600 hover:bg-rose-100 text-center block transition"
+                        onClick={() => handleSaveUpdate(undefined, "Closed")}
+                        className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2 font-bold text-rose-600 hover:bg-rose-100 text-center block transition cursor-pointer"
                       >
                         ✕ Close Ticket
                       </button>

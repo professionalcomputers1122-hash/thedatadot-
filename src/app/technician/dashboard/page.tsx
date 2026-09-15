@@ -45,6 +45,9 @@ interface TimelineStage {
 interface CategoryConfig {
   category: string;
   badgeColor: string;
+  workbenchIcon: string;
+  workbenchModeTitle: string;
+  workbenchModeDesc: string;
   tabTitle: string;
   protocolLabel: string;
   progressLabel: string;
@@ -54,6 +57,14 @@ interface CategoryConfig {
   telemetryCards: { label: string; value: string; color?: string }[];
   stages: { value: string; label: string }[];
   stepper: TimelineStage[];
+  benchOptions: string[];
+}
+
+interface TopTelemetryCard {
+  label: string;
+  value: string;
+  badge: string;
+  badgeColor: string;
 }
 
 function getCategoryConfig(
@@ -90,6 +101,9 @@ function getCategoryConfig(
     return {
       category: "Cybersecurity",
       badgeColor: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+      workbenchIcon: "🛡️",
+      workbenchModeTitle: "SOC Threat Defense & Cyber Pod",
+      workbenchModeDesc: "Incident isolation, memory forensics, zero-trust network quarantine & vector remediation.",
       tabTitle: "Remediation & Stage",
       protocolLabel: "Workflow Phase / Security Remediation Protocol",
       progressLabel: "Threat Remediation & Containment Progress (% Remediated):",
@@ -110,6 +124,12 @@ function getCategoryConfig(
         { value: "Resolved", label: "5. Threat Fully Mitigated (Resolved)" },
       ],
       stepper,
+      benchOptions: [
+        "SOC Threat Isolation Station 01",
+        "Forensic Hex Packet Capture Bench",
+        "Zero-Trust Boundary Quarantine Pod",
+        "Threat Memory & Malware Sandbox 02",
+      ],
     };
   }
 
@@ -133,6 +153,9 @@ function getCategoryConfig(
     return {
       category: "Cloud Solutions",
       badgeColor: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+      workbenchIcon: "☁️",
+      workbenchModeTitle: "Cloud DevOps & Infrastructure Terminal",
+      workbenchModeDesc: "Multi-region tenant provisioning, IAM security policies, VPC peering & workload migration.",
       tabTitle: "Migration & Stage",
       protocolLabel: "Workflow Phase / Cloud Architecture Protocol",
       progressLabel: "Cloud Architecture & Migration Progress (% Deployed):",
@@ -153,6 +176,12 @@ function getCategoryConfig(
         { value: "Resolved", label: "5. Cloud Deployment Active (Resolved)" },
       ],
       stepper,
+      benchOptions: [
+        "Cloud Infrastructure Terminal 01",
+        "Multi-Region Cluster Ops Bench",
+        "DevOps CI/CD Deployment Terminal",
+        "VPC Security & Routing Bench 02",
+      ],
     };
   }
 
@@ -176,6 +205,9 @@ function getCategoryConfig(
     return {
       category: "Managed IT",
       badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+      workbenchIcon: "💻",
+      workbenchModeTitle: "Enterprise IT & Fleet Systems Workbench",
+      workbenchModeDesc: "Hardware triage, OS kernel repair, Active Directory provisioning, OEM firmware & SLA field rollout.",
       tabTitle: "Execution & Stage",
       protocolLabel: "Workflow Phase / Managed IT Service Protocol",
       progressLabel: "Technical Resolution & Rollout Progress (% Resolved):",
@@ -196,6 +228,12 @@ function getCategoryConfig(
         { value: "Resolved", label: "5. Ticket Resolved & System Operational" },
       ],
       stepper,
+      benchOptions: [
+        "Enterprise Fleet Support Bench 01",
+        "Workstation Diagnostics & Hardware Station",
+        "OEM BIOS / Firmware Reflash Bench",
+        "Field Dispatch & Network Hub",
+      ],
     };
   }
 
@@ -219,6 +257,9 @@ function getCategoryConfig(
   return {
     category: "Data Recovery",
     badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    workbenchIcon: "🔬",
+    workbenchModeTitle: "Cleanroom Data Recovery Laboratory",
+    workbenchModeDesc: "ISO Class-5 laminar flow micro-examination, PC-3000 mirror imaging, head swaps & firmware reconstruction.",
     tabTitle: "Extraction & Stage",
     protocolLabel: "Workflow Phase / Hardware Recovery Protocol",
     progressLabel: "Precision Extraction Progress (% Complete):",
@@ -240,17 +281,232 @@ function getCategoryConfig(
       { value: "Resolved", label: "6. Completed & Recovered (Resolved)" },
     ],
     stepper,
+    benchOptions: [
+      "PC-3000 Bench 01 (Cleanroom Hood A)",
+      "PC-3000 Flash & Portable III (NVMe / SSD Station)",
+      "Forensic Hex Server Rack 04 (RAID Reconstruction)",
+      "Soldering & Micro-inspection Station",
+    ],
   };
 }
+
+function getWorkbenchTopTelemetry(
+  benchType: "ALL" | "Data Recovery" | "Managed IT" | "Cybersecurity" | "Cloud Solutions",
+  allCases: CaseItem[]
+): TopTelemetryCard[] {
+  const currentCases =
+    benchType === "ALL"
+      ? allCases
+      : allCases.filter((c) => (c.category || "Data Recovery") === benchType);
+
+  if (benchType === "Data Recovery") {
+    return [
+      {
+        label: "Cleanroom Media Queue",
+        value: `${currentCases.length} Drives`,
+        badge: "P1 Cleanroom",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        label: "Cleanroom Pressure",
+        value: "0.05 in. w.g.",
+        badge: "ISO Class-5",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        label: "PC-3000 Imager Stations",
+        value: "3 Active",
+        badge: "1 Standby",
+        badgeColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      },
+      {
+        label: "Verified Recovery Rate",
+        value: "99.98%",
+        badge: "30-Day SLA",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+    ];
+  }
+
+  if (benchType === "Managed IT") {
+    return [
+      {
+        label: "Fleet Workstation Queue",
+        value: `${currentCases.length} Units`,
+        badge: "Active Triage",
+        badgeColor: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      },
+      {
+        label: "Hardware & OS Diagnostics",
+        value: "99.4%",
+        badge: "Kernel/OS Pass",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        label: "Resolution Response SLA",
+        value: "< 15-Min",
+        badge: "Guaranteed",
+        badgeColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      },
+      {
+        label: "Deployment Drivers & Patches",
+        value: "Verified",
+        badge: "OEM Synced",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+    ];
+  }
+
+  if (benchType === "Cybersecurity") {
+    return [
+      {
+        label: "Active Threat Incidents",
+        value: `${currentCases.length} Breaches`,
+        badge: "SOC Quarantined",
+        badgeColor: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      },
+      {
+        label: "Perimeter Isolation",
+        value: "Zero-Trust",
+        badge: "Enforced",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        label: "SIEM Threat Severity",
+        value: "P1 Critical",
+        badge: "Defense Active",
+        badgeColor: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+      },
+      {
+        label: "Mitigation SLA",
+        value: "100%",
+        badge: "Neutralized",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+    ];
+  }
+
+  if (benchType === "Cloud Solutions") {
+    return [
+      {
+        label: "Active Cloud Migrations",
+        value: `${currentCases.length} Tenants`,
+        badge: "In Progress",
+        badgeColor: "text-sky-400 bg-sky-500/10 border-sky-500/20",
+      },
+      {
+        label: "Tenant Cluster Health",
+        value: "Multi-Region",
+        badge: "Redundant",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        label: "Migration Throughput",
+        value: "1.2 Gbps",
+        badge: "Live Stream",
+        badgeColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      },
+      {
+        label: "Uptime Availability Target",
+        value: "99.99%",
+        badge: "SLA Active",
+        badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      },
+    ];
+  }
+
+  // ALL Workbenches
+  return [
+    {
+      label: "Master Engineering Queue",
+      value: `${allCases.length} Cases`,
+      badge: allCases.length > 0 ? "P1 Active" : "Operational",
+      badgeColor:
+        allCases.length > 0
+          ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+          : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    },
+    {
+      label: "Technical Workbenches",
+      value: "4 Online",
+      badge: "Cleanroom / IT / SOC / Cloud",
+      badgeColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    },
+    {
+      label: "SLA Fulfillment Rate",
+      value: "99.8%",
+      badge: "Enterprise SLA",
+      badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    },
+    {
+      label: "Live Supabase Telemetry",
+      value: "Connected",
+      badge: "Real-Time Polling",
+      badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    },
+  ];
+}
+
+const WORKBENCH_PODS = [
+  {
+    id: "ALL" as const,
+    label: "All Workbenches",
+    shortLabel: "All Workbenches",
+    icon: "🌐",
+    desc: "Global incident workbenches across all technical service divisions",
+    stationType: "Cross-Discipline Multi-Bench",
+    accentColor: "blue",
+  },
+  {
+    id: "Data Recovery" as const,
+    label: "Cleanroom Data Recovery Laboratory",
+    shortLabel: "Data Recovery Lab",
+    icon: "🔬",
+    desc: "ISO Class-5 laminar flow, PC-3000 mirror extraction, donor heads & firmware rebuilds",
+    stationType: "ISO Class-5 Laminar Hoods & PC-3000",
+    accentColor: "emerald",
+  },
+  {
+    id: "Managed IT" as const,
+    label: "Enterprise IT & Fleet Systems Workbench",
+    shortLabel: "IT Management Bench",
+    icon: "💻",
+    desc: "Hardware diagnostics, kernel repairs, Active Directory, OEM firmware & SLA field rollout",
+    stationType: "Hardware Bench & Network Triage",
+    accentColor: "amber",
+  },
+  {
+    id: "Cybersecurity" as const,
+    label: "SOC Threat Defense & Cyber Pod",
+    shortLabel: "SOC Cyber Pod",
+    icon: "🛡️",
+    desc: "Perimeter quarantine, memory forensics, zero-trust containment & vector remediation",
+    stationType: "Isolated SIEM Sandbox & Threat Pod",
+    accentColor: "rose",
+  },
+  {
+    id: "Cloud Solutions" as const,
+    label: "Cloud DevOps & Infrastructure Terminal",
+    shortLabel: "Cloud Terminal",
+    icon: "☁️",
+    desc: "Multi-region tenant provisioning, IAM security architecture, VPC peering & live migrations",
+    stationType: "DevOps CI/CD & Cluster Terminal",
+    accentColor: "sky",
+  },
+];
 
 export default function TechnicianWorkbenchPage() {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
+  const [selectedServiceBench, setSelectedServiceBench] = useState<
+    "ALL" | "Data Recovery" | "Managed IT" | "Cybersecurity" | "Cloud Solutions"
+  >("ALL");
   const [notification, setNotification] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
   const [editProgress, setEditProgress] = useState<number>(0);
   const [editNotes, setEditNotes] = useState<string>("");
+  const [editBench, setEditBench] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({});
   const [replyText, setReplyText] = useState("");
   const [activeWorkbenchTab, setActiveWorkbenchTab] = useState<"controls" | "chat" | "telemetry">("controls");
@@ -323,13 +579,42 @@ export default function TechnicianWorkbenchPage() {
     };
   }, []);
 
-  const activeCase = cases.find((c) => c.id === selectedCaseId) || cases[0];
+  // Filter cases by the currently active service workbench
+  const filteredCases =
+    selectedServiceBench === "ALL"
+      ? cases
+      : cases.filter((c) => (c.category || "Data Recovery") === selectedServiceBench);
+
+  const activeCase =
+    selectedServiceBench === "ALL"
+      ? filteredCases.find((c) => c.id === selectedCaseId) || filteredCases[0] || cases[0]
+      : filteredCases.find((c) => c.id === selectedCaseId) || filteredCases[0];
+
+  const handleSwitchBench = (
+    bench: "ALL" | "Data Recovery" | "Managed IT" | "Cybersecurity" | "Cloud Solutions"
+  ) => {
+    setSelectedServiceBench(bench);
+    const targetCases =
+      bench === "ALL"
+        ? cases
+        : cases.filter((c) => (c.category || "Data Recovery") === bench);
+
+    if (targetCases.length > 0) {
+      const match = targetCases.find((c) => c.id === selectedCaseId) || targetCases[0];
+      setSelectedCaseId(match.id);
+      setEditStatus(match.status);
+      setEditProgress(match.progress);
+      setEditNotes(match.notes);
+      setEditBench(match.bench);
+    }
+  };
 
   useEffect(() => {
     if (activeCase) {
       setEditStatus(activeCase.status);
       setEditProgress(activeCase.progress);
       setEditNotes(activeCase.notes);
+      setEditBench(activeCase.bench);
 
       async function loadChat() {
         try {
@@ -363,6 +648,7 @@ export default function TechnicianWorkbenchPage() {
     setEditStatus(c.status);
     setEditProgress(c.progress);
     setEditNotes(c.notes);
+    setEditBench(c.bench);
   };
 
   const handleSaveUpdate = async (e: React.FormEvent) => {
@@ -372,6 +658,7 @@ export default function TechnicianWorkbenchPage() {
     const newStatus = editStatus || activeCase.status;
     const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
     const newNotes = editNotes !== undefined ? editNotes : activeCase.notes;
+    const newBench = editBench || activeCase.bench;
 
     setCases((prev) =>
       prev.map((c) =>
@@ -381,16 +668,20 @@ export default function TechnicianWorkbenchPage() {
               status: newStatus,
               progress: newProgress,
               notes: newNotes,
+              bench: newBench,
             }
           : c
       )
     );
-    setNotification(`Case #${selectedCaseId} saved! Telemetry synced to Customer Portal.`);
+    setNotification(
+      `Case #${selectedCaseId} saved! Station allocated to "${newBench}". Telemetry synced to Customer Portal.`
+    );
 
     await updateTicketInSupabase(selectedCaseId, {
       status: newStatus,
       clonedPercent: newProgress,
       techNotes: newNotes,
+      assignedBench: newBench,
     });
 
     const broadcastAuthor =
@@ -403,7 +694,7 @@ export default function TechnicianWorkbenchPage() {
         selectedCaseId,
         "Technician",
         broadcastAuthor,
-        `Specialist Telemetry Update: Stage updated to "${newStatus}" • Progress at ${newProgress}%. ${
+        `Specialist Telemetry Update: Station "${newBench}" • Stage "${newStatus}" • Progress at ${newProgress}%. ${
           newNotes ? ` Notes: ${newNotes}` : ""
         }`
       );
@@ -496,47 +787,166 @@ export default function TechnicianWorkbenchPage() {
           </div>
         )}
 
-        {/* TOP BENCH TELEMETRY STRIP */}
+        {/* DEDICATED SERVICE WORKBENCH SWITCHER BAR */}
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white tracking-tight">Dedicated Service Workbenches</h1>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 font-bold">
+                  Multi-Pod Routing
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Specialized technician diagnostic environments tailored for Cleanroom Extraction, Fleet Diagnostics, SOC Cyber Defense, and Cloud Operations.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Supabase Real-Time Sync</span>
+            </div>
+          </div>
+
+          {/* WORKBENCH SELECTOR TILES */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {WORKBENCH_PODS.map((pod) => {
+              const isSelected = selectedServiceBench === pod.id;
+              const count =
+                pod.id === "ALL"
+                  ? cases.length
+                  : cases.filter((c) => (c.category || "Data Recovery") === pod.id).length;
+
+              const activeBorderClass =
+                pod.accentColor === "emerald"
+                  ? "border-emerald-500 bg-emerald-950/40 ring-1 ring-emerald-500/50"
+                  : pod.accentColor === "amber"
+                  ? "border-amber-500 bg-amber-950/40 ring-1 ring-amber-500/50"
+                  : pod.accentColor === "rose"
+                  ? "border-rose-500 bg-rose-950/40 ring-1 ring-rose-500/50"
+                  : pod.accentColor === "sky"
+                  ? "border-sky-500 bg-sky-950/40 ring-1 ring-sky-500/50"
+                  : "border-blue-500 bg-blue-950/40 ring-1 ring-blue-500/50";
+
+              return (
+                <button
+                  key={pod.id}
+                  type="button"
+                  onClick={() => handleSwitchBench(pod.id)}
+                  className={`group relative flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                    isSelected
+                      ? `${activeBorderClass} shadow-lg`
+                      : "border-slate-800 bg-[#0f172a] hover:border-slate-700 hover:bg-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xl">{pod.icon}</span>
+                    <span
+                      className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                        isSelected
+                          ? "bg-white/10 text-white border-white/20"
+                          : count > 0
+                          ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                          : "bg-slate-800 text-slate-400 border-slate-700"
+                      }`}
+                    >
+                      {count} {count === 1 ? "case" : "cases"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3">
+                    <h3
+                      className={`text-xs font-bold leading-snug ${
+                        isSelected ? "text-white" : "text-slate-200 group-hover:text-white"
+                      }`}
+                    >
+                      {pod.shortLabel}
+                    </h3>
+                    <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{pod.stationType}</p>
+                  </div>
+
+                  {isSelected && (
+                    <div
+                      className={`absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl ${
+                        pod.accentColor === "emerald"
+                          ? "bg-emerald-500"
+                          : pod.accentColor === "amber"
+                          ? "bg-amber-500"
+                          : pod.accentColor === "rose"
+                          ? "bg-rose-500"
+                          : pod.accentColor === "sky"
+                          ? "bg-sky-500"
+                          : "bg-blue-500"
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ACTIVE WORKBENCH MODE BANNER */}
+          {(() => {
+            const activePod = WORKBENCH_PODS.find((p) => p.id === selectedServiceBench) || WORKBENCH_PODS[0];
+            return (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-[#0c1427] px-4 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">{activePod.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white tracking-wide">
+                        {activePod.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.2 rounded">
+                        Active Mode
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{activePod.desc}</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block font-mono">
+                    Bench Queue Depth
+                  </span>
+                  <span className="text-xs font-bold font-mono text-emerald-400">
+                    {filteredCases.length} Assigned Incident{filteredCases.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* DYNAMIC WORKBENCH TOP TELEMETRY STRIP */}
         <div className="mb-8 grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Assigned Queue</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl font-black text-white">{cases.length} Cases</span>
-              <span className={`text-xs font-mono px-2 py-0.5 rounded border ${
-                cases.length > 0
-                  ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
-                  : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-              }`}>
-                {cases.length > 0 ? "P1 Critical" : "Operational"}
+          {getWorkbenchTopTelemetry(selectedServiceBench, cases).map((metric, idx) => (
+            <div key={idx} className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 shadow-sm">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {metric.label}
               </span>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span
+                  className={`text-2xl font-black ${
+                    metric.badgeColor?.includes("rose")
+                      ? "text-rose-400"
+                      : metric.badgeColor?.includes("amber")
+                      ? "text-amber-400"
+                      : metric.badgeColor?.includes("sky")
+                      ? "text-sky-400"
+                      : metric.badgeColor?.includes("emerald")
+                      ? "text-emerald-400"
+                      : "text-white"
+                  }`}
+                >
+                  {metric.value}
+                </span>
+                <span className={`text-xs font-mono px-2 py-0.5 rounded border ${metric.badgeColor}`}>
+                  {metric.badge}
+                </span>
+              </div>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Cleanroom Pressure</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl font-black text-emerald-400">0.05 in. w.g.</span>
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                ISO Class-5
-              </span>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">PC-3000 Stations</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl font-black text-blue-400">3 Active</span>
-              <span className="text-xs font-mono text-slate-400">1 Standby</span>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-4 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Verified Recovery</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-2xl font-black text-emerald-400">99.98%</span>
-              <span className="text-xs font-mono text-slate-400">30-Day Rate</span>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* WORKBENCH CONTENT */}
@@ -559,18 +969,50 @@ export default function TechnicianWorkbenchPage() {
               <span>Real-Time Supabase Sync Active (Live Polling)</span>
             </div>
           </div>
+        ) : filteredCases.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-14 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center text-xl mb-4 text-blue-400">
+              {selectedServiceBench === "Managed IT"
+                ? "💻"
+                : selectedServiceBench === "Cybersecurity"
+                ? "🛡️"
+                : selectedServiceBench === "Cloud Solutions"
+                ? "☁️"
+                : "🔬"}
+            </div>
+            <h3 className="text-base font-bold text-white mb-2">
+              No Active Cases in {selectedServiceBench} Workbench
+            </h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
+              There are currently no tickets assigned to the {selectedServiceBench} workbench queue. When clients or admins assign new {selectedServiceBench} cases, they will stream directly into this pod in real time.
+            </p>
+            <button
+              type="button"
+              onClick={() => handleSwitchBench("ALL")}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
+            >
+              <span>← View All Workbenches</span>
+              <span className="font-mono bg-blue-700/60 px-1.5 py-0.5 rounded text-[11px]">
+                {cases.length} Total Cases
+              </span>
+            </button>
+          </div>
         ) : activeCase ? (
           /* DUAL PANE WORKBENCH */
           <div className="grid gap-6 lg:grid-cols-12">
             {/* LEFT: INCIDENT QUEUE & ASSIGNMENTS (5 COLS) */}
             <div className="lg:col-span-5 space-y-3">
               <div className="flex items-center justify-between mb-1">
-                <h2 className="text-sm font-bold text-white tracking-tight">Incident Queue &amp; Assignments</h2>
-                <span className="text-xs text-slate-400 font-mono">Select case to load</span>
+                <h2 className="text-sm font-bold text-white tracking-tight">
+                  {selectedServiceBench === "ALL" ? "Global Incident Queue" : `${selectedServiceBench} Queue`}
+                </h2>
+                <span className="text-xs text-slate-400 font-mono">
+                  {filteredCases.length} {filteredCases.length === 1 ? "case" : "cases"} active
+                </span>
               </div>
 
-            <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
-              {cases.map((c) => {
+              <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
+                {filteredCases.map((c) => {
                 const isSelected = c.id === activeCase.id;
                 return (
                   <div
@@ -662,8 +1104,8 @@ export default function TechnicianWorkbenchPage() {
                 </div>
 
                 <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-3.5 py-2 text-right">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Workbench Allocation</span>
-                  <span className="text-xs font-semibold text-blue-300 font-mono">{activeCase.bench}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Allocated Station</span>
+                  <span className="text-xs font-semibold text-blue-300 font-mono">{editBench || activeCase.bench}</span>
                 </div>
               </div>
 
@@ -758,21 +1200,43 @@ export default function TechnicianWorkbenchPage() {
               {/* TAB 1: PROTOCOL CONTROLS & STAGE */}
               {activeWorkbenchTab === "controls" && currentConfig && (
                 <form onSubmit={handleSaveUpdate} className="space-y-4 text-xs">
-                  <div>
-                    <label className="block font-semibold text-slate-300 mb-1">
-                      {currentConfig.protocolLabel}:
-                    </label>
-                    <select
-                      value={editStatus || activeCase.status}
-                      onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
-                    >
-                      {availableStages.map((st) => (
-                        <option key={st.value} value={st.value}>
-                          {st.label}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-300 mb-1">
+                        {currentConfig.protocolLabel}:
+                      </label>
+                      <select
+                        value={editStatus || activeCase.status}
+                        onChange={(e) => setEditStatus(e.target.value)}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
+                      >
+                        {availableStages.map((st) => (
+                          <option key={st.value} value={st.value}>
+                            {st.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-300 mb-1">
+                        Allocated Station / Pod:
+                      </label>
+                      <select
+                        value={editBench || activeCase.bench}
+                        onChange={(e) => setEditBench(e.target.value)}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
+                      >
+                        {currentConfig.benchOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                        {editBench && !currentConfig.benchOptions.includes(editBench) && (
+                          <option value={editBench}>{editBench}</option>
+                        )}
+                      </select>
+                    </div>
                   </div>
 
                   <div>
@@ -886,7 +1350,7 @@ export default function TechnicianWorkbenchPage() {
                     <div>
                       <span className="font-bold text-white block">Full Incident Specs</span>
                       <span className="text-slate-400 text-[11px]">
-                        Target: {activeCase.device} • Category: {activeCase.category || "Data Recovery"} • Station: {activeCase.bench}
+                        Target: {activeCase.device} • Category: {activeCase.category || "Data Recovery"} • Station: {editBench || activeCase.bench}
                       </span>
                     </div>
                     <Link

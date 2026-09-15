@@ -409,7 +409,13 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
 
 export async function updateTicketInSupabase(
   id: string,
-  updates: { status?: string; clonedPercent?: number; techNotes?: string }
+  updates: {
+    status?: string;
+    clonedPercent?: number;
+    techNotes?: string;
+    assignedBench?: string;
+    assignedTech?: string;
+  }
 ) {
   try {
     if (typeof window !== "undefined") {
@@ -430,6 +436,8 @@ export async function updateTicketInSupabase(
     if (updates.status) payload.status = updates.status;
     if (updates.clonedPercent !== undefined) payload.cloned_percent = updates.clonedPercent;
     if (updates.techNotes !== undefined) payload.tech_notes = updates.techNotes;
+    if (updates.assignedBench !== undefined) payload.assigned_bench = updates.assignedBench;
+    if (updates.assignedTech !== undefined) payload.assigned_tech = updates.assignedTech;
 
     await supabase.from("tickets").update(payload).eq("id", id);
   } catch (err) {

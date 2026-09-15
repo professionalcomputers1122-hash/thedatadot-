@@ -489,10 +489,17 @@ export default function TechnicianWorkbenchPage() {
       });
 
       setCases((prev) => {
+        const targetId = selectedCaseId || "";
         return mapped.map((m) => {
           const cur = prev.find((p) => p.id === m.id);
-          if (cur && cur.id === selectedCaseId && (cur.status !== m.status || cur.progress !== m.progress)) {
-            return { ...m, status: cur.status, progress: cur.progress, notes: cur.notes, bench: cur.bench };
+          if (cur && (cur.id === targetId) && (cur.status !== m.status || cur.progress !== m.progress)) {
+            return {
+              ...m,
+              status: cur.status || m.status,
+              progress: cur.progress !== undefined ? cur.progress : m.progress,
+              notes: cur.notes || m.notes,
+              bench: cur.bench || m.bench,
+            };
           }
           return m;
         });
@@ -669,10 +676,13 @@ export default function TechnicianWorkbenchPage() {
   // Load Chat Messages for Active Case
   useEffect(() => {
     if (activeCase) {
-      setEditStatus(activeCase.status);
-      setEditProgress(activeCase.progress);
-      setEditNotes(activeCase.notes);
-      setEditBench(activeCase.bench);
+      if (!selectedCaseId || selectedCaseId !== activeCase.id) {
+        setSelectedCaseId(activeCase.id);
+        setEditStatus(activeCase.status);
+        setEditProgress(activeCase.progress);
+        setEditNotes(activeCase.notes);
+        setEditBench(activeCase.bench);
+      }
 
       async function loadChat() {
         try {
@@ -706,6 +716,11 @@ export default function TechnicianWorkbenchPage() {
     if (e) e.preventDefault();
     if (!activeCase) return;
 
+    const targetId = selectedCaseId || activeCase.id;
+    if (!selectedCaseId && activeCase.id) {
+      setSelectedCaseId(activeCase.id);
+    }
+
     const newStatus = overrideStatus || editStatus || activeCase.status;
     setEditStatus(newStatus);
     const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
@@ -714,18 +729,18 @@ export default function TechnicianWorkbenchPage() {
 
     setCases((prev) =>
       prev.map((c) =>
-        c.id === selectedCaseId
+        c.id === targetId
           ? { ...c, status: newStatus, progress: newProgress, notes: newNotes, bench: newBench }
           : c
       )
     );
 
-    setNotification(`Case #${selectedCaseId} saved! Status updated to "${newStatus}".`);
+    setNotification(`Case #${targetId} saved! Status updated to "${newStatus}".`);
 
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You updated #${selectedCaseId} to "${newStatus}"`,
+        text: `You updated #${targetId} to "${newStatus}"`,
         time: "Just now",
         dotColor: newStatus.toLowerCase().includes("closed")
           ? "bg-slate-500"
@@ -736,7 +751,7 @@ export default function TechnicianWorkbenchPage() {
       ...prev.slice(0, 4),
     ]);
 
-    await updateTicketInSupabase(selectedCaseId, {
+    await updateTicketInSupabase(targetId, {
       status: newStatus,
       clonedPercent: newProgress,
       techNotes: newNotes,
@@ -745,7 +760,7 @@ export default function TechnicianWorkbenchPage() {
 
     try {
       await sendMessageToSupabase(
-        selectedCaseId,
+        targetId,
         "Technician",
         techUser.name,
         `Specialist Telemetry: Station "${newBench}" • Status "${newStatus}" • Progress at ${newProgress}%.${
@@ -1505,7 +1520,11 @@ export default function TechnicianWorkbenchPage() {
                           </label>
                           <select
                             value={editStatus || activeCase.status}
-                            onChange={(e) => setEditStatus(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditStatus(val);
+                              handleSaveUpdate(undefined, val);
+                            }}
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
                           >
                             <optgroup label="Core Lifecycle (Steps 1 - 6)">
@@ -2013,7 +2032,11 @@ export default function TechnicianWorkbenchPage() {
                       <label className="block font-semibold text-slate-700 mb-1">Status</label>
                       <select
                         value={editStatus || activeCase.status}
-                        onChange={(e) => setEditStatus(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditStatus(val);
+                          handleSaveUpdate(undefined, val);
+                        }}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
                       >
                         <optgroup label="Core Lifecycle (Steps 1 - 6)">

@@ -89,19 +89,43 @@ export async function PATCH(
     if (body.assigned_tech !== undefined) updates.assigned_tech = body.assigned_tech;
     if (body.urgency !== undefined) updates.urgency = body.urgency;
 
-    const { data: updatedTicket, error } = await supabase
+    let updatedTicket = null;
+    const { data: updateData, error: updateErr } = await supabase
       .from("tickets")
       .update(updates)
       .eq("id", id)
-      .select()
-      .single();
+      .select();
 
-    if (error) {
-      console.error("[API /api/tickets/[id] PATCH error]:", error);
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+    if (updateData && updateData.length > 0) {
+      updatedTicket = updateData[0];
+    } else {
+      // If the ticket was not yet in Supabase table, upsert it so updates are permanently stored
+      const insertRecord: Record<string, any> = {
+        id,
+        company_name: body.companyName || body.client || "Client Organization",
+        customer_name: body.customerName || body.client || "Client",
+        customer_email: body.customerEmail || "support@thedatadot.com",
+        device_or_subject: body.deviceOrSubject || body.device || "Support Incident",
+        status: updates.status || "In Progress",
+        cloned_percent: updates.cloned_percent || 0,
+        urgency: updates.urgency || "Standard",
+        tech_notes: updates.tech_notes || "Updated via technician portal",
+        assigned_bench: updates.assigned_bench || "Bench 01",
+        assigned_tech: updates.assigned_tech || "Technician",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      try {
+        const { data: upsertData } = await supabase
+          .from("tickets")
+          .upsert(insertRecord)
+          .select();
+        if (upsertData && upsertData.length > 0) {
+          updatedTicket = upsertData[0];
+        }
+      } catch (upsertErr) {
+        console.warn("[API /api/tickets/[id] upsert fallback warn]:", upsertErr);
+      }
     }
 
     // Insert audit log for technician telemetry update

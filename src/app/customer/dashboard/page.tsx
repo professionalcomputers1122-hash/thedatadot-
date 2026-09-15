@@ -356,7 +356,6 @@ export default function CustomerDashboardPage() {
   const [customer, setCustomer] = useState<CustomerUser | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFileModal, setShowFileModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -427,13 +426,6 @@ export default function CustomerDashboardPage() {
   const stages = activeTicket
     ? getTimelineStages(activeTicket.category, activeTicket.status, activeTicket.clonedPercent || 0)
     : [];
-
-  const files = [
-    { name: "Recovered_Database_Extract.mdf", size: "1.42 TB", status: "100% Intact" },
-    { name: "Forensic_Images_Archive.zip", size: "840 GB", status: "100% Intact" },
-    { name: "Company_Financial_Records.qbw", size: "420 GB", status: "100% Intact" },
-    { name: "Authentication_Credentials_Backup.xlsx", size: "12 MB", status: "100% Intact" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
@@ -643,15 +635,7 @@ export default function CustomerDashboardPage() {
               </span>
 
               <div className="flex flex-wrap items-center gap-3">
-                {activeTicket.category === "Data Recovery" ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowFileModal(true)}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
-                  >
-                    🔍 Verify Recovered File List
-                  </button>
-                ) : activeTicket.category === "Cybersecurity" ? (
+                {activeTicket.category === "Cybersecurity" ? (
                   <button
                     type="button"
                     onClick={() => alert("Security Containment Checklist:\n✓ Segment Isolated\n✓ Compromised IPs Blocked\n✓ Memory Dump Analyzed\n✓ Persistence Vectors Neutralized")}
@@ -659,7 +643,7 @@ export default function CustomerDashboardPage() {
                   >
                     🛡️ View Security Checklist
                   </button>
-                ) : (
+                ) : activeTicket.category !== "Data Recovery" ? (
                   <button
                     type="button"
                     onClick={() => alert("Deployment Quality Checklist:\n✓ DNS & MX Propagated\n✓ MFA Security Enforced\n✓ Mail Flow Certified\n✓ End-User Access Validated")}
@@ -667,7 +651,7 @@ export default function CustomerDashboardPage() {
                   >
                     📋 View Deployment Checklist
                   </button>
-                )}
+                ) : null}
 
                 <button
                   type="button"
@@ -783,57 +767,6 @@ export default function CustomerDashboardPage() {
           </div>
         </div>
       </main>
-
-      {/* RECOVERED FILES MODAL */}
-      {showFileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
-              <div>
-                <h4 className="text-base font-bold text-slate-950">
-                  Recovered Files Verification — Case #{activeTicket?.id || "TDD"}
-                </h4>
-                <p className="text-slate-500 text-xs">Reconstructed files verified in forensic isolation.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFileModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {files.map((f, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">📄</span>
-                    <div>
-                      <p className="font-bold text-slate-900">{f.name}</p>
-                      <span className="text-[11px] text-slate-500">{f.size}</span>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-emerald-100 text-emerald-800 font-extrabold px-2.5 py-0.5 text-[10px]">
-                    {f.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 flex items-center justify-between pt-4 border-t border-slate-200">
-              <span className="text-slate-500">Total Cloned: <strong>{activeTicket?.clonedPercent || 100}% Integrity</strong></span>
-              <button
-                type="button"
-                onClick={() => setShowFileModal(false)}
-                className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

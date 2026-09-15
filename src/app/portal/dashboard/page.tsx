@@ -33,7 +33,6 @@ function PhoneIcon({ className = "w-5 h-5" }: { className?: string }) {
 }
 
 export default function ClientDashboardPage() {
-  const [showFileModal, setShowFileModal] = useState(false);
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
 
@@ -56,14 +55,6 @@ export default function ClientDashboardPage() {
     intakeDate: "Sep 12, 2026",
     estimatedCompletion: "Today, 6:00 PM IST",
   };
-
-  const recoveredFilesSample = [
-    { name: "EMR_Patient_Records_2024_2026.mdf", size: "1.42 TB", status: "100% Intact" },
-    { name: "Radiology_DICOM_Images.zip", size: "840 GB", status: "100% Intact" },
-    { name: "Accounting_Tally_Database.qbw", size: "420 GB", status: "100% Intact" },
-    { name: "Staff_Credentials_Archived.xlsx", size: "12 MB", status: "100% Intact" },
-    { name: "Payroll_Ledgers_Q1-Q3.pdf", size: "1.2 GB", status: "100% Intact" },
-  ];
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-900 antialiased">
@@ -203,14 +194,6 @@ export default function ClientDashboardPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowFileModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-900 shadow-xs hover:bg-slate-50 transition"
-              >
-                <span>🔍 Verify Recovered Files (5)</span>
-              </button>
-
               <a
                 href="tel:+916380488373"
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-500 transition"
@@ -295,64 +278,6 @@ export default function ClientDashboardPage() {
         </div>
 
       </div>
-
-      {/* ================= RECOVERED FILES MODAL ================= */}
-      {showFileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-              <div>
-                <h4 className="text-lg font-bold text-slate-950">
-                  Recovered File Verification — Case #{activeCase.caseId}
-                </h4>
-                <p className="text-xs text-slate-500">
-                  Preview of healthy reconstructed file structures ready for handover.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFileModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-2.5 max-h-72 overflow-y-auto pr-1 text-xs">
-              {recoveredFilesSample.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-3 hover:bg-blue-50/40 transition"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">📄</span>
-                    <div>
-                      <p className="font-bold text-slate-900">{file.name}</p>
-                      <span className="text-[11px] text-slate-500">{file.size}</span>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                    {file.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <span className="text-xs text-slate-500 font-medium">
-                Total Extracted: <strong>3.82 TB (99.8% Integrity)</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowFileModal(false)}
-                className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-500"
-              >
-                Close File Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ================= NEW SERVICE TICKET MODAL ================= */}
       {showNewTicketModal && (

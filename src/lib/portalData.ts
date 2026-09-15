@@ -195,21 +195,55 @@ export const initialTechnicians: TechnicianRecord[] = [
 ];
 
 export const TECHNICIANS_STORAGE_KEY = "tdd_laboratory_technicians";
+export const DELETED_TECHNICIANS_KEY = "tdd_deleted_technician_emails";
+
+export function getDeletedTechnicianEmails(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DELETED_TECHNICIANS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.map((item: string) => item.toLowerCase().trim()));
+      }
+    }
+  } catch (e) {
+    console.warn("Failed reading deleted technicians:", e);
+  }
+  return new Set();
+}
+
+export function markTechnicianAsDeleted(emailOrId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const set = getDeletedTechnicianEmails();
+    set.add(emailOrId.toLowerCase().trim());
+    localStorage.setItem(DELETED_TECHNICIANS_KEY, JSON.stringify(Array.from(set)));
+    window.dispatchEvent(new Event("technicians-updated"));
+  } catch (e) {
+    console.warn("Failed deleting technician from storage:", e);
+  }
+}
 
 export function getStoredTechnicians(): TechnicianRecord[] {
   if (typeof window === "undefined") return initialTechnicians;
+  const deletedSet = getDeletedTechnicianEmails();
   try {
     const raw = localStorage.getItem(TECHNICIANS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.filter(
+          (t: TechnicianRecord) => !deletedSet.has(t.email.toLowerCase().trim()) && !deletedSet.has(t.id.toLowerCase().trim())
+        );
       }
     }
   } catch (e) {
     console.warn("Failed loading technicians from storage:", e);
   }
-  return initialTechnicians;
+  return initialTechnicians.filter(
+    (t: TechnicianRecord) => !deletedSet.has(t.email.toLowerCase().trim()) && !deletedSet.has(t.id.toLowerCase().trim())
+  );
 }
 
 export function saveStoredTechnicians(technicians: TechnicianRecord[]): void {

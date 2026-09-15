@@ -591,7 +591,20 @@ export default function Header({ theme = "light" }: { theme?: "light" | "dark" }
 
         {/* DESKTOP ACTIONS */}
         <div className="hidden items-center gap-3 lg:flex">
-          
+          <Link
+            href="/data-recovery"
+            className={`flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-bold transition shadow-sm ${
+              isDark
+                ? "border-red-500/40 bg-red-950/40 text-white hover:border-red-400"
+                : "border-red-200 bg-red-50/90 text-slate-900 hover:border-red-300 hover:bg-red-100/80 hover:text-red-700"
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600"></span>
+            </span>
+            <span className="font-bold tracking-tight">Data Recovery Lab</span>
+          </Link>
 
           <Link
             href="/portal"
@@ -844,7 +857,21 @@ export default function Header({ theme = "light" }: { theme?: "light" | "dark" }
             ))}
 
             <div className="border-t border-slate-200/80 pt-3 dark:border-slate-800 flex flex-col gap-2.5">
-              
+              <Link
+                href="/data-recovery"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-bold transition shadow-sm ${
+                  isDark
+                    ? "border-red-500/40 bg-red-950/40 text-white"
+                    : "border-red-200 bg-red-50/90 text-slate-900 hover:bg-red-100/80"
+                }`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600"></span>
+                </span>
+                <span className="font-bold tracking-tight">Data Recovery Lab</span>
+              </Link>
 
               {/* CLIENT LOGIN BUTTON */}
               <Link

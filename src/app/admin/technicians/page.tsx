@@ -8,6 +8,7 @@ import {
   TechnicianRecord,
   getStoredTechnicians,
   saveStoredTechnicians,
+  markTechnicianAsDeleted,
 } from "@/lib/portalData";
 
 export default function AdminTechniciansPage() {
@@ -206,12 +207,15 @@ export default function AdminTechniciansPage() {
     setIsDeletingTech(true);
 
     try {
-      await fetch(`/api/technicians?email=${encodeURIComponent(t.email)}`, {
+      await fetch(`/api/technicians?email=${encodeURIComponent(t.email)}&id=${encodeURIComponent(t.id)}`, {
         method: "DELETE",
       });
     } catch (e) {
       console.warn("Server technician deletion warning:", e);
     }
+
+    markTechnicianAsDeleted(t.email);
+    if (t.id) markTechnicianAsDeleted(t.id);
 
     const updated = technicians.filter(
       (tech) => tech.id !== t.id && tech.email.toLowerCase() !== t.email.toLowerCase()

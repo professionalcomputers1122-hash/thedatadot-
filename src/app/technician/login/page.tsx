@@ -7,8 +7,8 @@ import { getStoredTechnicians, initialTechnicians, TechnicianRecord } from "@/li
 
 export default function TechnicianLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("vignesh.ssd@thedatadot.com");
-  const [pin, setPin] = useState("8942");
+  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
   const [station, setStation] = useState("PC-3000 Channel 01 (Cleanroom Bench A)");
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -81,13 +81,6 @@ export default function TechnicianLoginPage() {
     }
   };
 
-  const handleQuickFill = (tEmail: string, tPin: string, tStation: string) => {
-    setEmail(tEmail);
-    setPin(tPin);
-    setStation(tStation);
-    setError("");
-  };
-
   return (
     <main className="min-h-screen bg-[#070e17] flex items-center justify-center p-4 sm:p-8 antialiased">
       {/* 2-COLUMN CONTAINER MATCHING PANEL 1 */}
@@ -157,18 +150,9 @@ export default function TechnicianLoginPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-semibold text-slate-700">
-                    Password / PIN
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill("vignesh.ssd@thedatadot.com", "8942", "PC-3000 Channel 01 (Cleanroom Bench A)")}
-                    className="text-[11px] font-semibold text-blue-600 hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <label className="block font-semibold text-slate-700 mb-1.5">
+                  Password
+                </label>
                 <input
                   type="password"
                   required
@@ -199,36 +183,6 @@ export default function TechnicianLoginPage() {
                 {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
-
-            {/* QUICK DEMO CREDENTIALS */}
-            <div className="pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                Quick Test Logins:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("vignesh.ssd@thedatadot.com", "8942", "PC-3000 Channel 01 (Cleanroom Bench A)")}
-                  className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                >
-                  K. Vignesh (8942)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("rajesh.lab@thedatadot.com", "7103", "PC-3000 Channel 01 (Cleanroom Bench A)")}
-                  className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                >
-                  M. Rajesh (7103)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("balaji.cloud@thedatadot.com", "5519", "Forensic Hex Server Rack 04")}
-                  className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                >
-                  R. Balaji (5519)
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="pt-6 text-center border-t border-slate-100 mt-6 flex items-center justify-center gap-2">

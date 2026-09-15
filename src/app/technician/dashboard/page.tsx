@@ -2360,11 +2360,25 @@ export default function TechnicianWorkbenchPage() {
                   </div>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (typeof window !== "undefined") {
                         localStorage.setItem("tdd_tech_user", JSON.stringify(techUser));
                       }
-                      setNotification("Profile details saved.");
+                      try {
+                        await fetch("/api/technicians", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            email: techUser.email,
+                            name: techUser.name,
+                            department: techUser.department,
+                          }),
+                        });
+                      } catch (e) {
+                        console.warn("Could not sync profile to backend:", e);
+                      }
+                      setNotification("✓ Profile details updated and saved to Supabase.");
+                      setTimeout(() => setNotification(""), 4000);
                     }}
                     className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm"
                   >

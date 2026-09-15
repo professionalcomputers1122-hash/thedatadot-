@@ -4,9 +4,25 @@ import { initialTechnicians } from "@/lib/portalData";
 
 export async function GET() {
   try {
+    const supabase = createAdminClient();
+
+    // Query audit logs to identify technicians that have been explicitly deleted
+    const { data: delLogs } = await supabase
+      .from("audit_logs")
+      .select("target")
+      .in("action", ["DELETE_TECHNICIAN", "REMOVE_LABORATORY_TECHNICIAN"]);
+
+    const deletedEmails = new Set<string>(
+      (delLogs || []).map((d: any) => (d.target || "").toLowerCase().trim())
+    );
+
+    const activeTechs = initialTechnicians.filter(
+      (t) => !deletedEmails.has(t.email.toLowerCase().trim())
+    );
+
     return NextResponse.json({
       success: true,
-      technicians: initialTechnicians,
+      technicians: activeTechs,
     });
   } catch (err: any) {
     return NextResponse.json(
@@ -37,7 +53,7 @@ export async function POST(req: Request) {
     const assignedPin = pin ? pin.trim() : Math.floor(1000 + Math.random() * 9000).toString();
     const assignedPassword = password ? password.trim() : `Tech@${assignedPin}!`;
 
-    // Audit log
+    // Audit log & profiles sync in Supabase
     try {
       const supabase = createAdminClient();
       await supabase.from("audit_logs").insert([
@@ -50,6 +66,15 @@ export async function POST(req: Request) {
           created_at: new Date().toISOString(),
         },
       ]);
+
+      await supabase.from("profiles").upsert(
+        {
+          email: cleanEmail,
+          full_name: name.trim(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "email" }
+      );
     } catch (auditErr) {
       console.warn("Technician audit log warning:", auditErr);
     }
@@ -84,11 +109,11 @@ export async function PATCH(req: Request) {
       "127.0.0.1";
 
     const body = await req.json();
-    const { email, pin, password } = body;
+    const { email, pin, password, name, department, role, station } = body;
 
-    if (!email || (!pin && !password)) {
+    if (!email) {
       return NextResponse.json(
-        { success: false, error: "Valid email and new PIN or Password required" },
+        { success: false, error: "Valid email is required" },
         { status: 400 }
       );
     }
@@ -97,32 +122,43 @@ export async function PATCH(req: Request) {
     const cleanPin = pin ? pin.trim() : undefined;
     const cleanPassword = password ? password.trim() : undefined;
 
-    // Record audit trail in Supabase
+    // Record audit trail & sync to Supabase
     try {
       const supabase = createAdminClient();
       await supabase.from("audit_logs").insert([
         {
           id: `LOG-TECH-PW-${Date.now().toString(36).toUpperCase()}`,
           actor: "Super Admin",
-          action: "RESET_TECHNICIAN_PASSWORD",
+          action: cleanPin || cleanPassword ? "RESET_TECHNICIAN_PASSWORD" : "UPDATE_TECHNICIAN_PROFILE",
           target: cleanEmail,
           ip: clientIp,
           created_at: new Date().toISOString(),
         },
       ]);
+
+      if (name) {
+        await supabase.from("profiles").upsert(
+          {
+            email: cleanEmail,
+            full_name: name.trim(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "email" }
+        );
+      }
     } catch (auditErr) {
-      console.warn("Technician password reset audit log warning:", auditErr);
+      console.warn("Technician update audit log warning:", auditErr);
     }
 
     return NextResponse.json({
       success: true,
-      message: `Credentials updated successfully for ${cleanEmail}`,
+      message: `Technician details updated successfully for ${cleanEmail}`,
       pin: cleanPin,
       password: cleanPassword,
     });
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to reset technician password/PIN" },
+      { success: false, error: err.message || "Failed to update technician" },
       { status: 500 }
     );
   }
@@ -146,15 +182,39 @@ export async function DELETE(req: Request) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const supabase = createAdminClient();
 
-    // Audit log
+    // 1. Delete from Supabase profiles table
     try {
-      const supabase = createAdminClient();
+      await supabase.from("profiles").delete().ilike("email", cleanEmail);
+    } catch (profErr) {
+      console.warn("Supabase profile deletion warning:", profErr);
+    }
+
+    // 2. Delete from technicians table if exists
+    try {
+      await supabase.from("technicians").delete().ilike("email", cleanEmail);
+    } catch (techErr) {
+      // Table may not exist yet, safe to proceed
+    }
+
+    // 3. Unassign active tickets in Supabase so no orphan tickets remain
+    try {
+      await supabase
+        .from("tickets")
+        .update({ assigned_tech: "Unassigned" })
+        .ilike("assigned_tech", `%${cleanEmail}%`);
+    } catch (ticketErr) {
+      console.warn("Ticket reassign warning:", ticketErr);
+    }
+
+    // 4. Record in Supabase audit logs
+    try {
       await supabase.from("audit_logs").insert([
         {
           id: `LOG-TECH-DEL-${Date.now().toString(36).toUpperCase()}`,
           actor: "Super Admin",
-          action: "REMOVE_LABORATORY_TECHNICIAN",
+          action: "DELETE_TECHNICIAN",
           target: cleanEmail,
           ip: clientIp,
           created_at: new Date().toISOString(),
@@ -166,7 +226,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Technician ${cleanEmail} removed from laboratory roster`,
+      message: `Technician ${cleanEmail} permanently deleted from laboratory roster and Supabase`,
     });
   } catch (err: any) {
     return NextResponse.json(

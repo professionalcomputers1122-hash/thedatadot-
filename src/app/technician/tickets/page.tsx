@@ -16,22 +16,27 @@ export default function TechnicianTicketsPage() {
     async function loadData() {
       try {
         const live = await fetchTicketsFromSupabase();
-        if (live && live.length > 0) {
-          setTickets(live);
-        } else {
-          setTickets(initialTickets);
-        }
+        setTickets(live || []);
       } catch (err) {
         console.warn("Failed to load tickets in technician portal:", err);
-        setTickets(initialTickets);
+        setTickets([]);
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadData, 4000);
+
+    const handleUpdate = () => loadData();
+    window.addEventListener("tickets-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tickets-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   const filtered = tickets.filter((t) => {

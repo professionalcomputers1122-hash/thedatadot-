@@ -21,73 +21,7 @@ export interface Ticket {
   techNotes: string;
 }
 
-export const initialTickets: Ticket[] = [
-  {
-    id: "TDD-8942",
-    customerName: "Dr. Aravind Swaminathan",
-    companyName: "Apex Healthcare Diagnostic Center",
-    category: "Data Recovery",
-    deviceOrSubject: "Seagate IronWolf Pro 4TB SATA 3.5\"",
-    serialNumber: "WDC-WMC4N0E83719",
-    status: "PC-3000 Imaging",
-    priority: "CRITICAL",
-    assignedTech: "K. Vignesh (Solid State Forensic)",
-    clonedPercent: 99.8,
-    recoveredSize: "3.82 TB of 4.0 TB",
-    createdAt: "Sep 12, 2026",
-    lastUpdated: "12 mins ago",
-    symptoms: "Loud clicking head crash following power outage on MRI scanner server.",
-    techNotes: "Heads 0-3 reading cleanly following ISO Class-5 donor slider swap. Mirrored 3.82 TB.",
-  },
-  {
-    id: "TDD-8943",
-    customerName: "Advocate Rajesh Menon",
-    companyName: "Nexus Legal Advisors LLP",
-    category: "Data Recovery",
-    deviceOrSubject: "Samsung 980 Pro NVMe 2TB M.2",
-    serialNumber: "S6B0NS0W102948F",
-    status: "Cleanroom Diagnosis",
-    priority: "HIGH",
-    assignedTech: "K. Vignesh (Solid State Forensic)",
-    clonedPercent: 74.5,
-    recoveredSize: "1.49 TB of 2.0 TB",
-    createdAt: "Sep 13, 2026",
-    lastUpdated: "1 hour ago",
-    symptoms: "Elpis controller locked in read-only safe mode. BitLocker key on file.",
-    techNotes: "Bypassing bad NAND blocks in bank 2 using PC-3000 Flash virtual translator.",
-  },
-  {
-    id: "TDD-8944",
-    customerName: "Dinesh Karthik",
-    companyName: "Metropolitan Logistics Warehousing",
-    category: "Data Recovery",
-    deviceOrSubject: "QNAP TS-453D 4-Bay RAID 5 (WD Red Plus 4TB x4)",
-    serialNumber: "QNP-RAID-9921",
-    status: "Cleanroom Diagnosis",
-    priority: "CRITICAL",
-    assignedTech: "Unassigned",
-    clonedPercent: 42.0,
-    recoveredSize: "5.1 TB of 12.0 TB",
-    createdAt: "Sep 13, 2026",
-    lastUpdated: "2 hours ago",
-    symptoms: "Disk 2 failed 2 months ago, Disk 4 dropped out yesterday during warehouse audit.",
-    techNotes: "XOR parity algorithm calculating missing block sectors. Volume reconstruction in progress.",
-  },
-  {
-    id: "TDD-8910",
-    customerName: "Kavitha Ramanathan",
-    companyName: "Sri Lakshmi Tax & Audits",
-    category: "Cloud Solutions",
-    deviceOrSubject: "Microsoft 365 MFA Policy & Mailbox Audit",
-    status: "Resolved",
-    priority: "STANDARD",
-    assignedTech: "R. Balaji (Cloud Security)",
-    createdAt: "Sep 10, 2026",
-    lastUpdated: "Sep 11, 2026",
-    symptoms: "Quarterly audit of employee MFA policies and immutable cloud backup verification.",
-    techNotes: "All 35 accounts secured with FIDO2/Authenticator apps. Immutable Veeam snapshot confirmed.",
-  },
-];
+export const initialTickets: Ticket[] = [];
 
 export const initialCustomers = [
   {
@@ -265,6 +199,7 @@ export async function deleteTicketFromSupabase(ticketId: string): Promise<boolea
       const current = getDeletedTicketIds();
       current.add(cleanId.toUpperCase());
       localStorage.setItem(DELETED_TICKETS_KEY, JSON.stringify(Array.from(current)));
+      window.dispatchEvent(new Event("tickets-updated"));
     } catch (e) {
       console.warn("Storage update warning:", e);
     }

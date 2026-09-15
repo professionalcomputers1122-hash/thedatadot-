@@ -37,108 +37,75 @@ interface ChatMessage {
 }
 
 export default function TechnicianWorkbenchPage() {
-  const [cases, setCases] = useState<CaseItem[]>([
-    {
-      id: "TDD-8942",
-      client: "Apex Healthcare Diagnostic Center",
-      device: "4TB Seagate SATA (ST4000DM004)",
-      serial: "WDC-WMC4N0E83719",
-      mediaType: "HDD",
-      status: "PC-3000 Raw Platter Mirrored Extraction",
-      progress: 99.8,
-      priority: "CRITICAL",
-      notes: "Cleanroom donor slider heads calibrated. Head 0-3 reading cleanly. 3.82TB cloned.",
-      bench: "PC-3000 Channel 01 (Cleanroom Bench A)",
-      headsHealth: "Head 0-3 Operational (Swapped in Class-5)",
-      badSectorsRemapped: 142,
-      temp: "28.4°C (Normal)",
-    },
-    {
-      id: "TDD-8943",
-      client: "Nexus Legal Advisors LLP",
-      device: "Samsung 980 Pro NVMe 2TB M.2",
-      serial: "S6B0NS0W102948F",
-      mediaType: "SSD",
-      status: "Firmware Virtual Translator Rebuild",
-      progress: 74.5,
-      priority: "HIGH",
-      notes: "Elpis controller locked in safe-mode. Bypassing bad NAND blocks in bank 2.",
-      bench: "PC-3000 Portable III NVMe Station",
-      headsHealth: "NAND Controller Safe Mode Bypass Active",
-      badSectorsRemapped: 890,
-      temp: "34.1°C (Normal)",
-    },
-    {
-      id: "TDD-8944",
-      client: "Metropolitan Logistics Warehousing",
-      device: "QNAP TS-453D 4-Bay RAID 5",
-      serial: "QNP-RAID-9921",
-      mediaType: "RAID",
-      status: "Hex Pattern XOR Parity Reconstruction",
-      progress: 42.0,
-      priority: "CRITICAL",
-      notes: "Rebuilding missing blocks via XOR parity algorithm.",
-      bench: "Forensic Hex Server Rack 04",
-      headsHealth: "RAID Stripe 64KB Block Alignment Synced",
-      badSectorsRemapped: 2150,
-      temp: "29.8°C (Normal)",
-    },
-  ]);
-
-  const [selectedCaseId, setSelectedCaseId] = useState<string>("TDD-8942");
+  const [cases, setCases] = useState<CaseItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [notification, setNotification] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
-  const [editProgress, setEditProgress] = useState<number>(99.8);
+  const [editProgress, setEditProgress] = useState<number>(0);
   const [editNotes, setEditNotes] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({});
   const [replyText, setReplyText] = useState("");
   const [activeWorkbenchTab, setActiveWorkbenchTab] = useState<"controls" | "chat" | "telemetry">("controls");
 
-  // Load live tickets from Supabase on mount
+  // Load live tickets from Supabase & poll for real-time changes
   useEffect(() => {
     async function loadLiveTickets() {
       try {
         const liveTickets = await fetchTicketsFromSupabase();
-        if (liveTickets && liveTickets.length > 0) {
-          const mappedCases: CaseItem[] = liveTickets.map((t) => {
-            const mediaType = t.mediaType || "HDD";
-            const progress = t.clonedPercent ? Number(t.clonedPercent) : 0;
-            const priority: "CRITICAL" | "HIGH" | "STANDARD" =
-              t.priority === "CRITICAL" ? "CRITICAL" : t.priority === "HIGH" ? "HIGH" : "STANDARD";
+        const mappedCases: CaseItem[] = (liveTickets || []).map((t) => {
+          const mediaType = (t.mediaType as any) || "HDD";
+          const progress = t.clonedPercent ? Number(t.clonedPercent) : 0;
+          const priority: "CRITICAL" | "HIGH" | "STANDARD" =
+            t.priority === "CRITICAL" ? "CRITICAL" : t.priority === "HIGH" ? "HIGH" : "STANDARD";
 
-            return {
-              id: t.id,
-              client: t.companyName || t.customerName || "Enterprise Client",
-              device: t.deviceOrSubject,
-              serial: t.serialNumber || "N/A",
-              mediaType: mediaType as any,
-              category: t.category,
-              status: t.status,
-              progress: progress,
-              priority: priority,
-              notes: t.techNotes || "",
-              bench: t.assignedBench || "PC-3000 Bench 01 (Cleanroom Hood A)",
-              headsHealth: "Hardware Calibrated",
-              badSectorsRemapped: 0,
-              temp: "28.4°C (Normal)",
-              leadTech: t.assignedTech,
-            };
+          return {
+            id: t.id,
+            client: t.companyName || t.customerName || "Enterprise Client",
+            device: t.deviceOrSubject,
+            serial: t.serialNumber || "N/A",
+            mediaType: mediaType,
+            category: t.category,
+            status: t.status,
+            progress: progress,
+            priority: priority,
+            notes: t.techNotes || "",
+            bench: t.assignedBench || "PC-3000 Bench 01 (Cleanroom Hood A)",
+            headsHealth: "Hardware Calibrated",
+            badSectorsRemapped: 0,
+            temp: "28.4°C (Normal)",
+            leadTech: t.assignedTech,
+          };
+        });
+
+        setCases(mappedCases);
+        if (mappedCases.length > 0) {
+          setSelectedCaseId((prev) => {
+            const exists = mappedCases.find((c) => c.id === prev);
+            return exists ? prev : mappedCases[0].id;
           });
-
-          setCases(mappedCases);
-          if (mappedCases.length > 0) {
-            setSelectedCaseId(mappedCases[0].id);
-            setEditStatus(mappedCases[0].status);
-            setEditProgress(mappedCases[0].progress);
-            setEditNotes(mappedCases[0].notes);
-          }
+        } else {
+          setSelectedCaseId("");
         }
       } catch (err) {
         console.warn("Failed to load technician cases from Supabase:", err);
+      } finally {
+        setLoading(false);
       }
     }
 
     loadLiveTickets();
+    const interval = setInterval(loadLiveTickets, 4000);
+
+    const handleUpdate = () => loadLiveTickets();
+    window.addEventListener("tickets-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tickets-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, []);
 
   const activeCase = cases.find((c) => c.id === selectedCaseId) || cases[0];
@@ -185,6 +152,8 @@ export default function TechnicianWorkbenchPage() {
 
   const handleSaveUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeCase) return;
+
     const newStatus = editStatus || activeCase.status;
     const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
     const newNotes = editNotes !== undefined ? editNotes : activeCase.notes;
@@ -232,7 +201,7 @@ export default function TechnicianWorkbenchPage() {
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !activeCase) return;
 
     const messageText = replyText.trim();
     const currentAuthor =
@@ -259,14 +228,16 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  const currentMessages = chatMessages[selectedCaseId] || [
-    {
-      sender: "Customer",
-      author: activeCase.client,
-      time: "Today",
-      text: "Awaiting cleanroom intake analysis report.",
-    },
-  ];
+  const currentMessages = activeCase
+    ? chatMessages[selectedCaseId] || [
+        {
+          sender: "Customer",
+          author: activeCase.client,
+          time: "Today",
+          text: "Awaiting cleanroom intake analysis report.",
+        },
+      ]
+    : [];
 
   return (
     <main className="min-h-screen bg-[#0b1324] text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
@@ -289,8 +260,12 @@ export default function TechnicianWorkbenchPage() {
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Assigned Queue</span>
             <div className="mt-1 flex items-baseline justify-between">
               <span className="text-2xl font-black text-white">{cases.length} Cases</span>
-              <span className="text-xs font-mono text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
-                P1 Critical
+              <span className={`text-xs font-mono px-2 py-0.5 rounded border ${
+                cases.length > 0
+                  ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                  : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+              }`}>
+                {cases.length > 0 ? "P1 Critical" : "Operational"}
               </span>
             </div>
           </div>
@@ -322,14 +297,35 @@ export default function TechnicianWorkbenchPage() {
           </div>
         </div>
 
-        {/* DUAL PANE WORKBENCH */}
-        <div className="grid gap-6 lg:grid-cols-12">
-          {/* LEFT: INCIDENT QUEUE & ASSIGNMENTS (5 COLS) */}
-          <div className="lg:col-span-5 space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-bold text-white tracking-tight">Incident Queue &amp; Assignments</h2>
-              <span className="text-xs text-slate-400 font-mono">Select case to load</span>
+        {/* WORKBENCH CONTENT */}
+        {loading ? (
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-16 text-center shadow-sm">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mb-3" />
+            <p className="text-xs text-slate-400 font-mono">Synchronizing Technical Workbench with Supabase...</p>
+          </div>
+        ) : cases.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-16 text-center shadow-sm">
+            <div className="mx-auto h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center text-xl mb-4 text-blue-400">
+              🔬
             </div>
+            <h3 className="text-base font-bold text-white mb-2">No Active Cases on Technical Workbench</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
+              Workbench is clean and synchronized with Super Admin. Deleted tickets have been permanently purged. When clients or admins raise new tickets, they will stream here live.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1 text-xs font-mono text-emerald-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Real-Time Supabase Sync Active (Live Polling)</span>
+            </div>
+          </div>
+        ) : activeCase ? (
+          /* DUAL PANE WORKBENCH */
+          <div className="grid gap-6 lg:grid-cols-12">
+            {/* LEFT: INCIDENT QUEUE & ASSIGNMENTS (5 COLS) */}
+            <div className="lg:col-span-5 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-sm font-bold text-white tracking-tight">Incident Queue &amp; Assignments</h2>
+                <span className="text-xs text-slate-400 font-mono">Select case to load</span>
+              </div>
 
             <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
               {cases.map((c) => {
@@ -409,17 +405,35 @@ export default function TechnicianWorkbenchPage() {
 
               {/* WORKFLOW STEPPER */}
               <div className="grid grid-cols-3 gap-2 mb-6">
-                <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-center">
-                  <span className="text-xs font-bold text-emerald-300 block">[Cleanroom Intake]</span>
-                  <span className="text-[10px] font-mono text-emerald-400">Completed</span>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  activeCase.status === "Media Received" || activeCase.progress > 0
+                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    : "border-slate-800 bg-slate-950/50"
+                }`}>
+                  <span className="text-xs font-bold text-emerald-300 block">[Media Received]</span>
+                  <span className="text-[10px] font-mono text-emerald-400">
+                    {activeCase.status === "Media Received" ? "Active" : "Completed"}
+                  </span>
                 </div>
-                <div className="p-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 text-center ring-1 ring-blue-400/30">
-                  <span className="text-xs font-bold text-blue-300 block">[PC-3000 Raw Mirror]</span>
-                  <span className="text-[10px] font-mono text-blue-400 font-bold">Active Protocol</span>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  activeCase.status.includes("Cleanroom") || activeCase.status.includes("PC-3000")
+                    ? "border-blue-500/40 bg-blue-500/15 ring-1 ring-blue-400/30"
+                    : "border-slate-800 bg-slate-950/50"
+                }`}>
+                  <span className="text-xs font-bold text-blue-300 block">[Cleanroom Diagnostics & Mirror]</span>
+                  <span className="text-[10px] font-mono text-blue-400 font-bold">
+                    {activeCase.progress > 0 ? `${activeCase.progress}% Complete` : "In Queue"}
+                  </span>
                 </div>
-                <div className="p-2.5 rounded-xl border border-slate-800 bg-slate-950/50 text-center opacity-70">
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  activeCase.status === "Resolved" || activeCase.progress === 100
+                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    : "border-slate-800 bg-slate-950/50 opacity-70"
+                }`}>
                   <span className="text-xs font-bold text-slate-400 block">[Integrity Verification]</span>
-                  <span className="text-[10px] font-mono text-slate-500">Pending</span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    {activeCase.status === "Resolved" ? "Verified" : "Pending"}
+                  </span>
                 </div>
               </div>
 
@@ -472,7 +486,7 @@ export default function TechnicianWorkbenchPage() {
                       onChange={(e) => setEditStatus(e.target.value)}
                       className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white outline-none focus:border-blue-500"
                     >
-                      <option value="Initial Hardware Intake & Diode Diagnostic">1. Initial Intake &amp; Diode Diagnostics</option>
+                      <option value="Media Received">1. Media Received</option>
                       <option value="Cleanroom Diagnosis">2. Cleanroom Diagnosis (ISO Class-5)</option>
                       <option value="PC-3000 Raw Platter Mirrored Extraction">3. PC-3000 Raw Platter Mirrored Extraction</option>
                       <option value="Firmware Virtual Translator Rebuild">4. Firmware Virtual Translator Rebuild</option>
@@ -620,6 +634,7 @@ export default function TechnicianWorkbenchPage() {
             </div>
           </div>
         </div>
+        ) : null}
       </div>
 
       <Footer />

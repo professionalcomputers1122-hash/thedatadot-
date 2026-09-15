@@ -27,14 +27,9 @@ export default function TechnicianTicketDetailPage({
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
 
-  const [ticket, setTicket] = useState<any>(() => {
-    return (
-      initialTickets.find((t) => t.id.toLowerCase() === ticketId.toLowerCase()) ||
-      null
-    );
-  });
+  const [ticket, setTicket] = useState<any>(null);
 
-  const [status, setStatus] = useState("Cleanroom Diagnosis");
+  const [status, setStatus] = useState("Media Received");
   const [progress, setProgress] = useState(0);
   const [notes, setNotes] = useState("");
   const [notification, setNotification] = useState("");
@@ -67,15 +62,9 @@ export default function TechnicianTicketDetailPage({
           );
         }
 
-        if (!found) {
-          found = initialTickets.find(
-            (t) => t.id.toLowerCase() === ticketId.toLowerCase()
-          );
-        }
-
         if (found) {
           setTicket(found);
-          setStatus(found.status || "Intake & Diagnostics");
+          setStatus(found.status || (found.category === "Data Recovery" ? "Media Received" : "Intake & Diagnostics"));
           setProgress(Number(found.clonedPercent) || 0);
           setNotes(found.techNotes || "");
 

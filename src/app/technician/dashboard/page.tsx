@@ -352,6 +352,32 @@ export default function TechnicianWorkbenchPage() {
 
   // Navigation View State
   const [activeView, setActiveView] = useState<PortalNavView>("dashboard");
+  const [settingsSubTab, setSettingsSubTab] = useState<"Appearance" | "General" | "Notifications" | "Security">("Appearance");
+  const [appearanceTheme, setAppearanceTheme] = useState<"light" | "navy" | "system">("light");
+  const [accentColor, setAccentColor] = useState<"blue" | "emerald" | "violet" | "amber">("blue");
+  const [workbenchDensity, setWorkbenchDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [telemetrySpeed, setTelemetrySpeed] = useState<"5s" | "10s" | "30s">("10s");
+  const [highContrastBadges, setHighContrastBadges] = useState<boolean>(false);
+  const [audioChimes, setAudioChimes] = useState<boolean>(true);
+
+  const handleSaveAppearance = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("tdd_tech_appearance", JSON.stringify({
+          theme: appearanceTheme,
+          accent: accentColor,
+          density: workbenchDensity,
+          speed: telemetrySpeed,
+          highContrast: highContrastBadges,
+          audio: audioChimes
+        }));
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+    setNotification("Website appearance & workbench preferences saved successfully!");
+    setTimeout(() => setNotification(""), 4000);
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -2303,92 +2329,358 @@ export default function TechnicianWorkbenchPage() {
           {/* VIEW 12: SETTINGS (Panel 12 in Mockup) */}
           {/* ========================================================= */}
           {activeView === "settings" && (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                    Configuration Center
+                  </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <span className="text-xs text-slate-500 font-medium">Technician Workbench Settings</span>
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-1">Workbench Settings &amp; Appearance</h1>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Manage your preferences and notifications.
+                  Customize your UI appearance, theme, notifications, security credentials, and live telemetry sync.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {/* SETTINGS MENU (Matching Panel 12) */}
-                <div className="space-y-1 text-xs">
-                  {["General", "Notifications", "Security", "Appearance"].map((tab, idx) => (
+                {/* SETTINGS SUBTABS (Matching Panel 12 with full interactivity) */}
+                <div className="space-y-1.5 text-xs">
+                  {(["Appearance", "General", "Notifications", "Security"] as const).map((tab) => (
                     <button
                       key={tab}
-                      className={`w-full text-left px-3 py-2 rounded-lg font-semibold transition ${
-                        idx === 0 ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-600 hover:text-slate-900"
+                      onClick={() => setSettingsSubTab(tab)}
+                      className={`w-full text-left px-3.5 py-2.5 rounded-xl font-bold transition flex items-center justify-between ${
+                        settingsSubTab === tab
+                          ? "bg-white text-blue-600 shadow-sm border border-slate-200"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
                       }`}
                     >
-                      {tab}
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm">
+                          {tab === "Appearance" ? "🎨" : tab === "General" ? "⚙️" : tab === "Notifications" ? "🔔" : "🔒"}
+                        </span>
+                        <span>{tab}</span>
+                      </div>
+                      {settingsSubTab === tab && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                      )}
                     </button>
                   ))}
+
+                  <div className="pt-4 border-t border-slate-200/80 mt-4 px-2 space-y-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                      Active Theme
+                    </span>
+                    <div className="flex items-center gap-2 text-[11px] font-medium text-slate-700">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="capitalize">{appearanceTheme} Workspace</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* SETTINGS FORM (Matching Panel 12) */}
-                <div className="md:col-span-3 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-5 text-xs">
-                  <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-3">General Settings</h3>
+                {/* SETTINGS SUBTAB CONTENT */}
+                <div className="md:col-span-3 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-6 text-xs">
+                  {/* SUBTAB 1: APPEARANCE */}
+                  {settingsSubTab === "Appearance" && (
+                    <div className="space-y-6">
+                      <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm">Website &amp; Workbench Appearance</h3>
+                          <p className="text-[11px] text-slate-400">Control visual theme, accent colors, contrast, and layout density.</p>
+                        </div>
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-600 border border-blue-100">
+                          Live UI Preview
+                        </span>
+                      </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Time Zone</label>
-                      <select className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none">
-                        <option>(UTC+01:00) London, Dublin, Edinburgh</option>
-                        <option>(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi</option>
-                        <option>(UTC-05:00) Eastern Time (US &amp; Canada)</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                      {/* THEME SELECTOR */}
                       <div>
-                        <label className="block font-semibold text-slate-700 mb-1">Language</label>
+                        <label className="block font-bold text-slate-800 mb-2">Theme Mode</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { id: "light", label: "Clean Light", desc: "Default high-readability", icon: "☀️", previewBg: "bg-white border-slate-200 text-slate-800" },
+                            { id: "navy", label: "Dark Navy", desc: "Low eye strain in dark lab", icon: "🌙", previewBg: "bg-[#0b1324] border-slate-700 text-white" },
+                            { id: "system", label: "System Sync", desc: "Matches operating system", icon: "💻", previewBg: "bg-gradient-to-r from-white to-slate-800 border-slate-300 text-slate-800" },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setAppearanceTheme(t.id as any)}
+                              className={`rounded-xl border p-3 text-left transition relative ${
+                                appearanceTheme === t.id
+                                  ? "border-blue-600 bg-blue-50/50 shadow-sm ring-2 ring-blue-500/20"
+                                  : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-base">{t.icon}</span>
+                                {appearanceTheme === t.id && (
+                                  <span className="text-blue-600 font-bold text-xs">✓ Active</span>
+                                )}
+                              </div>
+                              <p className="font-bold text-slate-900">{t.label}</p>
+                              <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{t.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ACCENT COLOR SELECTOR */}
+                      <div>
+                        <label className="block font-bold text-slate-800 mb-2">Accent Brand Tone</label>
+                        <div className="flex flex-wrap gap-3">
+                          {[
+                            { id: "blue", name: "Data Dot Blue", color: "#2563eb" },
+                            { id: "emerald", name: "Forensic Emerald", color: "#10b981" },
+                            { id: "violet", name: "Cyber Violet", color: "#8b5cf6" },
+                            { id: "amber", name: "High-Priority Amber", color: "#f59e0b" },
+                          ].map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => setAccentColor(c.id as any)}
+                              className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition ${
+                                accentColor === c.id
+                                  ? "border-blue-600 bg-blue-50 text-blue-900 font-bold ring-1 ring-blue-600"
+                                  : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span className="h-3.5 w-3.5 rounded-full shadow-sm" style={{ backgroundColor: c.color }} />
+                              <span className="text-xs">{c.name}</span>
+                              {accentColor === c.id && <span className="text-[10px]">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* WORKBENCH DENSITY & TELEMETRY SPEED */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <label className="block font-bold text-slate-800 mb-1">Workbench Layout Density</label>
+                          <select
+                            value={workbenchDensity}
+                            onChange={(e) => setWorkbenchDensity(e.target.value as any)}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none focus:border-blue-500 font-medium"
+                          >
+                            <option value="comfortable">Comfortable Grid (Spacious)</option>
+                            <option value="compact">Compact Triage (High Density Data)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-800 mb-1">Live Telemetry Sync Rate</label>
+                          <select
+                            value={telemetrySpeed}
+                            onChange={(e) => setTelemetrySpeed(e.target.value as any)}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none focus:border-blue-500 font-medium"
+                          >
+                            <option value="5s">5 Seconds (Real-time Streaming)</option>
+                            <option value="10s">10 Seconds (Standard Polling)</option>
+                            <option value="30s">30 Seconds (Low Network Bandwidth)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* TOGGLES */}
+                      <div className="pt-3 border-t border-slate-100 space-y-3">
+                        <label className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-50">
+                          <div>
+                            <span className="font-bold text-slate-800 block">High-Contrast Status Badges</span>
+                            <span className="text-[11px] text-slate-400">Boosts visibility of ticket urgency and bench flags</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={highContrastBadges}
+                            onChange={(e) => setHighContrastBadges(e.target.checked)}
+                            className="h-4 w-4 accent-blue-600 rounded cursor-pointer"
+                          />
+                        </label>
+
+                        <label className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-slate-50">
+                          <div>
+                            <span className="font-bold text-slate-800 block">Audio Chimes for Incoming Messages</span>
+                            <span className="text-[11px] text-slate-400">Play subtle sound chime when customer or admin replies</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={audioChimes}
+                            onChange={(e) => setAudioChimes(e.target.checked)}
+                            className="h-4 w-4 accent-blue-600 rounded cursor-pointer"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleSaveAppearance}
+                          className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center gap-2"
+                        >
+                          <span>Save Appearance Settings</span>
+                          <span>✓</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUBTAB 2: GENERAL */}
+                  {settingsSubTab === "General" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-slate-100 pb-3">
+                        <h3 className="font-bold text-slate-900 text-sm">General Workbench Settings</h3>
+                        <p className="text-[11px] text-slate-400">Set primary timezone, regional format, and default bench views.</p>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Time Zone</label>
                         <select className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none">
-                          <option>English (UK)</option>
-                          <option>English (US)</option>
+                          <option>(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi</option>
+                          <option>(UTC+01:00) London, Dublin, Edinburgh</option>
+                          <option>(UTC-05:00) Eastern Time (US &amp; Canada)</option>
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block font-semibold text-slate-700 mb-1">Default Ticket View</label>
-                        <select className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none">
-                          <option>My Tickets</option>
-                          <option>All Tickets</option>
-                          <option>Unassigned</option>
-                        </select>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">Language</label>
+                          <select className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none">
+                            <option>English (UK)</option>
+                            <option>English (US)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">Default Ticket View</label>
+                          <select className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none">
+                            <option>My Tickets</option>
+                            <option>All Tickets</option>
+                            <option>Unassigned</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          onClick={() => {
+                            setNotification("General preferences updated successfully!");
+                            setTimeout(() => setNotification(""), 3500);
+                          }}
+                          className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm"
+                        >
+                          Save Changes
+                        </button>
                       </div>
                     </div>
+                  )}
 
-                    <div className="pt-3 border-t border-slate-100 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-bold text-slate-800 block">Email Notifications</span>
-                          <span className="text-[11px] text-slate-400">Receive email notifications for ticket updates</span>
-                        </div>
-                        <input type="checkbox" defaultChecked className="h-4 w-4 accent-blue-600 rounded" />
+                  {/* SUBTAB 3: NOTIFICATIONS */}
+                  {settingsSubTab === "Notifications" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-slate-100 pb-3">
+                        <h3 className="font-bold text-slate-900 text-sm">Alerts &amp; Notification Rules</h3>
+                        <p className="text-[11px] text-slate-400">Configure email, desktop push, and SMS dispatch channels.</p>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-bold text-slate-800 block">Browser Notifications</span>
-                          <span className="text-[11px] text-slate-400">Show desktop notifications</span>
-                        </div>
-                        <input type="checkbox" defaultChecked className="h-4 w-4 accent-blue-600 rounded" />
+                      <div className="space-y-3">
+                        <label className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50">
+                          <div>
+                            <span className="font-bold text-slate-800 block">Critical Ticket Email Alerts</span>
+                            <span className="text-[11px] text-slate-400">Immediate dispatch on CRITICAL SLA incidents</span>
+                          </div>
+                          <input type="checkbox" defaultChecked className="h-4 w-4 accent-blue-600 rounded" />
+                        </label>
+
+                        <label className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50">
+                          <div>
+                            <span className="font-bold text-slate-800 block">Browser Push Notifications</span>
+                            <span className="text-[11px] text-slate-400">Show desktop popups when a new ticket is assigned to me</span>
+                          </div>
+                          <input type="checkbox" defaultChecked className="h-4 w-4 accent-blue-600 rounded" />
+                        </label>
+
+                        <label className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50">
+                          <div>
+                            <span className="font-bold text-slate-800 block">SMS Lab Alerts (Emergency Dispatch)</span>
+                            <span className="text-[11px] text-slate-400">Receive SMS for cleanroom drive drops after hours</span>
+                          </div>
+                          <input type="checkbox" defaultChecked className="h-4 w-4 accent-blue-600 rounded" />
+                        </label>
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          onClick={() => {
+                            setNotification("Notification channels saved successfully!");
+                            setTimeout(() => setNotification(""), 3500);
+                          }}
+                          className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm"
+                        >
+                          Save Changes
+                        </button>
                       </div>
                     </div>
+                  )}
 
-                    <button
-                      onClick={() => setNotification("Settings saved.")}
-                      className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
+                  {/* SUBTAB 4: SECURITY */}
+                  {settingsSubTab === "Security" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-slate-100 pb-3">
+                        <h3 className="font-bold text-slate-900 text-sm">Security &amp; Active Sessions</h3>
+                        <p className="text-[11px] text-slate-400">Manage technician authentication credentials and session security.</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">Current Password</label>
+                          <input
+                            type="password"
+                            defaultValue="••••••••••••"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">New Password</label>
+                          <input
+                            type="password"
+                            placeholder="Enter new strong password"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700 outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <div>
+                            <span className="font-bold text-emerald-950 block">Hardware Token / 2FA Active</span>
+                            <span className="text-[11px] text-emerald-700">Protected by SOC 2 Type II authentication policy</span>
+                          </div>
+                        </div>
+                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                          Active
+                        </span>
+                      </div>
+
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          onClick={() => {
+                            setNotification("Technician security credentials updated!");
+                            setTimeout(() => setNotification(""), 3500);
+                          }}
+                          className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm"
+                        >
+                          Update Password
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          )}
-        </main>
+          )}</main>
       </div>
 
       {/* ------------------------------------------------------------- */}

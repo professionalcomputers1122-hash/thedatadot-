@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import WordReveal from "@/components/WordReveal";
 import { fetchBlogPostsFromSupabase, getDeletedBlogIds } from "@/lib/portalData";
 
 // ================= ARTICLES (PRIMARY 3 MATCHING PANEL 7 EXACTLY) =================
@@ -156,41 +157,36 @@ export default function BlogPage() {
       {/* HEADER */}
       <Header />
 
-      {/* ================= HERO SECTION (MATCHING PANEL 7) ================= */}
+      {/* ================= HERO SECTION ================= */}
       <section className="relative overflow-hidden bg-white border-b border-slate-200/80">
         <div className="pointer-events-none absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full bg-blue-100/60 blur-[140px]" />
         <div className="pointer-events-none absolute -left-40 top-1/2 h-[450px] w-[450px] rounded-full bg-sky-50 blur-[130px]" />
 
         <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-16 text-center lg:pt-24 lg:pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mx-auto max-w-3xl"
-          >
+          <div className="mx-auto max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-600">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-              <span>Technology &amp; Security Knowledge Base</span>
+              <span>TECHNOLOGY &amp; SECURITY KNOWLEDGE BASE</span>
             </div>
 
-            <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-[42px] text-[#071426] leading-tight">
-              Latest Insights
+            <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-[44px] text-[#071426] leading-tight">
+              <WordReveal text="Latest Technology Insights & IT Guides" />
             </h1>
 
-            <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
-              Tips, news and updates from our team.
+            <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-600 max-w-2xl mx-auto">
+              Practical cybersecurity advice, cloud infrastructure blueprints, and managed IT guidance written by certified enterprise specialists.
             </p>
-          </motion.div>
+          </div>
 
           {/* CATEGORY FILTER PILLS */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-2.5">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 ${
+                className={`rounded-xl px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   activeCategory === cat
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-[1.02]"
                     : "border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600"
                 }`}
               >
@@ -199,30 +195,33 @@ export default function BlogPage() {
             ))}
           </div>
 
-          {/* ================= PRIMARY ARTICLE CARDS (MATCHING PANEL 7) ================= */}
+          {/* ================= PRIMARY ARTICLE CARDS ================= */}
           <div className="mt-14 mx-auto max-w-4xl space-y-6 text-left">
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {filteredArticles.map((article, idx) => (
                 <motion.article
                   key={article.id}
-                  initial={{ opacity: 0, y: 24 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.4, delay: idx * 0.08 }}
-                  whileHover={{ y: -4 }}
-                  className="group relative flex flex-col sm:flex-row items-stretch overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm transition-all duration-300 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/10"
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{
+                    duration: 0.35,
+                    delay: Math.min(idx * 0.04, 0.2),
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="group relative flex flex-col sm:flex-row items-stretch overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm zoho-card-lift hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/10"
                 >
                   {/* THUMBNAIL IMAGE (LEFT ON DESKTOP) */}
-                  <div className="relative aspect-[16/10] sm:w-64 sm:shrink-0 overflow-hidden bg-slate-900">
+                  <div className="relative aspect-[16/10] sm:w-72 sm:shrink-0 overflow-hidden bg-slate-900">
                     <Image
                       src={article.image}
                       alt={article.title}
                       fill
-                      sizes="(max-width: 640px) 100vw, 256px"
+                      sizes="(max-width: 640px) 100vw, 288px"
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                    <div className="absolute left-3 top-3 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-md border border-white/20">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <div className="absolute left-3.5 top-3.5 rounded-full bg-slate-950/75 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-white/20 shadow-sm">
                       {article.category}
                     </div>
                   </div>
@@ -231,27 +230,27 @@ export default function BlogPage() {
                   <div className="flex flex-1 flex-col justify-between p-6 sm:p-7">
                     <div>
                       {/* DATE & READ TIME BADGE */}
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                         <span>{article.date}</span>
                         <span>•</span>
                         <span className="text-blue-600">{article.readTime}</span>
                       </div>
 
                       {/* ARTICLE TITLE */}
-                      <h2 className="mt-2 text-xl font-bold tracking-tight text-[#071426] transition group-hover:text-blue-600 sm:text-2xl">
+                      <h2 className="mt-2.5 text-xl sm:text-2xl font-bold tracking-tight text-[#071426] transition group-hover:text-blue-600 leading-snug">
                         {article.title}
                       </h2>
 
                       {/* EXCERPT */}
-                      <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                      <p className="mt-3 text-sm sm:text-[15px] leading-relaxed text-slate-600">
                         {article.excerpt}
                       </p>
                     </div>
 
                     {/* READ ARTICLE LINK WITH ARROW */}
-                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 transition group-hover:text-blue-800">
-                        <span>Read Full Insight</span>
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-600 transition group-hover:text-blue-800">
+                        <span>Read Full Article</span>
                         <svg
                           width="14"
                           height="14"
@@ -259,7 +258,7 @@ export default function BlogPage() {
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2.3"
-                          className="transition group-hover:translate-x-1"
+                          className="zoho-hover-arrow"
                         >
                           <path
                             d="M5 12h14M12 5l7 7-7 7"
@@ -279,7 +278,7 @@ export default function BlogPage() {
           <div className="mt-14 flex justify-center">
             <button
               onClick={() => setShowAllArticles(!showAllArticles)}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 hover:shadow-xl"
+              className="inline-flex items-center gap-2.5 rounded-xl bg-blue-600 px-8 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 hover:shadow-xl active:scale-[0.98] cursor-pointer"
             >
               <span>{showAllArticles ? "Show Primary Insights" : "View All Articles"}</span>
               <svg
@@ -306,7 +305,7 @@ export default function BlogPage() {
 
       {/* ================= NEWSLETTER & TECH BRIEFING BANNER ================= */}
       <section className="border-b border-slate-200/80 bg-slate-50/70 py-16 px-6">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center zoho-card-lift">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <svg
               width="28"
@@ -322,10 +321,16 @@ export default function BlogPage() {
               <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
             </svg>
           </div>
-          <h2 className="mt-5 text-2xl font-bold tracking-tight text-[#071426] sm:text-3xl">
-            Get practical IT insights delivered to your inbox
+
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-600">
+            <span>WEEKLY TECH DIGEST</span>
+          </div>
+
+          <h2 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-[#071426]">
+            Get Practical IT Insights Delivered to Your Inbox
           </h2>
-          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+
+          <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-md mx-auto leading-relaxed">
             Actionable cybersecurity alerts, cloud advice, and business tech tips without spam or marketing fluff.
           </p>
 
@@ -335,13 +340,13 @@ export default function BlogPage() {
           >
             <input
               type="email"
-              placeholder="Enter your work email"
+              placeholder="Enter your work email address"
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20"
               required
             />
             <button
               type="submit"
-              className="w-full sm:w-auto shrink-0 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 shadow-sm"
+              className="w-full sm:w-auto shrink-0 rounded-xl bg-blue-600 px-7 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 shadow-sm cursor-pointer"
             >
               Subscribe
             </button>
@@ -373,12 +378,14 @@ export default function BlogPage() {
                   </svg>
                 </div>
                 <div>
+                  <span className="inline-block text-xs font-bold uppercase tracking-wider text-blue-400 mb-1">
+                    ENTERPRISE IT CONSULTATION
+                  </span>
                   <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl text-white">
                     Ready to Get Started?
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Let&apos;s build a more secure and productive future together.
-                    Speak with an IT specialist today.
+                  <p className="mt-2 max-w-xl text-sm sm:text-base leading-relaxed text-slate-300">
+                    Let&apos;s build a more secure and productive future together. Speak with an IT specialist today.
                   </p>
                 </div>
               </div>
@@ -386,7 +393,7 @@ export default function BlogPage() {
               <div className="flex shrink-0 items-center gap-4">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-xl"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-xl"
                 >
                   <span>Get a Free Consultation</span>
                   <svg

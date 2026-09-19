@@ -236,29 +236,18 @@ export default function AdminTechniciansPage() {
       subtitle="Cleanroom forensic staff roster, ISO Class-5 laminar station allocations, and secure workbench access PIN management"
       actions={
         <div className="flex items-center gap-2.5">
-          <Link
-            href="/technician/dashboard"
+          <button
+            type="button"
             onClick={() => {
               if (typeof window !== "undefined") {
-                const current = localStorage.getItem("tdd_tech_user");
-                if (!current) {
-                  const techSession = {
-                    id: "admin-tech-direct",
-                    name: "Super Admin (Ebinezer)",
-                    email: "ebinezer@thedatadot.com",
-                    role: "Lead Forensic Cleanroom Engineer",
-                    station: "PC-3000 Flash & Portable III (Bench 01)",
-                    department: "Cleanroom Laboratory",
-                  };
-                  localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
-                }
+                window.dispatchEvent(new Event("tdd_open_tech_bench_modal"));
               }
             }}
-            className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+            className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <span>⚡ Open Technician Bench (No Login)</span>
+            <span>⚡ Open Technician Bench</span>
             <span>↗</span>
-          </Link>
+          </button>
           <button
             onClick={() => {
               setNewTech((prev) => ({

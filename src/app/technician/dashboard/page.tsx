@@ -421,8 +421,10 @@ export default function TechnicianWorkbenchPage() {
   const [replyMode, setReplyMode] = useState<"customer" | "internal">("customer");
   const [notification, setNotification] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
+  const [clientStatus, setClientStatus] = useState<string>("");
   const [editPriority, setEditPriority] = useState<"CRITICAL" | "HIGH" | "STANDARD">("STANDARD");
   const [editProgress, setEditProgress] = useState<number>(0);
+  const [clientProgress, setClientProgress] = useState<number>(0);
   const [editNotes, setEditNotes] = useState<string>("");
   const [editBench, setEditBench] = useState<string>("");
   const [clientUpdateText, setClientUpdateText] = useState<string>("");
@@ -564,7 +566,9 @@ export default function TechnicianWorkbenchPage() {
         selectedCaseIdRef.current = first.id;
         setSelectedCaseId(first.id);
         setEditStatus(first.status);
+        setClientStatus(first.status);
         setEditProgress(first.progress);
+        setClientProgress(first.progress);
         setEditNotes(first.notes);
         setEditBench(first.bench);
         setEditPriority(first.priority);
@@ -711,10 +715,13 @@ export default function TechnicianWorkbenchPage() {
       selectedCaseIdRef.current = match.id;
       setSelectedCaseId(match.id);
       setEditStatus(match.status);
+      setClientStatus(match.status);
       setEditPriority(match.priority);
       setEditProgress(match.progress);
+      setClientProgress(match.progress);
       setEditNotes(match.notes);
       setEditBench(match.bench);
+      setClientUpdateText("");
     }
   };
 
@@ -723,10 +730,13 @@ export default function TechnicianWorkbenchPage() {
     selectedCaseIdRef.current = c.id;
     setSelectedCaseId(c.id);
     setEditStatus(c.status);
+    setClientStatus(c.status);
     setEditPriority(c.priority);
     setEditProgress(c.progress);
+    setClientProgress(c.progress);
     setEditNotes(c.notes);
     setEditBench(c.bench);
+    setClientUpdateText("");
   };
 
   // Open Full Ticket Details View
@@ -743,10 +753,13 @@ export default function TechnicianWorkbenchPage() {
         selectedCaseIdRef.current = activeCase.id;
         setSelectedCaseId(activeCase.id);
         setEditStatus(activeCase.status);
+        setClientStatus(activeCase.status);
         setEditPriority(activeCase.priority);
         setEditProgress(activeCase.progress);
+        setClientProgress(activeCase.progress);
         setEditNotes(activeCase.notes);
         setEditBench(activeCase.bench);
+        setClientUpdateText("");
       }
 
       async function loadChat() {
@@ -831,7 +844,7 @@ export default function TechnicianWorkbenchPage() {
     }
   }, [activeCase?.id]);
 
-  // Save Workbench / Dashboard Status (Button Only)
+  // Save Internal Workbench Status (Station, Internal Priority, Lab Notes Only)
   const handleSaveWorkbenchStatus = async (overrideStatus?: string) => {
     if (!activeCase) return;
 
@@ -844,16 +857,18 @@ export default function TechnicianWorkbenchPage() {
     setIsUpdatingStatus(true);
     lastManualUpdateRef.current = Date.now();
 
-    const newStatus = overrideStatus || editStatus || activeCase.status;
     const newPriority = editPriority || activeCase.priority;
     const newBench = editBench || activeCase.bench;
-    const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
     const newNotes = editNotes !== undefined ? editNotes : activeCase.notes;
+    const newStatus = overrideStatus || activeCase.status;
 
-    setEditStatus(newStatus);
     setEditPriority(newPriority);
     setEditBench(newBench);
-    setEditProgress(newProgress);
+    setEditNotes(newNotes);
+    if (overrideStatus) {
+      setEditStatus(overrideStatus);
+      setClientStatus(overrideStatus);
+    }
 
     // Optimistically update in local state
     setCases((prev) =>
@@ -861,11 +876,11 @@ export default function TechnicianWorkbenchPage() {
         c.id.toLowerCase() === targetId.toLowerCase()
           ? {
               ...c,
-              status: newStatus,
+              ...(overrideStatus ? { status: overrideStatus } : {}),
               priority: newPriority,
               bench: newBench,
-              progress: newProgress,
               notes: newNotes,
+              updatedAt: "Just now",
             }
           : c
       )
@@ -877,10 +892,10 @@ export default function TechnicianWorkbenchPage() {
         const raw = localStorage.getItem("tdd_ticket_overrides");
         const overrides = raw ? JSON.parse(raw) : {};
         const overrideData = {
-          status: newStatus,
+          ...(overrides[targetId] || {}),
+          ...(overrideStatus ? { status: overrideStatus } : {}),
           priority: newPriority,
           bench: newBench,
-          progress: newProgress,
           notes: newNotes,
           updatedAt: "Just now",
         };
@@ -894,30 +909,28 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    setNotification(`Case #${targetId} status updated to "${newStatus}".`);
+    setNotification(`Internal workbench notes & station updated for #${targetId}.`);
 
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You updated #${targetId} status to "${newStatus}"`,
+        text: `You updated internal workbench records on #${targetId}`,
         time: "Just now",
-        dotColor: newStatus.toLowerCase().includes("closed")
-          ? "bg-slate-500"
-          : newStatus.toLowerCase().includes("resolved")
-          ? "bg-emerald-500"
-          : "bg-blue-500",
+        dotColor: "bg-blue-500",
       },
       ...prev.slice(0, 4),
     ]);
 
     try {
-      await updateTicketInSupabase(targetId, {
-        status: newStatus,
+      const updatePayload: Record<string, any> = {
         priority: newPriority,
-        clonedPercent: newProgress,
         techNotes: newNotes,
         assignedBench: newBench,
-      });
+      };
+      if (overrideStatus) {
+        updatePayload.status = overrideStatus;
+      }
+      await updateTicketInSupabase(targetId, updatePayload);
     } catch (err) {
       console.warn("Error updating ticket in Supabase:", err);
     } finally {
@@ -932,22 +945,23 @@ export default function TechnicianWorkbenchPage() {
     await handleSaveWorkbenchStatus(overrideStatus);
   };
 
-  // Dispatch Customer-Facing Update to Portal (Button Only)
+  // Dispatch Customer-Facing Update to Portal (Updates Ticket Status in DB & Broadcasts)
   const handleSendClientUpdate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!activeCase || !clientUpdateText.trim()) return;
+    if (!activeCase) return;
 
     const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
     setIsSendingClientUpdate(true);
     lastManualUpdateRef.current = Date.now();
 
-    const currentStatus = editStatus || activeCase.status;
-    const currentProgress = editProgress !== undefined ? editProgress : activeCase.progress;
+    const newStatus = clientStatus || activeCase.status;
+    const newProgress = clientProgress !== undefined ? clientProgress : activeCase.progress;
     const currentStation = editBench || activeCase.bench;
 
-    let broadcastMessage = clientUpdateText.trim();
-    if (notifyClientWithTelemetry) {
-      broadcastMessage += `\n\n[Status: ${currentStatus} • Progress: ${currentProgress}% • Station: ${currentStation}]`;
+    const rawMsg = clientUpdateText.trim();
+    let broadcastMessage = rawMsg || `Ticket lifecycle stage updated to "${newStatus}" (${newProgress}% completed).`;
+    if (notifyClientWithTelemetry && !broadcastMessage.includes("[Status:")) {
+      broadcastMessage += `\n\n[Status: ${newStatus} • Progress: ${newProgress}% • Station: ${currentStation}]`;
     }
 
     const newMsg: ChatMessage = {
@@ -962,21 +976,62 @@ export default function TechnicianWorkbenchPage() {
       [targetId]: [...(prev[targetId] || []), newMsg],
     }));
 
+    // Optimistically update status and progress in cases
+    setCases((prev) =>
+      prev.map((c) =>
+        c.id.toLowerCase() === targetId.toLowerCase()
+          ? {
+              ...c,
+              status: newStatus,
+              progress: newProgress,
+              updatedAt: "Just now",
+            }
+          : c
+      )
+    );
+
+    // Save persistent local override
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("tdd_ticket_overrides");
+        const overrides = raw ? JSON.parse(raw) : {};
+        const overrideData = {
+          ...(overrides[targetId] || {}),
+          status: newStatus,
+          progress: newProgress,
+          updatedAt: "Just now",
+        };
+        overrides[targetId] = overrideData;
+        overrides[targetId.toUpperCase()] = overrideData;
+        overrides[targetId.toLowerCase()] = overrideData;
+        localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+        window.dispatchEvent(new Event("tickets-updated"));
+      } catch (e) {
+        console.warn("Could not save persistent ticket override on client update:", e);
+      }
+    }
+
     setClientUpdateText("");
-    setNotification(`Client update successfully broadcast to #${targetId} customer portal!`);
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}" (${newProgress}%).`);
 
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You broadcast an update to customer on #${targetId}`,
+        text: `You broadcast an update to customer on #${targetId} (${newStatus} - ${newProgress}%)`,
         time: "Just now",
-        dotColor: "bg-indigo-500",
+        dotColor: "bg-emerald-500",
       },
       ...prev.slice(0, 4),
     ]);
 
     try {
-      await sendMessageToSupabase(targetId, "Technician", techUser.name, broadcastMessage);
+      await Promise.all([
+        updateTicketInSupabase(targetId, {
+          status: newStatus,
+          clonedPercent: newProgress,
+        }),
+        sendMessageToSupabase(targetId, "Technician", techUser.name, broadcastMessage),
+      ]);
     } catch (err) {
       console.warn("Failed to broadcast client update:", err);
     } finally {
@@ -991,6 +1046,7 @@ export default function TechnicianWorkbenchPage() {
     const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
     if (!window.confirm(`Are you sure you want to close Ticket #${targetId}?`)) return;
     setEditStatus("Closed");
+    setClientStatus("Closed");
     await handleSaveWorkbenchStatus("Closed");
   };
 
@@ -999,6 +1055,8 @@ export default function TechnicianWorkbenchPage() {
     if (!replyText.trim() || !activeCase) return;
 
     const messageText = replyText.trim();
+    setReplyText("");
+
     const newMsg: ChatMessage = {
       sender: "Technician",
       author: techUser.name,
@@ -1011,8 +1069,7 @@ export default function TechnicianWorkbenchPage() {
       [selectedCaseId]: [...(prev[selectedCaseId] || []), newMsg],
     }));
 
-    setReplyText("");
-    setNotification(`Update sent to ${activeCase.client} and logged.`);
+    setNotification("Reply sent to customer portal.");
 
     setActivityFeed((prev) => [
       {
@@ -1028,15 +1085,15 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  // Real File Attachment Handler
+  // Real File Attachment Handler (Persistent & Auto-Switching)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeCase) return;
 
     const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
-    const newAttachments: TicketAttachment[] = [];
+    const fileList = Array.from(files);
 
-    Array.from(files).forEach((file, index) => {
+    fileList.forEach((file, index) => {
       const bytes = file.size;
       let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
       if (bytes > 1024 * 1024) {
@@ -1051,42 +1108,60 @@ export default function TechnicianWorkbenchPage() {
       else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
       else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
 
-      const objectUrl = URL.createObjectURL(file);
-
-      newAttachments.push({
-        id: `att-${Date.now()}-${index}`,
-        name: file.name,
-        size: sizeStr,
-        type: fileType,
-        url: objectUrl,
-        uploadedAt: "Just now",
-        uploadedBy: techUser.name,
-      });
+      if (bytes < 4 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const newAtt: TicketAttachment = {
+            id: `att-${Date.now()}-${index}`,
+            name: file.name,
+            size: sizeStr,
+            type: fileType,
+            url: dataUrl,
+            uploadedAt: "Just now",
+            uploadedBy: techUser.name,
+          };
+          setAttachments((prev) => {
+            const updated = [...(prev[targetId] || []), newAtt];
+            try {
+              localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(updated));
+            } catch (err) {
+              console.warn("Storage warning for attachments:", err);
+            }
+            return { ...prev, [targetId]: updated };
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const objectUrl = URL.createObjectURL(file);
+        const newAtt: TicketAttachment = {
+          id: `att-${Date.now()}-${index}`,
+          name: file.name,
+          size: sizeStr,
+          type: fileType,
+          url: objectUrl,
+          uploadedAt: "Just now",
+          uploadedBy: techUser.name,
+        };
+        setAttachments((prev) => {
+          const updated = [...(prev[targetId] || []), newAtt];
+          try {
+            localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(updated));
+          } catch (err) {
+            console.warn("Storage warning for attachments:", err);
+          }
+          return { ...prev, [targetId]: updated };
+        });
+      }
     });
 
-    const updatedList = [...(attachments[targetId] || []), ...newAttachments];
-    setAttachments((prev) => ({
-      ...prev,
-      [targetId]: updatedList,
-    }));
+    setNotification(`${fileList.length} file(s) attached to Case #${targetId}!`);
+    setTicketDetailTab("attachments");
 
-    if (typeof window !== "undefined") {
-      try {
-        const serializable = updatedList.map((a) => ({
-          ...a,
-          url: a.url?.startsWith("blob:") ? undefined : a.url,
-        }));
-        localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(serializable));
-      } catch (err) {
-        console.warn("Storage warning for attachments:", err);
-      }
-    }
-
-    setNotification(`${newAttachments.length} file(s) attached to Case #${targetId} successfully!`);
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You attached ${newAttachments.length} file(s) to #${targetId}`,
+        text: `You attached ${fileList.length} file(s) to #${targetId}`,
         time: "Just now",
         dotColor: "bg-emerald-500",
       },
@@ -1892,46 +1967,27 @@ export default function TechnicianWorkbenchPage() {
                         </button>
                       </div>
 
-                      {/* MODULE 1: INTERNAL WORKBENCH UPDATE */}
+                      {/* MODULE 1: INTERNAL WORKBENCH UPDATE (Internal Only) */}
                       {dashboardDrawerTab === "internal" && (
                         <div className="space-y-3 text-xs">
-                          <div>
-                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Lifecycle Stage:
-                            </label>
-                            <select
-                              value={editStatus || activeCase.status}
-                              onChange={(e) => setEditStatus(e.target.value)}
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                            >
-                              <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                                {availableStages.core.map((st) => (
-                                  <option key={st.value} value={st.value}>
-                                    {st.label}
-                                  </option>
-                                ))}
-                              </optgroup>
-                              {availableStages.extras.length > 0 && (
-                                <optgroup label={`${activeCase.category} Execution Stages`}>
-                                  {availableStages.extras.map((st) => (
-                                    <option key={st.value} value={st.value}>
-                                      {st.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )}
-                            </select>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 space-y-1">
+                            <span className="font-semibold text-slate-800 text-[11px] block">
+                              Internal Bench &amp; SLA Controls
+                            </span>
+                            <p className="text-[10px] text-slate-500">
+                              Confidential engineering directives. Not visible to client.
+                            </p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                                Priority:
+                                Internal Priority:
                               </label>
                               <select
                                 value={editPriority || activeCase.priority}
                                 onChange={(e) => setEditPriority(e.target.value as any)}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
                               >
                                 <option value="CRITICAL">High</option>
                                 <option value="HIGH">Medium</option>
@@ -1946,7 +2002,7 @@ export default function TechnicianWorkbenchPage() {
                               <select
                                 value={editBench || activeCase.bench}
                                 onChange={(e) => setEditBench(e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate"
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate font-medium"
                               >
                                 {currentConfig?.benchOptions.map((opt) => (
                                   <option key={opt} value={opt}>
@@ -1958,31 +2014,14 @@ export default function TechnicianWorkbenchPage() {
                           </div>
 
                           <div>
-                            <div className="flex items-center justify-between text-[11px] mb-1">
-                              <span className="font-semibold text-slate-700">Completion Progress:</span>
-                              <span className="font-mono font-bold text-blue-600">
-                                {editProgress !== undefined ? editProgress : activeCase.progress}%
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              value={editProgress !== undefined ? editProgress : activeCase.progress}
-                              onChange={(e) => setEditProgress(Number(e.target.value))}
-                              className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                            />
-                          </div>
-
-                          <div>
                             <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Internal Tech Notes:
+                              Internal Lab / Bench Notes:
                             </label>
                             <textarea
-                              rows={2}
+                              rows={3}
                               value={editNotes}
                               onChange={(e) => setEditNotes(e.target.value)}
-                              placeholder="Technical observations, lab log, firmware revision..."
+                              placeholder="Internal lab log, firmware rev, donor head serials, engineering handover..."
                               className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
                             />
                           </div>
@@ -2008,9 +2047,72 @@ export default function TechnicianWorkbenchPage() {
                         </div>
                       )}
 
-                      {/* MODULE 2: CLIENT PORTAL UPDATE */}
+                      {/* MODULE 2: CLIENT PORTAL UPDATE (Customer-Facing & Live Synced) */}
                       {dashboardDrawerTab === "client" && (
                         <div className="space-y-3 text-xs">
+                          {/* Client Lifecycle Stage */}
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Client Lifecycle Stage:
+                            </label>
+                            <select
+                              value={clientStatus || activeCase.status}
+                              onChange={(e) => setClientStatus(e.target.value)}
+                              className="w-full rounded-xl border border-blue-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
+                            >
+                              <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                                {availableStages.core.map((st) => (
+                                  <option key={st.value} value={st.value}>
+                                    {st.label}
+                                  </option>
+                                ))}
+                              </optgroup>
+                              {availableStages.extras.length > 0 && (
+                                <optgroup label={`${activeCase.category} Execution Stages`}>
+                                  {availableStages.extras.map((st) => (
+                                    <option key={st.value} value={st.value}>
+                                      {st.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </select>
+                          </div>
+
+                          {/* Client Progress Slider */}
+                          <div>
+                            <div className="flex items-center justify-between text-[11px] mb-1">
+                              <span className="font-semibold text-slate-700">Client Completion Progress:</span>
+                              <span className="font-mono font-bold text-blue-600">
+                                {clientProgress !== undefined ? clientProgress : activeCase.progress}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={clientProgress !== undefined ? clientProgress : activeCase.progress}
+                              onChange={(e) => setClientProgress(Number(e.target.value))}
+                              className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                            />
+                            <div className="flex items-center gap-1.5 pt-1.5">
+                              {[25, 50, 75, 100].map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => setClientProgress(pct)}
+                                  className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
+                                    (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"
+                                  }`}
+                                >
+                                  {pct}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                           <div>
                             <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Quick Presets:
@@ -2041,7 +2143,7 @@ export default function TechnicianWorkbenchPage() {
                               rows={3}
                               value={clientUpdateText}
                               onChange={(e) => setClientUpdateText(e.target.value)}
-                              placeholder={`Update message for ${activeCase.client}...`}
+                              placeholder={`Update message for ${activeCase.client} (optional)...`}
                               className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
                             />
                           </div>
@@ -2053,24 +2155,24 @@ export default function TechnicianWorkbenchPage() {
                               onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
                               className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span>Include stage &amp; progress stamp</span>
+                            <span>Include stage &amp; progress stamp in message</span>
                           </label>
 
                           <button
                             type="button"
                             onClick={handleSendClientUpdate}
-                            disabled={isSendingClientUpdate || !clientUpdateText.trim()}
-                            className="w-full rounded-xl bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSendingClientUpdate}
+                            className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isSendingClientUpdate ? (
                               <>
                                 <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span>Broadcasting to Portal...</span>
+                                <span>Syncing to Portal...</span>
                               </>
                             ) : (
                               <>
-                                <span>✉️</span>
-                                <span>Send Client Update</span>
+                                <span>🌐</span>
+                                <span>Sync &amp; Send Client Update</span>
                               </>
                             )}
                           </button>
@@ -2827,56 +2929,27 @@ export default function TechnicianWorkbenchPage() {
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
-                          ⚙️
+                          🛠️
                         </span>
                         <div>
                           <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                            Workbench Status
+                            Workbench Status (Internal)
                           </h3>
                           <span className="text-[10px] text-slate-400 block">
                             Internal operational controls
                           </span>
                         </div>
                       </div>
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-bold text-blue-600 border border-blue-100">
-                        Internal
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-700 border border-amber-200">
+                        🔒 Internal Only
                       </span>
-                    </div>
-
-                    {/* Status Dropdown */}
-                    <div className="space-y-1">
-                      <label className="block font-semibold text-slate-700 text-[11px]">
-                        Lifecycle Stage:
-                      </label>
-                      <select
-                        value={editStatus || activeCase.status}
-                        onChange={(e) => setEditStatus(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
-                      >
-                        <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                          {availableStages.core.map((st) => (
-                            <option key={st.value} value={st.value}>
-                              {st.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                        {availableStages.extras.length > 0 && (
-                          <optgroup label={`${activeCase.category} Execution Stages`}>
-                            {availableStages.extras.map((st) => (
-                              <option key={st.value} value={st.value}>
-                                {st.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </select>
                     </div>
 
                     {/* Priority & Station Grid */}
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
                         <label className="block font-semibold text-slate-700 text-[11px]">
-                          Priority:
+                          Internal Priority:
                         </label>
                         <select
                           value={editPriority || activeCase.priority}
@@ -2907,34 +2980,16 @@ export default function TechnicianWorkbenchPage() {
                       </div>
                     </div>
 
-                    {/* Progress Slider */}
-                    <div className="space-y-1 pt-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-slate-700">Completion Progress:</span>
-                        <span className="font-mono font-bold text-blue-600">
-                          {editProgress !== undefined ? editProgress : activeCase.progress}%
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={editProgress !== undefined ? editProgress : activeCase.progress}
-                        onChange={(e) => setEditProgress(Number(e.target.value))}
-                        className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                      />
-                    </div>
-
                     {/* Internal Tech Notes */}
                     <div className="space-y-1 pt-1">
                       <label className="block font-semibold text-slate-700 text-[11px]">
                         Internal Workbench Notes:
                       </label>
                       <textarea
-                        rows={2}
+                        rows={3}
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Technical notes, lab log, firmware revision..."
+                        placeholder="Internal lab log, firmware revision, donor head serials, engineering findings..."
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
                       />
                     </div>
@@ -2944,7 +2999,7 @@ export default function TechnicianWorkbenchPage() {
                       type="button"
                       onClick={() => handleSaveWorkbenchStatus()}
                       disabled={isUpdatingStatus}
-                      className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                      className="w-full rounded-xl bg-slate-800 py-2.5 font-bold text-white hover:bg-slate-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       {isUpdatingStatus ? (
                         <>
@@ -2958,9 +3013,12 @@ export default function TechnicianWorkbenchPage() {
                         </>
                       )}
                     </button>
+                    <p className="text-[10px] text-slate-400 text-center -mt-1">
+                      Saves station &amp; internal notes only. Client portal is unaffected.
+                    </p>
                   </div>
 
-                  {/* 2. CLIENT PORTAL UPDATE (CUSTOMER-FACING BROADCAST) */}
+                  {/* 2. CLIENT PORTAL UPDATE (CUSTOMER-FACING BROADCAST & LIVE SYNC) */}
                   <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-b from-blue-50/40 to-white p-5 shadow-sm space-y-3.5 text-xs">
                     <div className="flex items-center justify-between border-b border-blue-100/70 pb-3">
                       <div className="flex items-center gap-2">
@@ -2972,13 +3030,76 @@ export default function TechnicianWorkbenchPage() {
                             Client Portal Update
                           </h3>
                           <span className="text-[10px] text-slate-500 block">
-                            Direct broadcast to customer portal
+                            Live sync to customer tracking portal
                           </span>
                         </div>
                       </div>
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                        Customer Visible
+                        🟢 Customer Visible
                       </span>
+                    </div>
+
+                    {/* Client Lifecycle Stage */}
+                    <div className="space-y-1">
+                      <label className="block font-semibold text-slate-700 text-[11px]">
+                        Client Lifecycle Stage:
+                      </label>
+                      <select
+                        value={clientStatus || activeCase.status}
+                        onChange={(e) => setClientStatus(e.target.value)}
+                        className="w-full rounded-xl border border-blue-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
+                      >
+                        <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                          {availableStages.core.map((st) => (
+                            <option key={st.value} value={st.value}>
+                              {st.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                        {availableStages.extras.length > 0 && (
+                          <optgroup label={`${activeCase.category} Execution Stages`}>
+                            {availableStages.extras.map((st) => (
+                              <option key={st.value} value={st.value}>
+                                {st.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Client Progress Slider */}
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-slate-700">Client Completion Progress:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          {clientProgress !== undefined ? clientProgress : activeCase.progress}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={clientProgress !== undefined ? clientProgress : activeCase.progress}
+                        onChange={(e) => setClientProgress(Number(e.target.value))}
+                        className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                      />
+                      <div className="flex items-center gap-1.5 pt-1">
+                        {[25, 50, 75, 100].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => setClientProgress(pct)}
+                            className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
+                              (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Preset Status Quick Chips */}
@@ -2997,7 +3118,7 @@ export default function TechnicianWorkbenchPage() {
                             key={idx}
                             type="button"
                             onClick={() => setClientUpdateText(tmpl)}
-                            className="rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/60 px-2.5 py-1 text-[11px] text-slate-700 transition text-left truncate"
+                            className="rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/60 px-2.5 py-1 text-[11px] text-slate-700 transition text-left truncate cursor-pointer"
                           >
                             + {tmpl}
                           </button>
@@ -3014,8 +3135,8 @@ export default function TechnicianWorkbenchPage() {
                         rows={3}
                         value={clientUpdateText}
                         onChange={(e) => setClientUpdateText(e.target.value)}
-                        placeholder="Type update message for client to view on tracking portal..."
-                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        placeholder="Type update message for client to view on tracking portal (optional)..."
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
                       />
                     </div>
 
@@ -3027,28 +3148,31 @@ export default function TechnicianWorkbenchPage() {
                         onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span>Include stage ({editStatus || activeCase.status}) &amp; progress stamp</span>
+                      <span>Include stage ({clientStatus || activeCase.status}) &amp; progress ({clientProgress !== undefined ? clientProgress : activeCase.progress}%) stamp</span>
                     </label>
 
                     {/* Send Client Update Button */}
                     <button
                       type="button"
                       onClick={handleSendClientUpdate}
-                      disabled={isSendingClientUpdate || !clientUpdateText.trim()}
-                      className="w-full rounded-xl bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isSendingClientUpdate}
+                      className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSendingClientUpdate ? (
                         <>
                           <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Broadcasting to Portal...</span>
+                          <span>Syncing to Portal...</span>
                         </>
                       ) : (
                         <>
-                          <span>✉️</span>
-                          <span>Send Client Update</span>
+                          <span>🌐</span>
+                          <span>Sync &amp; Send Client Update</span>
                         </>
                       )}
                     </button>
+                    <p className="text-[10px] text-blue-600/80 text-center -mt-1">
+                      Directly updates ticket status &amp; progress in customer portal database.
+                    </p>
                   </div>
 
                   {/* 3. ADMINISTRATIVE QUICK ACTIONS */}
@@ -3069,10 +3193,15 @@ export default function TechnicianWorkbenchPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full rounded-xl border border-blue-200 bg-blue-50/50 py-2 font-semibold text-blue-700 hover:bg-blue-100 text-left px-3 flex items-center gap-2 transition cursor-pointer"
+                      className="w-full rounded-xl border border-blue-200 bg-blue-50/50 py-2 font-semibold text-blue-700 hover:bg-blue-100 text-left px-3 flex items-center justify-between transition cursor-pointer"
                     >
-                      <span>📎</span>
-                      <span>Add Attachment</span>
+                      <div className="flex items-center gap-2">
+                        <span>📎</span>
+                        <span>Add Attachment</span>
+                      </div>
+                      <span className="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-mono font-bold">
+                        {(attachments[activeCase.id] || []).length} attached
+                      </span>
                     </button>
 
                     <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import TechnicianNav from "@/components/TechnicianNav";
 import Footer from "@/components/Footer";
@@ -17,6 +17,16 @@ interface Message {
   author: string;
   time: string;
   text: string;
+}
+
+export interface TicketAttachment {
+  id: string;
+  name: string;
+  size: string;
+  type: string;
+  url?: string;
+  uploadedAt: string;
+  uploadedBy: string;
 }
 
 export default function TechnicianTicketDetailPage({
@@ -37,6 +47,8 @@ export default function TechnicianTicketDetailPage({
   const [replyText, setReplyText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -130,6 +142,29 @@ export default function TechnicianTicketDetailPage({
             }
             setMessages(initialThread);
           }
+
+          // Load attachments for this ticket
+          if (typeof window !== "undefined") {
+            try {
+              const storedAtts = localStorage.getItem(`tdd_attachments_${ticketId}`);
+              if (storedAtts) {
+                setAttachments(JSON.parse(storedAtts));
+              } else {
+                setAttachments([
+                  {
+                    id: `att-${ticketId}-1`,
+                    name: `${(found.category || "Service").toLowerCase().replace(/\s+/g, "_")}_diagnostic_telemetry.pdf`,
+                    size: "2.1 MB",
+                    type: "pdf",
+                    uploadedAt: found.createdAt || "Today",
+                    uploadedBy: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Bench Intake Desk",
+                  },
+                ]);
+              }
+            } catch (attErr) {
+              console.warn("Could not load stored attachments:", attErr);
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to load technician ticket:", err);
@@ -141,6 +176,7 @@ export default function TechnicianTicketDetailPage({
     loadData();
   }, [ticketId]);
 
+  // Dedicated Internal Workbench Status Update (Button Only - No Automatic Customer Chat Broadcast)
   const handleSaveUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ticket) return;
@@ -160,47 +196,7 @@ export default function TechnicianTicketDetailPage({
         techNotes: notes,
       }));
 
-      // Broadcast official engineering status change directly to customer chat thread
-      const currentAuthor =
-        ticket.assignedTech && ticket.assignedTech !== "Unassigned"
-          ? ticket.assignedTech
-          : "Technical Operations Specialist";
-
-      const progressLabel =
-        ticket.category === "Cybersecurity"
-          ? `${progress}% Remediated`
-          : ticket.category === "Cloud Solutions"
-          ? `${progress}% Deployed`
-          : ticket.category === "Managed IT"
-          ? `${progress}% Resolved`
-          : `${progress}% Cloned`;
-
-      const broadcastText = `Specialist Status Update: Stage updated to "${status}" • Progress calibrated at ${progressLabel}.${
-        notes ? ` Forensic Log: ${notes}` : ""
-      }`;
-
-      try {
-        await sendMessageToSupabase(
-          ticket.id,
-          "Technician",
-          currentAuthor,
-          broadcastText
-        );
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "Technician",
-            author: currentAuthor,
-            time: "Just now",
-            text: broadcastText,
-          },
-        ]);
-      } catch (chatErr) {
-        console.warn("Chat broadcast warning:", chatErr);
-      }
-
-      setNotification("Status & progress updated! Live telemetry pushed to Customer Portal.");
+      setNotification("Internal workbench status & progress updated successfully!");
     } catch (err) {
       console.warn("Update sync warning:", err);
       setNotification("Status updated locally.");
@@ -208,6 +204,76 @@ export default function TechnicianTicketDetailPage({
       setSaving(false);
       setTimeout(() => setNotification(""), 4000);
     }
+  };
+
+  // Real File Attachment Upload Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !ticket) return;
+
+    const newAtts: TicketAttachment[] = [];
+    Array.from(files).forEach((file, index) => {
+      const bytes = file.size;
+      let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
+      if (bytes > 1024 * 1024) {
+        sizeStr = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      let fileType = "generic";
+      const nameLower = file.name.toLowerCase();
+      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
+      else if (file.type.includes("image") || nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) fileType = "image";
+      else if (nameLower.endsWith(".zip") || nameLower.endsWith(".tar") || nameLower.endsWith(".gz") || nameLower.endsWith(".7z")) fileType = "archive";
+      else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
+      else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
+
+      const objectUrl = URL.createObjectURL(file);
+
+      newAtts.push({
+        id: `att-${Date.now()}-${index}`,
+        name: file.name,
+        size: sizeStr,
+        type: fileType,
+        url: objectUrl,
+        uploadedAt: "Just now",
+        uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
+      });
+    });
+
+    const updated = [...attachments, ...newAtts];
+    setAttachments(updated);
+
+    if (typeof window !== "undefined") {
+      try {
+        const serializable = updated.map((a) => ({
+          ...a,
+          url: a.url?.startsWith("blob:") ? undefined : a.url,
+        }));
+        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(serializable));
+      } catch (err) {
+        console.warn("Storage warning for attachments:", err);
+      }
+    }
+
+    setNotification(`${newAtts.length} file(s) attached successfully!`);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setTimeout(() => setNotification(""), 4000);
+  };
+
+  const handleDeleteAttachment = (attId: string) => {
+    const updated = attachments.filter((a) => a.id !== attId);
+    setAttachments(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Storage warning for attachments:", err);
+      }
+    }
+    setNotification("Attachment removed.");
+    setTimeout(() => setNotification(""), 3000);
   };
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -451,14 +517,15 @@ export default function TechnicianTicketDetailPage({
 
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-[11px] text-slate-500 font-mono">
-                    * Status &amp; telemetry sync live to customer view upon save.
+                    * Status, progress, and engineering notes saved to internal system.
                   </span>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-500 transition disabled:opacity-50 text-xs"
+                    className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-500 transition disabled:opacity-50 text-xs flex items-center gap-1.5 cursor-pointer"
                   >
-                    {saving ? "Saving Changes..." : "Save Status & Sync Telemetry →"}
+                    <span>💾</span>
+                    <span>{saving ? "Saving Changes..." : "Save Internal Status"}</span>
                   </button>
                 </div>
               </form>
@@ -519,12 +586,91 @@ export default function TechnicianTicketDetailPage({
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-500 transition text-xs shadow-xs"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-500 transition text-xs shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
-                    Send Update to Client Portal →
+                    <span>✉️</span>
+                    <span>Send Update to Client Portal →</span>
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* ATTACHMENTS & LAB FILES */}
+            <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6 text-xs shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <span>📎</span>
+                    <span>Case Attachments &amp; Lab Captures ({attachments.length})</span>
+                  </h2>
+                  <span className="text-[11px] text-slate-400">Forensic images, diagnostics, and test results</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-xl bg-blue-600 px-3.5 py-1.5 font-semibold text-white hover:bg-blue-500 transition text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span>📎</span>
+                  <span>Upload File</span>
+                </button>
+              </div>
+
+              {attachments.length === 0 ? (
+                <div className="p-6 text-center text-slate-500 bg-slate-900/60 rounded-xl border border-dashed border-slate-800">
+                  <p className="font-semibold text-slate-400">No attachments uploaded yet</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Click the button above to upload firmware dumps, photos, or logs.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {attachments.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-slate-900 transition"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-950/60 border border-blue-800/40 text-blue-400 font-bold text-sm">
+                          {file.type === "pdf" ? "📄" : file.type === "image" ? "🖼️" : file.type === "archive" ? "📦" : file.type === "binary" ? "💾" : "📎"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-200 truncate">{file.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">
+                            {file.size} • {file.uploadedAt} by {file.uploadedBy}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {file.url ? (
+                          <a
+                            href={file.url}
+                            download={file.name}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:bg-slate-700 transition flex items-center gap-1"
+                          >
+                            <span>⬇️</span>
+                            <span>Download</span>
+                          </a>
+                        ) : (
+                          <span className="rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-medium text-slate-400">
+                            Verified File
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(file.id)}
+                          className="rounded-lg border border-rose-900/60 bg-rose-950/30 text-rose-400 hover:bg-rose-900/50 px-2 py-1 text-xs font-bold transition cursor-pointer"
+                          title="Delete Attachment"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -634,6 +780,16 @@ export default function TechnicianTicketDetailPage({
           </div>
         </div>
       </main>
+
+      {/* Hidden Native File Input for Attachments */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        multiple
+        className="hidden"
+        aria-label="Upload ticket attachment"
+      />
 
       <Footer />
     </div>

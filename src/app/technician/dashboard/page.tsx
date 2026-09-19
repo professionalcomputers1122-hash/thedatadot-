@@ -37,6 +37,23 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface TicketAttachment {
+  id: string;
+  name: string;
+  size: string;
+  type: string;
+  url?: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface InternalNote {
+  id: string;
+  author: string;
+  time: string;
+  text: string;
+}
+
 export interface TimelineStage {
   title: string;
   description: string;
@@ -416,6 +433,11 @@ export default function TechnicianWorkbenchPage() {
   const [replyText, setReplyText] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
+  const [attachments, setAttachments] = useState<Record<string, TicketAttachment[]>>({});
+  const [internalNotes, setInternalNotes] = useState<Record<string, InternalNote[]>>({});
+  const [newInternalNoteText, setNewInternalNoteText] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const selectedCaseIdRef = useRef<string>("");
   const lastManualUpdateRef = useRef<number>(0);
 
@@ -733,6 +755,61 @@ export default function TechnicianWorkbenchPage() {
         }
       }
       loadChat();
+
+      // Load attachments for active case
+      if (typeof window !== "undefined") {
+        try {
+          const storedAtts = localStorage.getItem(`tdd_attachments_${activeCase.id}`);
+          if (storedAtts) {
+            setAttachments((prev) => ({
+              ...prev,
+              [activeCase.id]: JSON.parse(storedAtts),
+            }));
+          } else {
+            const seedAtts: TicketAttachment[] = [
+              {
+                id: `att-${activeCase.id}-1`,
+                name: `${(activeCase.category || "Service").toLowerCase().replace(/\s+/g, "_")}_diagnostic_telemetry.pdf`,
+                size: "2.1 MB",
+                type: "pdf",
+                uploadedAt: "Today, 09:30 AM",
+                uploadedBy: activeCase.leadTech && activeCase.leadTech !== "Unassigned" ? activeCase.leadTech : "Lab Diagnostics Hub",
+              },
+            ];
+            setAttachments((prev) => ({
+              ...prev,
+              [activeCase.id]: seedAtts,
+            }));
+          }
+        } catch (e) {
+          console.warn("Could not load stored attachments:", e);
+        }
+
+        try {
+          const storedNotes = localStorage.getItem(`tdd_internal_notes_${activeCase.id}`);
+          if (storedNotes) {
+            setInternalNotes((prev) => ({
+              ...prev,
+              [activeCase.id]: JSON.parse(storedNotes),
+            }));
+          } else if (activeCase.notes) {
+            const seedNotes: InternalNote[] = [
+              {
+                id: `note-${activeCase.id}-1`,
+                author: activeCase.leadTech && activeCase.leadTech !== "Unassigned" ? activeCase.leadTech : techUser.name,
+                time: "Intake Station",
+                text: activeCase.notes,
+              },
+            ];
+            setInternalNotes((prev) => ({
+              ...prev,
+              [activeCase.id]: seedNotes,
+            }));
+          }
+        } catch (e) {
+          console.warn("Could not load stored notes:", e);
+        }
+      }
     }
   }, [activeCase?.id]);
 
@@ -907,6 +984,137 @@ export default function TechnicianWorkbenchPage() {
     ]);
 
     await sendMessageToSupabase(selectedCaseId, "Technician", techUser.name, messageText);
+    setTimeout(() => setNotification(""), 4500);
+  };
+
+  // Real File Attachment Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !activeCase) return;
+
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const newAttachments: TicketAttachment[] = [];
+
+    Array.from(files).forEach((file, index) => {
+      const bytes = file.size;
+      let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
+      if (bytes > 1024 * 1024) {
+        sizeStr = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      let fileType = "generic";
+      const nameLower = file.name.toLowerCase();
+      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
+      else if (file.type.includes("image") || nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) fileType = "image";
+      else if (nameLower.endsWith(".zip") || nameLower.endsWith(".tar") || nameLower.endsWith(".gz") || nameLower.endsWith(".7z")) fileType = "archive";
+      else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
+      else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
+
+      const objectUrl = URL.createObjectURL(file);
+
+      newAttachments.push({
+        id: `att-${Date.now()}-${index}`,
+        name: file.name,
+        size: sizeStr,
+        type: fileType,
+        url: objectUrl,
+        uploadedAt: "Just now",
+        uploadedBy: techUser.name,
+      });
+    });
+
+    const updatedList = [...(attachments[targetId] || []), ...newAttachments];
+    setAttachments((prev) => ({
+      ...prev,
+      [targetId]: updatedList,
+    }));
+
+    if (typeof window !== "undefined") {
+      try {
+        const serializable = updatedList.map((a) => ({
+          ...a,
+          url: a.url?.startsWith("blob:") ? undefined : a.url,
+        }));
+        localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(serializable));
+      } catch (err) {
+        console.warn("Storage warning for attachments:", err);
+      }
+    }
+
+    setNotification(`${newAttachments.length} file(s) attached to Case #${targetId} successfully!`);
+    setActivityFeed((prev) => [
+      {
+        id: Date.now(),
+        text: `You attached ${newAttachments.length} file(s) to #${targetId}`,
+        time: "Just now",
+        dotColor: "bg-emerald-500",
+      },
+      ...prev.slice(0, 4),
+    ]);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setTimeout(() => setNotification(""), 4500);
+  };
+
+  const handleDeleteAttachment = (ticketId: string, attId: string) => {
+    const current = attachments[ticketId] || [];
+    const updated = current.filter((a) => a.id !== attId);
+    setAttachments((prev) => ({
+      ...prev,
+      [ticketId]: updated,
+    }));
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Failed to update attachments storage:", err);
+      }
+    }
+
+    setNotification("Attachment removed.");
+    setTimeout(() => setNotification(""), 3000);
+  };
+
+  const handleAddInternalNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newInternalNoteText.trim() || !activeCase) return;
+
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const newNote: InternalNote = {
+      id: `note-${Date.now()}`,
+      author: techUser.name,
+      time: "Just now",
+      text: newInternalNoteText.trim(),
+    };
+
+    const updatedNotes = [...(internalNotes[targetId] || []), newNote];
+    setInternalNotes((prev) => ({
+      ...prev,
+      [targetId]: updatedNotes,
+    }));
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`tdd_internal_notes_${targetId}`, JSON.stringify(updatedNotes));
+      } catch (err) {
+        console.warn("Failed to store internal notes:", err);
+      }
+    }
+
+    setNewInternalNoteText("");
+    setNotification(`Internal note saved to #${targetId} (confidential / technician-only).`);
+    setActivityFeed((prev) => [
+      {
+        id: Date.now(),
+        text: `You logged an internal note on #${targetId}`,
+        time: "Just now",
+        dotColor: "bg-amber-500",
+      },
+      ...prev.slice(0, 4),
+    ]);
     setTimeout(() => setNotification(""), 4500);
   };
 
@@ -2065,116 +2273,365 @@ export default function TechnicianWorkbenchPage() {
                 {/* LEFT: CONVERSATION TABS (8 COLS) */}
                 <div className="lg:col-span-8 space-y-4">
                   <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-4">
-                    {/* TABS (Matching Panel 7) */}
-                    <div className="flex items-center gap-4 border-b border-slate-100 pb-3 text-xs font-bold">
+                    {/* TABS HEADER */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 border-b border-slate-100 pb-3 text-xs font-bold">
                       <button
+                        type="button"
                         onClick={() => setTicketDetailTab("conversation")}
-                        className={`pb-2 border-b-2 transition ${
+                        className={`pb-2 border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                           ticketDetailTab === "conversation"
                             ? "border-blue-600 text-blue-600"
                             : "border-transparent text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Conversation
+                        <span>💬</span>
+                        <span>Customer Conversation</span>
+                        <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px]">
+                          {currentMessages.length}
+                        </span>
                       </button>
+
                       <button
+                        type="button"
                         onClick={() => setTicketDetailTab("notes")}
-                        className={`pb-2 border-b-2 transition ${
+                        className={`pb-2 border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                           ticketDetailTab === "notes"
-                            ? "border-blue-600 text-blue-600"
+                            ? "border-amber-600 text-amber-700"
                             : "border-transparent text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Internal Notes
+                        <span>🔒</span>
+                        <span>Internal Notes</span>
+                        <span className="rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[10px]">
+                          {(internalNotes[activeCase.id] || []).length}
+                        </span>
                       </button>
+
                       <button
+                        type="button"
                         onClick={() => setTicketDetailTab("attachments")}
-                        className={`pb-2 border-b-2 transition ${
+                        className={`pb-2 border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                           ticketDetailTab === "attachments"
                             ? "border-blue-600 text-blue-600"
                             : "border-transparent text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Attachments (1)
+                        <span>📎</span>
+                        <span>Attachments</span>
+                        <span className="rounded-full bg-emerald-100 text-emerald-800 px-1.5 py-0.5 text-[10px]">
+                          {(attachments[activeCase.id] || []).length}
+                        </span>
                       </button>
+
                       <button
+                        type="button"
                         onClick={() => setTicketDetailTab("audit")}
-                        className={`pb-2 border-b-2 transition ${
+                        className={`pb-2 border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                           ticketDetailTab === "audit"
                             ? "border-blue-600 text-blue-600"
                             : "border-transparent text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        Audit Log
+                        <span>📜</span>
+                        <span>Audit Log</span>
                       </button>
                     </div>
 
-                    {/* MESSAGE THREAD (Matching Panel 7) */}
-                    <div className="space-y-4">
-                      {currentMessages.map((msg, idx) => (
-                        <div key={idx} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-900">{msg.author}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">({msg.sender})</span>
+                    {/* TAB 1: CUSTOMER CONVERSATION */}
+                    {ticketDetailTab === "conversation" && (
+                      <div className="space-y-4">
+                        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                          {currentMessages.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                              <span className="text-2xl block mb-2">💬</span>
+                              <p className="font-semibold text-slate-600">No conversation messages yet</p>
+                              <p className="text-xs text-slate-400 mt-1">Send a message below to communicate directly with the customer portal.</p>
                             </div>
-                            <span className="text-slate-400 text-[11px]">{msg.time}</span>
-                          </div>
-                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{msg.text}</p>
+                          ) : (
+                            currentMessages.map((msg, idx) => {
+                              const isTech = msg.sender === "Technician";
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`rounded-xl border p-4 space-y-2 ${
+                                    isTech
+                                      ? "border-blue-200 bg-blue-50/40 text-slate-800 ml-4"
+                                      : "border-slate-200 bg-slate-50/70 text-slate-800 mr-4"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-900">{msg.author}</span>
+                                      <span
+                                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                                          isTech ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-700"
+                                        }`}
+                                      >
+                                        {msg.sender}
+                                      </span>
+                                    </div>
+                                    <span className="text-slate-400 text-[11px]">{msg.time}</span>
+                                  </div>
+                                  <p className="text-xs leading-relaxed whitespace-pre-line text-slate-700">{msg.text}</p>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
-                      ))}
-                    </div>
 
-                    {/* REPLY BOX (Matching Panel 7) */}
-                    <form onSubmit={handleSendReply} className="space-y-3 pt-4 border-t border-slate-100 text-xs">
-                      <div className="flex items-center gap-4 text-xs font-semibold">
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="reply_mode"
-                            checked={replyMode === "customer"}
-                            onChange={() => setReplyMode("customer")}
-                            className="accent-blue-600"
+                        {/* DEDICATED CUSTOMER REPLY FORM */}
+                        <form onSubmit={handleSendReply} className="space-y-3 pt-4 border-t border-slate-100 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <span>✉️</span>
+                              <span>Send Direct Message to Customer</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReplyText(
+                                  "Hello, our engineering team has reviewed this case and bench diagnostics are actively underway. We will provide another update shortly."
+                                )
+                              }
+                              className="text-xs text-blue-600 hover:underline cursor-pointer"
+                            >
+                              + Insert Template
+                            </button>
+                          </div>
+
+                          <textarea
+                            rows={3}
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder={`Type a customer message for ${activeCase.client}...`}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition"
                           />
-                          <span>Reply to Customer</span>
-                        </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-500">
-                          <input
-                            type="radio"
-                            name="reply_mode"
-                            checked={replyMode === "internal"}
-                            onChange={() => setReplyMode("internal")}
-                            className="accent-blue-600"
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400">
+                              Dispatched immediately to the customer portal
+                            </span>
+                            <button
+                              type="submit"
+                              disabled={!replyText.trim()}
+                              className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                              <span>✉️</span>
+                              <span>Send to Customer Portal</span>
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* TAB 2: INTERNAL LAB NOTES (TECHNICIAN CONFIDENTIAL) */}
+                    {ticketDetailTab === "notes" && (
+                      <div className="space-y-4">
+                        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                          {(internalNotes[activeCase.id] || []).length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 bg-amber-50/50 rounded-xl border border-dashed border-amber-200">
+                              <span className="text-2xl block mb-2">🔒</span>
+                              <p className="font-semibold text-slate-700">No private internal notes yet</p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Internal notes are completely private and never shown to the customer. Use them for firmware offsets, donor head serials, or lab shift handover.
+                              </p>
+                            </div>
+                          ) : (
+                            (internalNotes[activeCase.id] || []).map((note) => (
+                              <div
+                                key={note.id}
+                                className="rounded-xl border border-amber-200/80 bg-amber-50/30 p-4 space-y-1.5"
+                              >
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900">{note.author}</span>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                                      🔒 Internal Note
+                                    </span>
+                                  </div>
+                                  <span className="text-slate-400 text-[11px] font-mono">{note.time}</span>
+                                </div>
+                                <p className="text-xs text-slate-800 font-mono leading-relaxed whitespace-pre-line bg-white/80 p-2.5 rounded-lg border border-amber-100">
+                                  {note.text}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* DEDICATED INTERNAL NOTE FORM */}
+                        <form onSubmit={handleAddInternalNote} className="space-y-3 pt-4 border-t border-slate-100 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                              <span>🔒</span>
+                              <span>Add Private Technician Note</span>
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded-md">
+                              Confidential
+                            </span>
+                          </div>
+
+                          <textarea
+                            rows={3}
+                            value={newInternalNoteText}
+                            onChange={(e) => setNewInternalNoteText(e.target.value)}
+                            placeholder="Record ROM checksum, donor head serial, forensic drive geometry, or internal notes..."
+                            className="w-full rounded-xl border border-amber-200 bg-amber-50/20 p-3 text-xs font-mono text-slate-800 outline-none focus:border-amber-500 focus:bg-white transition"
                           />
-                          <span>Internal Note (not visible to customer)</span>
-                        </label>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400">
+                              Never visible to customer or client portal
+                            </span>
+                            <button
+                              type="submit"
+                              disabled={!newInternalNoteText.trim()}
+                              className="rounded-xl bg-amber-600 px-5 py-2 font-bold text-white hover:bg-amber-500 transition shadow-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                              <span>💾</span>
+                              <span>Save Internal Note</span>
+                            </button>
+                          </div>
+                        </form>
                       </div>
+                    )}
 
-                      <textarea
-                        rows={3}
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Type your reply here..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                      />
+                    {/* TAB 3: ATTACHMENTS */}
+                    {ticketDetailTab === "attachments" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">
+                            Attached Files &amp; Laboratory Logs ({((attachments[activeCase.id]) || []).length})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>📎</span>
+                            <span>Upload New File</span>
+                          </button>
+                        </div>
 
-                      <div className="flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setReplyText("Hi, we are currently analyzing this incident on our bench and will provide an update shortly.")}
-                          className="text-xs text-blue-600 hover:underline"
+                        {/* FILE LIST */}
+                        <div className="space-y-2.5">
+                          {((attachments[activeCase.id]) || []).length === 0 ? (
+                            <div className="p-10 text-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                              <span className="text-3xl block mb-2">📁</span>
+                              <p className="font-semibold text-slate-700">No attachments uploaded yet</p>
+                              <p className="text-xs text-slate-400 mt-1 mb-4">
+                                Attach forensic captures, intake photos, SMART reports, or hex logs.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 text-xs font-bold transition cursor-pointer"
+                              >
+                                <span>📎</span>
+                                <span>Select File from Computer</span>
+                              </button>
+                            </div>
+                          ) : (
+                            ((attachments[activeCase.id]) || []).map((file) => (
+                              <div
+                                key={file.id}
+                                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-bold text-base">
+                                    {file.type === "pdf"
+                                      ? "📄"
+                                      : file.type === "image"
+                                      ? "🖼️"
+                                      : file.type === "archive"
+                                      ? "📦"
+                                      : file.type === "binary"
+                                      ? "💾"
+                                      : "📎"}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-slate-900 truncate">{file.name}</p>
+                                    <p className="text-[11px] text-slate-400 font-mono">
+                                      {file.size} • Uploaded {file.uploadedAt} by {file.uploadedBy}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {file.url ? (
+                                    <a
+                                      href={file.url}
+                                      download={file.name}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition flex items-center gap-1"
+                                    >
+                                      <span>⬇️</span>
+                                      <span>Download</span>
+                                    </a>
+                                  ) : (
+                                    <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                                      Verified File
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteAttachment(activeCase.id, file.id)}
+                                    className="rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 px-2 py-1 text-xs font-bold transition cursor-pointer"
+                                    title="Remove Attachment"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* DRAG & DROP / CLICK PROMPT BOX */}
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-5 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 text-center cursor-pointer hover:bg-blue-50/60 transition group"
                         >
-                          Templates ▾
-                        </button>
-
-                        <button
-                          type="submit"
-                          className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition shadow-sm"
-                        >
-                          Send Reply
-                        </button>
+                          <span className="text-xl block mb-1 group-hover:scale-110 transition-transform">📎</span>
+                          <p className="text-xs font-bold text-blue-700">Click to attach more documents or logs</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Supports PDF, JPG, PNG, BIN, ZIP, LOG up to 50MB</p>
+                        </div>
                       </div>
-                    </form>
+                    )}
+
+                    {/* TAB 4: AUDIT LOG */}
+                    {ticketDetailTab === "audit" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                          <span className="text-xs font-bold text-slate-800">Operational Audit Trail</span>
+                          <span className="text-[10px] font-mono text-slate-400">Target #{activeCase.id}</span>
+                        </div>
+                        <div className="space-y-2 text-xs">
+                          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
+                            <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-semibold text-slate-800">Assigned to {activeCase.leadTech}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">Bench station: {activeCase.bench}</p>
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-semibold text-slate-800">Current Lifecycle: {activeCase.status}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">Calibrated Progress: {activeCase.progress}%</p>
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
+                            <span className="h-2 w-2 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-semibold text-slate-800">Intake Created &amp; Telemetry Registered</p>
+                              <p className="text-[11px] text-slate-400 font-mono">{activeCase.createdAt} • System Authenticated</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2307,12 +2764,12 @@ export default function TechnicianWorkbenchPage() {
                       {isUpdatingStatus ? (
                         <>
                           <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Saving Status...</span>
+                          <span>Saving Internal Update...</span>
                         </>
                       ) : (
                         <>
                           <span>💾</span>
-                          <span>Update Ticket Status</span>
+                          <span>Save Internal Update</span>
                         </>
                       )}
                     </button>
@@ -2418,7 +2875,7 @@ export default function TechnicianWorkbenchPage() {
                     <button
                       type="button"
                       onClick={() => setNotification("Reassign ticket dialog opened.")}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2 transition"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2 transition cursor-pointer"
                     >
                       <span>🔄</span>
                       <span>Reassign Ticket</span>
@@ -2426,8 +2883,8 @@ export default function TechnicianWorkbenchPage() {
 
                     <button
                       type="button"
-                      onClick={() => setNotification("Attachment dialog opened.")}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2 transition"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full rounded-xl border border-blue-200 bg-blue-50/50 py-2 font-semibold text-blue-700 hover:bg-blue-100 text-left px-3 flex items-center gap-2 transition cursor-pointer"
                     >
                       <span>📎</span>
                       <span>Add Attachment</span>
@@ -3133,6 +3590,16 @@ export default function TechnicianWorkbenchPage() {
           </div>
         </div>
       )}
+
+      {/* Hidden Native File Input for Attachments */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        multiple
+        className="hidden"
+        aria-label="Upload ticket attachment"
+      />
     </div>
   );
 }

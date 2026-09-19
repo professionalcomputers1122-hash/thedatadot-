@@ -48,7 +48,7 @@ const securityItems = [
 ];
 
 export default function Tech3D() {
-  const [isProtectionOn, setIsProtectionOn] = useState(true);
+  const [isProtectionOn, setIsProtectionOn] = useState(false);
   const sceneRef = useRef<HTMLDivElement>(null);
   const mouseAnimationRef = useRef<number | null>(null);
 
@@ -281,16 +281,16 @@ export default function Tech3D() {
             className="power-button power-button-online"
             onClick={() => setIsProtectionOn(false)}
             title="Click to turn Protection Off"
-            aria-label="Protection On. Click to turn Protection Off."
+            aria-label="Click to turn Protection Off"
           >
             <span className="online-dot" />
 
             <span className="power-text">
-              PROTECTION ON
+              Protection Off
             </span>
 
             <span className="power-subtext">
-              (CLICK FOR OFF)
+              (ACTIVE)
             </span>
           </button>
         ) : (
@@ -299,14 +299,14 @@ export default function Tech3D() {
             className="power-button"
             onClick={() => setIsProtectionOn(true)}
             title="Click to turn Protection On"
-            aria-label="Protection Off. Click to turn Protection On."
+            aria-label="Click to turn Protection On"
           >
             <span className="power-icon">
               <span />
             </span>
 
             <span className="power-text">
-              PROTECTION OFF
+              Protection On
             </span>
 
             <span className="power-arrow">

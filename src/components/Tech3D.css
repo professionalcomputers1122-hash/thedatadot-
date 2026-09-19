@@ -802,20 +802,20 @@
 
   z-index: 30;
 
-  min-width: 230px;
+  min-width: 180px;
 
-  height: 58px;
+  height: 44px;
 
-  padding: 0 23px;
+  padding: 0 18px;
 
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 10px;
 
   border: 1px solid rgba(70, 169, 255, 0.65);
 
-  border-radius: 100px;
+  border-radius: 9999px;
 
   color: #ffffff;
 
@@ -827,8 +827,8 @@
     );
 
   box-shadow:
-    0 12px 35px rgba(13, 92, 190, 0.3),
-    0 0 25px rgba(32, 140, 255, 0.2);
+    0 8px 24px rgba(13, 92, 190, 0.28),
+    0 0 16px rgba(32, 140, 255, 0.2);
 
   cursor: pointer;
 
@@ -838,17 +838,19 @@
 
   transition:
     transform 0.25s ease,
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .power-button:hover {
   transform:
     translateX(-50%)
-    translateY(-3px);
+    translateY(-2px);
 
   box-shadow:
-    0 18px 40px rgba(13, 92, 190, 0.4),
-    0 0 35px rgba(32, 140, 255, 0.35);
+    0 12px 28px rgba(13, 92, 190, 0.38),
+    0 0 24px rgba(32, 140, 255, 0.3);
 }
 
 .power-button:active {
@@ -868,8 +870,8 @@
   border: 1.5px solid rgba(56, 189, 248, 0.6);
 
   box-shadow:
-    0 12px 35px rgba(4, 18, 36, 0.35),
-    0 0 25px rgba(56, 189, 248, 0.2);
+    0 8px 24px rgba(4, 18, 36, 0.35),
+    0 0 16px rgba(56, 189, 248, 0.18);
 
   color: #7ed0ff;
 }
@@ -877,26 +879,26 @@
 .power-button-online:hover {
   transform:
     translateX(-50%)
-    translateY(-3px);
+    translateY(-2px);
 
   background:
     linear-gradient(
       135deg,
-      #132e50,
-      #081930
+      #1e2235,
+      #141624
     );
 
-  border-color: rgba(239, 68, 68, 0.65);
+  border-color: rgba(239, 68, 68, 0.7);
 
   color: #fca5a5;
 
   box-shadow:
-    0 18px 40px rgba(239, 68, 68, 0.2),
-    0 0 30px rgba(239, 68, 68, 0.25);
+    0 10px 26px rgba(239, 68, 68, 0.22),
+    0 0 20px rgba(239, 68, 68, 0.2);
 }
 
 .power-subtext {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   opacity: 0.85;
   letter-spacing: 0.5px;
@@ -905,10 +907,10 @@
 .power-icon {
   position: relative;
 
-  width: 27px;
-  height: 27px;
+  width: 20px;
+  height: 20px;
 
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 1.8px solid rgba(255, 255, 255, 0.9);
 
   border-radius: 50%;
 
@@ -922,10 +924,10 @@
 
   position: absolute;
 
-  top: -4px;
+  top: -3px;
 
-  width: 9px;
-  height: 12px;
+  width: 7px;
+  height: 9px;
 
   background: #1476e8;
 }
@@ -935,35 +937,35 @@
 
   position: absolute;
 
-  top: -3px;
+  top: -2px;
 
-  width: 3px;
-  height: 12px;
+  width: 2px;
+  height: 8px;
 
   background: white;
 
-  border-radius: 5px;
+  border-radius: 3px;
 }
 
 .power-text {
-  font-size: 14px;
+  font-size: 13px;
 
-  font-weight: 800;
+  font-weight: 700;
 
-  letter-spacing: 1.5px;
+  letter-spacing: 0.8px;
 }
 
 .power-arrow {
-  font-size: 18px;
+  font-size: 15px;
 
-  opacity: 0.8;
+  opacity: 0.85;
 
   transition:
     transform 0.25s ease;
 }
 
 .power-button:hover .power-arrow {
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
 
 /* --------------------------------
@@ -1897,9 +1899,13 @@
   }
 
   .power-button {
-    min-width: 200px;
+    min-width: 160px;
 
-    height: 53px;
+    height: 40px;
+
+    padding: 0 14px;
+
+    gap: 8px;
   }
 
   .boot-panel {

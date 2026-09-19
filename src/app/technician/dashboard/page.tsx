@@ -1307,38 +1307,40 @@ export default function TechnicianWorkbenchPage() {
     };
   }, [cases]);
 
-  // Standard ITIL / MSP Ticket Lifecycle Stages (Steps 1 - 6)
-  const CORE_STAGES = [
-    { value: "Open", label: "Step 1: Open" },
-    { value: "Assigned", label: "Step 2: Assigned" },
-    { value: "In Progress", label: "Step 3: In Progress" },
-    { value: "Waiting for Customer", label: "Step 4: Waiting for Customer" },
-    { value: "Resolved", label: "Step 5: Resolved" },
-    { value: "Closed", label: "Step 6: Closed" },
-  ];
-
   // Category Configuration for Active Ticket
   const currentConfig = activeCase
     ? getCategoryConfig(
         activeCase.category,
-        editStatus || activeCase.status,
-        editProgress !== undefined ? editProgress : activeCase.progress,
+        editStatus || clientStatus || activeCase.status,
+        clientProgress !== undefined ? clientProgress : (editProgress !== undefined ? editProgress : activeCase.progress),
         editBench || activeCase.bench
       )
     : null;
 
-  const availableStages = useMemo(() => {
-    const core = [...CORE_STAGES];
-    const techStages = currentConfig ? currentConfig.stages : [];
-    const extras = techStages.filter(
-      (ts) => !core.some((c) => c.value.toLowerCase() === ts.value.toLowerCase())
-    );
-    return {
-      core,
-      extras,
-      all: [...core, ...extras],
-    };
-  }, [currentConfig]);
+  // Category Execution Stages for the Active Ticket (e.g. Data Recovery, Managed IT, Cybersecurity, Cloud)
+  const ticketStages = useMemo(() => {
+    let stages = currentConfig?.stages && currentConfig.stages.length > 0
+      ? [...currentConfig.stages]
+      : [
+          { value: "Intake & Diagnostics", label: "1. Intake & Diagnostics" },
+          { value: "In Progress", label: "2. In Progress / Active Execution" },
+          { value: "Verification", label: "3. Quality Verification" },
+          { value: "Resolved", label: "4. Completed (Resolved)" },
+          { value: "Closed", label: "5. Closed / Handover" },
+        ];
+
+    if (!stages.some((s) => s.value.toLowerCase() === "closed")) {
+      stages.push({ value: "Closed", label: `${stages.length + 1}. Closed / Handover` });
+    }
+
+    // Keep current status selectable if it was an older legacy state
+    const curStatus = clientStatus || activeCase?.status;
+    if (curStatus && !stages.some((s) => s.value.toLowerCase() === curStatus.toLowerCase())) {
+      stages = [{ value: curStatus, label: `Current: ${curStatus}` }, ...stages];
+    }
+
+    return stages;
+  }, [currentConfig, clientStatus, activeCase?.status]);
 
   const currentMessages = activeCase
     ? chatMessages[selectedCaseId] || [
@@ -2002,25 +2004,17 @@ export default function TechnicianWorkbenchPage() {
                           </label>
                           <select
                             value={clientStatus || activeCase.status}
-                            onChange={(e) => setClientStatus(e.target.value)}
+                            onChange={(e) => {
+                              setClientStatus(e.target.value);
+                              setEditStatus(e.target.value);
+                            }}
                             className="w-full rounded-xl border border-blue-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                           >
-                            <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                              {availableStages.core.map((st) => (
-                                <option key={st.value} value={st.value}>
-                                  {st.label}
-                                </option>
-                              ))}
-                            </optgroup>
-                            {availableStages.extras.length > 0 && (
-                              <optgroup label={`${activeCase.category} Execution Stages`}>
-                                {availableStages.extras.map((st) => (
-                                  <option key={st.value} value={st.value}>
-                                    {st.label}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
+                            {ticketStages.map((st) => (
+                              <option key={st.value} value={st.value}>
+                                {st.label}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
@@ -2460,38 +2454,45 @@ export default function TechnicianWorkbenchPage() {
                   </div>
                 </div>
 
-                {/* WORKFLOW STEPPER (Interactive Steps 1-6 Matching Panel 7) */}
+                {/* WORKFLOW STEPPER (Interactive Category Execution Stages) */}
                 <div className="pt-4 border-t border-slate-100 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                      Workflow Lifecycle Progression
+                      {activeCase.category || "Data Recovery"} Execution Stages
                     </span>
                     <span className="text-[11px] text-slate-400">
-                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Save Internal Update</strong> to save
+                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Sync &amp; Send Client Update</strong> below to apply
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                    {["Open", "Assigned", "In Progress", "Waiting for Customer", "Resolved", "Closed"].map((st, i) => {
-                      const currentStatus = (editStatus || activeCase.status || "").toLowerCase();
-                      const isSelected = currentStatus === st.toLowerCase();
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+                    {ticketStages.map((st, i) => {
+                      const currentStatus = (clientStatus || editStatus || activeCase.status || "").toLowerCase();
+                      const isSelected =
+                        currentStatus === st.value.toLowerCase() ||
+                        currentStatus === st.label.toLowerCase();
                       return (
                         <button
-                          key={st}
+                          key={st.value}
                           type="button"
-                          onClick={() => setEditStatus(st)}
-                          title={`Select Step ${i + 1}: ${st}`}
-                          className={`text-center p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
+                          onClick={() => {
+                            setClientStatus(st.value);
+                            setEditStatus(st.value);
+                          }}
+                          title={`Select Stage ${i + 1}: ${st.label}`}
+                          className={`text-left p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
                             isSelected
                               ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-500/25"
                               : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                           }`}
                         >
-                          <span className={`text-[10px] block font-mono font-bold ${
-                            isSelected ? "text-blue-100" : "text-slate-400"
-                          }`}>
-                            Step {i + 1}
+                          <span
+                            className={`text-[10px] block font-mono font-bold ${
+                              isSelected ? "text-blue-100" : "text-slate-400"
+                            }`}
+                          >
+                            Stage {i + 1}
                           </span>
-                          <span className="truncate block mt-0.5 font-bold">{st}</span>
+                          <span className="truncate block mt-0.5 font-bold">{st.value}</span>
                         </button>
                       );
                     })}
@@ -2931,25 +2932,17 @@ export default function TechnicianWorkbenchPage() {
                       </label>
                       <select
                         value={clientStatus || activeCase.status}
-                        onChange={(e) => setClientStatus(e.target.value)}
+                        onChange={(e) => {
+                          setClientStatus(e.target.value);
+                          setEditStatus(e.target.value);
+                        }}
                         className="w-full rounded-xl border border-blue-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                       >
-                        <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                          {availableStages.core.map((st) => (
-                            <option key={st.value} value={st.value}>
-                              {st.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                        {availableStages.extras.length > 0 && (
-                          <optgroup label={`${activeCase.category} Execution Stages`}>
-                            {availableStages.extras.map((st) => (
-                              <option key={st.value} value={st.value}>
-                                {st.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
+                        {ticketStages.map((st) => (
+                          <option key={st.value} value={st.value}>
+                            {st.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 

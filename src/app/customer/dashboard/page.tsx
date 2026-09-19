@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
-import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
-import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
+import {
+  getCustomerSession,
+  CustomerUser,
+  getCustomerTheme,
+  updateCustomerAvatar,
+} from "@/lib/clientAuth";
+import {
+  fetchTicketsFromSupabase,
+  deleteTicketFromSupabase,
+  Ticket,
+  TicketAttachment,
+  getTicketAttachments,
+} from "@/lib/portalData";
 
 interface TimelineStage {
   title: string;
@@ -388,6 +399,10 @@ export default function CustomerDashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
@@ -397,6 +412,7 @@ export default function CustomerDashboardPage() {
     }
     const activeCust = currentCustomer;
     setCustomer(activeCust);
+    setTheme(getCustomerTheme());
 
     const userEmail = activeCust.email.toLowerCase();
     const userCompany = activeCust.company.toLowerCase();
@@ -465,12 +481,24 @@ export default function CustomerDashboardPage() {
     loadTickets();
     const interval = setInterval(loadTickets, 5000);
     const handleUpdate = () => loadTickets();
+    const handleThemeChange = () => setTheme(getCustomerTheme());
+    const handleProfileChange = () => setCustomer(getCustomerSession());
+
     window.addEventListener("tickets-updated", handleUpdate);
+    window.addEventListener("customer-theme-changed", handleThemeChange);
+    window.addEventListener("customer-profile-updated", handleProfileChange);
     window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleThemeChange);
+    window.addEventListener("storage", handleProfileChange);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
+      window.removeEventListener("customer-theme-changed", handleThemeChange);
+      window.removeEventListener("customer-profile-updated", handleProfileChange);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleThemeChange);
+      window.removeEventListener("storage", handleProfileChange);
     };
   }, [router]);
 
@@ -501,41 +529,205 @@ export default function CustomerDashboardPage() {
     ? getTimelineStages(activeTicket.category, activeTicket.status, activeTicket.clonedPercent || 0)
     : [];
 
+  // Synchronize attachments for active ticket
+  useEffect(() => {
+    if (!activeTicket?.id) {
+      setAttachments([]);
+      return;
+    }
+
+    const refreshAttachments = () => {
+      const atts = getTicketAttachments(activeTicket.id);
+      setAttachments(atts);
+    };
+
+    refreshAttachments();
+    window.addEventListener("attachments-updated", refreshAttachments);
+    window.addEventListener("storage", refreshAttachments);
+    return () => {
+      window.removeEventListener("attachments-updated", refreshAttachments);
+      window.removeEventListener("storage", refreshAttachments);
+    };
+  }, [activeTicket?.id]);
+
+  // Client Photo Upload Handler
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file (JPEG, PNG, WebP).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      updateCustomerAvatar(result);
+      setCustomer((prev) => (prev ? { ...prev, avatarUrl: result } : prev));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleRemoveAvatar = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (window.confirm("Remove custom profile photo and revert to company initials?")) {
+      updateCustomerAvatar(null);
+      setCustomer((prev) => (prev ? { ...prev, avatarUrl: undefined } : prev));
+    }
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "CL";
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const isDark = theme === "dark";
+
   return (
-    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
+    <div
+      className={`min-h-screen flex flex-col antialiased transition-colors duration-200 ${
+        isDark ? "bg-[#070e1b] text-slate-100" : "bg-[#fafbfd] text-slate-900"
+      }`}
+    >
       <CustomerNav />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        {/* WELCOME BANNER */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 mb-2">
-              <span>
-                {customer?.company || "Enterprise Client Desk"} • Account #{customer?.accountNumber || "TDD-CLI-8492"}
-              </span>
+        {/* WELCOME BANNER WITH CLIENT PHOTO PROFILE */}
+        <div
+          className={`mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-3xl border transition ${
+            isDark
+              ? "border-[#15243b] bg-[#0a1526]"
+              : "border-slate-200 bg-white shadow-xs"
+          }`}
+        >
+          {/* USER AVATAR & INFO */}
+          <div className="flex items-center gap-4">
+            {/* AVATAR WITH PHOTO UPLOAD TRIGGER */}
+            <div className="relative group">
+              <div
+                className={`relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden font-black text-xl sm:text-2xl shadow-md border-2 transition ${
+                  isDark
+                    ? "bg-blue-600 text-white border-blue-500/40"
+                    : "bg-blue-600 text-white border-blue-200"
+                }`}
+              >
+                {customer?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={customer.avatarUrl}
+                    alt={customer?.name || "Client"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{getInitials(customer?.name)}</span>
+                )}
+
+                {/* CAMERA OVERLAY ON HOVER */}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  title="Upload or change profile photo"
+                  className="absolute inset-0 bg-slate-950/70 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-semibold"
+                >
+                  <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                    <circle cx="12" cy="13" r="3" />
+                  </svg>
+                  <span>Edit</span>
+                </button>
+              </div>
+
+              {/* HIDDEN FILE INPUT */}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+                aria-label="Upload profile photo"
+              />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Welcome back, {customer?.name || "Client"}
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-600">
-              Live dashboard for your hardware cases, SOC incidents, and cloud tickets.
-            </p>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${
+                    isDark
+                      ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+                      : "border-blue-200 bg-blue-50 text-blue-700"
+                  }`}
+                >
+                  <span>{customer?.company || "Enterprise Client Desk"}</span>
+                  <span className="opacity-60">• #{customer?.accountNumber || "TDD-CLI-8492"}</span>
+                </span>
+
+                {customer?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className={`text-[10px] underline cursor-pointer transition ${
+                      isDark ? "text-slate-400 hover:text-rose-400" : "text-slate-500 hover:text-rose-600"
+                    }`}
+                  >
+                    Remove Photo
+                  </button>
+                )}
+              </div>
+
+              <h1 className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-950"}`}>
+                Welcome back, {customer?.name || "Client"}
+              </h1>
+              <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                Live telemetry and forensic lifecycle tracking for your support cases.
+              </p>
+            </div>
           </div>
 
+          {/* ACTION BUTTONS */}
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
+                isDark
+                  ? "border-[#1b314f] bg-[#0e1d33] text-slate-200 hover:bg-[#142844] hover:text-white"
+                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+              <span>{customer?.avatarUrl ? "Change Photo" : "Add Photo"}</span>
+            </button>
+
             <Link
               href="/customer/tickets/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-500 transition"
             >
-              <span>+ Open New Support Ticket</span>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+              </svg>
+              <span>Open Support Ticket</span>
             </Link>
           </div>
         </div>
 
         {/* METRICS OVERVIEW */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">
+          <div
+            className={`rounded-2xl border p-5 transition ${
+              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
+            }`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
               {activeTicket?.category === "Cybersecurity"
                 ? "Active Incident"
                 : activeTicket?.category === "Cloud Solutions"
@@ -545,36 +737,50 @@ export default function CustomerDashboardPage() {
                 : "Active Recovery"}
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-blue-600">
+              <span className="text-2xl font-black text-blue-500">
                 {activeCount} {activeCount === 1 ? "Case" : "Cases"}
               </span>
               {activeTicket && (
-                <span className="text-[11px] font-semibold text-emerald-600 truncate max-w-[150px]" title={activeTicket.status}>
+                <span className="text-[11px] font-semibold text-emerald-500 truncate max-w-[150px]" title={activeTicket.status}>
                   {activeTicket.status || "Media Intake"}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">SLA Response Guarantee</span>
+          <div
+            className={`rounded-2xl border p-5 transition ${
+              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
+            }`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+              SLA Response Guarantee
+            </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-950">15-Min</span>
-              <span className="text-[11px] font-semibold text-blue-600">24/7/365</span>
+              <span className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-950"}`}>
+                15-Min
+              </span>
+              <span className="text-[11px] font-semibold text-blue-500">24/7/365</span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Service Standard</span>
+          <div
+            className={`rounded-2xl border p-5 transition ${
+              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
+            }`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+              Service Standard
+            </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-emerald-600">
+              <span className="text-2xl font-black text-emerald-500">
                 {activeTicket?.category === "Cybersecurity"
                   ? "Zero Breach"
                   : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
                   ? "99.99%"
                   : "99.98%"}
               </span>
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className="text-[11px] font-semibold opacity-60">
                 {activeTicket?.category === "Cybersecurity"
                   ? "SOC Assurance"
                   : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
@@ -584,11 +790,19 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Total Cases</span>
+          <div
+            className={`rounded-2xl border p-5 transition ${
+              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
+            }`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+              Total Cases
+            </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-950">{tickets.length} Cases</span>
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-950"}`}>
+                {tickets.length} Cases
+              </span>
+              <span className="text-[11px] font-semibold opacity-60">
                 {activeCount} Active · {tickets.length - activeCount} Closed
               </span>
             </div>
@@ -597,29 +811,47 @@ export default function CustomerDashboardPage() {
 
         {/* ACTIVE CASE SPOTLIGHT OR EMPTY STATE */}
         {activeTicket ? (
-          <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20 p-6 sm:p-8 shadow-sm mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5 mb-6">
+          <div
+            className={`rounded-3xl border p-6 sm:p-8 shadow-sm mb-8 transition ${
+              isDark
+                ? "border-[#192f4c] bg-gradient-to-br from-[#091424] via-[#0c192c] to-[#091424]"
+                : "border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20"
+            }`}
+          >
+            <div
+              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5 mb-6 ${
+                isDark ? "border-[#162740]" : "border-slate-200/80"
+              }`}
+            >
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700 mb-2">
+                <div
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-2 border ${
+                    isDark
+                      ? "border-blue-500/30 bg-blue-500/15 text-blue-300"
+                      : "border-blue-200 bg-blue-50 text-blue-700"
+                  }`}
+                >
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
                   </span>
                   <span>
                     {activeTicket.category === "Cybersecurity"
-                      ? "🛡️ Cybersecurity Response Target"
+                      ? "Cybersecurity Response Target"
                       : activeTicket.category === "Cloud Solutions"
-                      ? "☁️ Cloud Infrastructure Target"
+                      ? "Cloud Infrastructure Target"
                       : activeTicket.category === "Managed IT"
-                      ? "🖥️ Managed IT System"
-                      : "💽 Forensic Hardware Target"}{" "}
+                      ? "Managed IT Workstation"
+                      : "Forensic Hardware Target"}{" "}
                     • Case #{activeTicket.id}
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-950">
+
+                <h2 className={`text-xl sm:text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-950"}`}>
                   {activeTicket.deviceOrSubject}
                 </h2>
-                <p className="text-xs text-slate-600 mt-1">
+
+                <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                   {activeTicket.category === "Cybersecurity" ? (
                     <>Target Segment / Host: <strong>{activeTicket.serialNumber || "Corporate Network"}</strong> • Indicators: {activeTicket.symptoms || "Threat analysis in progress"}</>
                   ) : activeTicket.category === "Cloud Solutions" || activeTicket.category === "Managed IT" ? (
@@ -631,7 +863,7 @@ export default function CustomerDashboardPage() {
               </div>
 
               <div className="sm:text-right">
-                <span className="text-xs text-slate-500 block">
+                <span className="text-xs opacity-60 block">
                   {activeTicket.category === "Cybersecurity"
                     ? "Assigned Security Lead"
                     : activeTicket.category === "Cloud Solutions"
@@ -640,12 +872,12 @@ export default function CustomerDashboardPage() {
                     ? "Assigned Systems Lead"
                     : "Assigned Lead Engineer"}
                 </span>
-                <span className="text-sm font-bold text-slate-900">
+                <span className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-slate-900"}`}>
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
                     ? activeTicket.assignedTech
-                    : "Pending Admin Dispatch"}
+                    : "Pending Specialist Dispatch"}
                 </span>
-                <p className="text-xs font-bold text-blue-600 mt-0.5">
+                <p className="text-xs font-bold text-blue-500 mt-0.5">
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
                     ? "Direct Desk Hotline: +91 6380488373"
                     : "Triage Queue • Specialist Pending"}
@@ -658,82 +890,235 @@ export default function CustomerDashboardPage() {
               {stages.map((stg, sIdx) => {
                 if (stg.state === "done") {
                   return (
-                    <div key={sIdx} className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
-                      <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                        ✓ {stg.title}
+                    <div
+                      key={sIdx}
+                      className={`rounded-2xl border p-4 transition ${
+                        isDark
+                          ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-300"
+                          : "border-emerald-200 bg-emerald-50/80 text-emerald-900"
+                      }`}
+                    >
+                      <span className="text-xs font-bold flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>{stg.title}</span>
                       </span>
-                      <p className="text-[11px] text-emerald-900 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-emerald-700 block mt-2 font-bold">Done</span>
+                      <p className="text-[11px] opacity-80 mt-1">{stg.description}</p>
+                      <span className="text-[10px] text-emerald-500 block mt-2 font-bold">Done</span>
                     </div>
                   );
                 }
                 if (stg.state === "active") {
                   return (
-                    <div key={sIdx} className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4 shadow-sm relative overflow-hidden">
-                      <span className="text-xs font-bold text-blue-800 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
-                        {stg.title}
+                    <div
+                      key={sIdx}
+                      className={`rounded-2xl border-2 p-4 shadow-sm relative overflow-hidden transition ${
+                        isDark
+                          ? "border-blue-500 bg-blue-950/30 text-blue-100 ring-2 ring-blue-500/20"
+                          : "border-blue-600 bg-blue-50 text-blue-950 ring-2 ring-blue-500/20"
+                      }`}
+                    >
+                      <span className="text-xs font-bold flex items-center gap-1.5 text-blue-500">
+                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                        <span>{stg.title}</span>
                       </span>
-                      <p className="text-[11px] text-blue-950 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-blue-700 block mt-2 font-extrabold">
+                      <p className="text-[11px] opacity-90 mt-1">{stg.description}</p>
+                      <span className="text-[10px] text-blue-500 block mt-2 font-extrabold">
                         Active In Progress
                       </span>
                     </div>
                   );
                 }
                 return (
-                  <div key={sIdx} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 opacity-70">
-                    <span className="text-xs font-bold text-slate-600">○ {stg.title}</span>
-                    <p className="text-[11px] text-slate-500 mt-1">{stg.description}</p>
-                    <span className="text-[10px] text-slate-400 block mt-2">Pending</span>
+                  <div
+                    key={sIdx}
+                    className={`rounded-2xl border p-4 opacity-70 transition ${
+                      isDark
+                        ? "border-[#15233b] bg-[#0b1626]/60 text-slate-400"
+                        : "border-slate-200 bg-slate-50/80 text-slate-500"
+                    }`}
+                  >
+                    <span className="text-xs font-bold">○ {stg.title}</span>
+                    <p className="text-[11px] opacity-80 mt-1">{stg.description}</p>
+                    <span className="text-[10px] opacity-60 block mt-2">Pending</span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
-              <span className="text-xs text-slate-600">
-                {activeTicket.category === "Data Recovery" ? (
-                  <>Protected by <strong>No Data, No Recovery Fee</strong> guarantee.</>
-                ) : activeTicket.category === "Cybersecurity" ? (
-                  <>Protected by <strong>Enterprise SOC & Incident Containment SLA</strong>.</>
-                ) : (
-                  <>Backed by <strong>Dedicated Enterprise SLA & Guaranteed Uptime</strong>.</>
-                )}
-              </span>
+            {/* ATTACHED LABORATORY FILES & DIAGNOSTICS (Real-time synced from technician) */}
+            <div
+              className={`rounded-2xl border p-5 mb-6 transition ${
+                isDark ? "border-[#172740] bg-[#0a1526]/80" : "border-slate-200/90 bg-white shadow-xs"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4 mb-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
+                    Attached Laboratory Files &amp; Diagnostics
+                  </span>
+                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-extrabold text-blue-400">
+                    {attachments.length}
+                  </span>
+                </div>
+
+                <span className="text-[10px] opacity-60 hidden sm:inline-block">
+                  Synced directly with Cleanroom &amp; Technician Workspace
+                </span>
+              </div>
+
+              {attachments.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {attachments.map((file) => {
+                    const isImg = file.type === "image" || /\.(png|jpg|jpeg|webp)$/i.test(file.name);
+                    const isPdf = file.type === "pdf" || /\.pdf$/i.test(file.name);
+
+                    return (
+                      <div
+                        key={file.id}
+                        className={`group flex items-center justify-between rounded-xl border p-3 transition ${
+                          isDark
+                            ? "border-[#1b2f4c] bg-[#0e1d33] hover:border-blue-500/40"
+                            : "border-slate-200 bg-slate-50/80 hover:border-blue-300 hover:bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <div
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                              isPdf
+                                ? "bg-rose-500/15 text-rose-400"
+                                : isImg
+                                ? "bg-indigo-500/15 text-indigo-400"
+                                : "bg-blue-500/15 text-blue-400"
+                            }`}
+                          >
+                            {isPdf ? "PDF" : isImg ? "IMG" : "DOC"}
+                          </div>
+
+                          <div className="min-w-0">
+                            <span
+                              className={`block truncate text-xs font-bold ${
+                                isDark ? "text-slate-200" : "text-slate-800"
+                              }`}
+                              title={file.name}
+                            >
+                              {file.name}
+                            </span>
+                            <span className="block text-[10px] opacity-60">
+                              {file.size} • {file.uploadedAt}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isImg && file.url && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImage(file.url || null)}
+                              title="Preview Image"
+                              className={`rounded-lg p-1.5 text-xs transition cursor-pointer ${
+                                isDark
+                                  ? "hover:bg-[#152740] text-blue-400"
+                                  : "hover:bg-slate-200 text-blue-600"
+                              }`}
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </button>
+                          )}
+
+                          {file.url ? (
+                            <a
+                              href={file.url}
+                              download={file.name}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Download Attachment"
+                              className={`rounded-lg p-1.5 text-xs font-bold transition flex items-center gap-1 ${
+                                isDark
+                                  ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+                                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                              }`}
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" x2="12" y1="15" y2="3" />
+                              </svg>
+                            </a>
+                          ) : (
+                            <span className="text-[10px] opacity-40">Stored</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  className={`rounded-xl border border-dashed p-4 text-center text-xs ${
+                    isDark ? "border-[#1c2e47] text-slate-400" : "border-slate-200 text-slate-500"
+                  }`}
+                >
+                  <p>No laboratory files or diagnostic attachments uploaded yet for this case.</p>
+                  <p className="text-[10px] opacity-60 mt-0.5">
+                    Bench reports and forensic media logs will appear here automatically as tests complete.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* CASE GUARANTEES & FOOTER ACTIONS */}
+            <div
+              className={`flex flex-wrap items-center justify-between gap-4 pt-4 border-t ${
+                isDark ? "border-[#162740]" : "border-slate-200/80"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs opacity-70">
+                <svg className="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>
+                  {activeTicket.category === "Data Recovery" ? (
+                    <>Protected by <strong>No Data, No Recovery Fee</strong> guarantee.</>
+                  ) : activeTicket.category === "Cybersecurity" ? (
+                    <>Protected by <strong>Enterprise SOC &amp; Incident Containment SLA</strong>.</>
+                  ) : (
+                    <>Backed by <strong>Dedicated Enterprise SLA &amp; Guaranteed Uptime</strong>.</>
+                  )}
+                </span>
+              </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                {activeTicket.category === "Cybersecurity" ? (
-                  <button
-                    type="button"
-                    onClick={() => alert("Security Containment Checklist:\n✓ Segment Isolated\n✓ Compromised IPs Blocked\n✓ Memory Dump Analyzed\n✓ Persistence Vectors Neutralized")}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
-                  >
-                    🛡️ View Security Checklist
-                  </button>
-                ) : activeTicket.category !== "Data Recovery" ? (
-                  <button
-                    type="button"
-                    onClick={() => alert("Deployment Quality Checklist:\n✓ DNS & MX Propagated\n✓ MFA Security Enforced\n✓ Mail Flow Certified\n✓ End-User Access Validated")}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-900 hover:bg-slate-50 shadow-xs transition"
-                  >
-                    📋 View Deployment Checklist
-                  </button>
-                ) : null}
-
                 <button
                   type="button"
                   onClick={() => setDeleteModalTicket(activeTicket)}
                   disabled={deletingId === activeTicket.id}
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 shadow-xs transition cursor-pointer"
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    isDark
+                      ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                      : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                  }`}
                   title="Permanently remove this ticket"
                 >
-                  🗑️ Delete Ticket
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                  <span>Delete Ticket</span>
                 </button>
 
                 <Link
                   href={`/customer/tickets/${activeTicket.id}`}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 shadow-sm transition"
                 >
                   View Full Ticket Thread →
                 </Link>
@@ -741,35 +1126,53 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-xs mb-8">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 text-xl font-bold mb-3">
-              📦
+          <div
+            className={`rounded-3xl border border-dashed p-10 text-center mb-8 transition ${
+              isDark ? "border-[#1a2c47] bg-[#0a1526]" : "border-slate-300 bg-white"
+            }`}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 mb-3">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.29 7 12 12 20.71 7" />
+                <line x1="12" x2="12" y1="22" y2="12" />
+              </svg>
             </div>
-            <h3 className="text-base font-bold text-slate-950">No Active Service Cases</h3>
-            <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
+            <h3 className={`text-base font-bold ${isDark ? "text-white" : "text-slate-950"}`}>
+              No Active Service Cases
+            </h3>
+            <p className={`mt-1 text-xs max-w-md mx-auto ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Your organization currently has no open tickets. If you experience hardware failure, security alerts, or cloud service outages, open a ticket for immediate dispatch.
             </p>
             <div className="mt-5">
               <Link
                 href="/customer/tickets/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-500 shadow-xs transition"
               >
-                + Open Your First Ticket
+                <span>+ Open Your First Ticket</span>
               </Link>
             </div>
           </div>
         )}
 
-        {/* RECENT TICKETS */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
+        {/* RECENT TICKETS TABLE */}
+        <div
+          className={`rounded-3xl border p-6 sm:p-8 transition ${
+            isDark ? "border-[#15243b] bg-[#0a1526]" : "border-slate-200 bg-white shadow-xs"
+          }`}
+        >
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-lg font-bold text-slate-950">Your Tickets</h3>
-              <p className="text-xs text-slate-500">Active and recent support requests</p>
+              <h3 className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-950"}`}>
+                Your Tickets
+              </h3>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Active and recent support requests
+              </p>
             </div>
             <Link
               href="/customer/tickets"
-              className="text-xs font-bold text-blue-600 hover:underline"
+              className="text-xs font-bold text-blue-500 hover:underline"
             >
               View All Tickets ({tickets.length}) →
             </Link>
@@ -777,8 +1180,14 @@ export default function CustomerDashboardPage() {
 
           <div className="overflow-x-auto">
             {tickets.length > 0 ? (
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 text-[10px] font-bold uppercase text-slate-500 border-b border-slate-200">
+              <table className={`w-full text-left text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                <thead
+                  className={`text-[10px] font-bold uppercase border-b ${
+                    isDark
+                      ? "border-[#15233b] bg-[#070e1b] text-slate-400"
+                      : "border-slate-200 bg-slate-50 text-slate-500"
+                  }`}
+                >
                   <tr>
                     <th className="px-4 py-3">Ticket ID</th>
                     <th className="px-4 py-3">Category</th>
@@ -787,17 +1196,28 @@ export default function CustomerDashboardPage() {
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className={`divide-y ${isDark ? "divide-[#15233b]" : "divide-slate-100"}`}>
                   {tickets.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/60 transition">
-                      <td className="px-4 py-3.5 font-bold text-blue-600">#{t.id}</td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-900">{t.category}</td>
-                      <td className="px-4 py-3.5 font-medium text-slate-900">{t.deviceOrSubject}</td>
+                    <tr
+                      key={t.id}
+                      className={`transition ${isDark ? "hover:bg-[#0e1d32]" : "hover:bg-slate-50/60"}`}
+                    >
+                      <td className="px-4 py-3.5 font-bold text-blue-500">#{t.id}</td>
+                      <td className={`px-4 py-3.5 font-semibold ${isDark ? "text-slate-200" : "text-slate-900"}`}>
+                        {t.category}
+                      </td>
+                      <td className={`px-4 py-3.5 font-medium ${isDark ? "text-slate-300" : "text-slate-900"}`}>
+                        {t.deviceOrSubject}
+                      </td>
                       <td className="px-4 py-3.5">
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             t.status === "Resolved"
-                              ? "bg-emerald-100 text-emerald-800"
+                              ? isDark
+                                ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/50"
+                                : "bg-emerald-100 text-emerald-800"
+                              : isDark
+                              ? "bg-blue-950/60 text-blue-400 border border-blue-800/50"
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
@@ -808,7 +1228,7 @@ export default function CustomerDashboardPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/customer/tickets/${t.id}`}
-                            className="font-bold text-blue-600 hover:underline"
+                            className="font-bold text-blue-500 hover:underline"
                           >
                             Inspect →
                           </Link>
@@ -816,10 +1236,18 @@ export default function CustomerDashboardPage() {
                             type="button"
                             onClick={() => setDeleteModalTicket(t)}
                             disabled={deletingId === t.id}
-                            className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded cursor-pointer"
+                            className={`p-1.5 rounded transition cursor-pointer ${
+                              isDark
+                                ? "text-rose-400 hover:bg-rose-950/40"
+                                : "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                            }`}
                             title={`Delete Ticket #${t.id}`}
                           >
-                            🗑️
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
                           </button>
                         </div>
                       </td>
@@ -834,6 +1262,38 @@ export default function CustomerDashboardPage() {
             )}
           </div>
         </div>
+
+        {/* IMAGE PREVIEW LIGHTBOX MODAL */}
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div
+              className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 p-2 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+                <span className="text-xs font-bold text-slate-200">Attached Laboratory Photo Preview</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-2 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewImage}
+                  alt="Laboratory Preview"
+                  className="max-h-[70vh] max-w-full object-contain rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* MODERN DELETE MODAL */}
         <ModernDeleteModal

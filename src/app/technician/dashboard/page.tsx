@@ -1277,7 +1277,12 @@ export default function TechnicianWorkbenchPage() {
           setAttachments((prev) => {
             const updated = [...(prev[targetId] || []), newAtt];
             try {
-              localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(updated));
+              const json = JSON.stringify(updated);
+              localStorage.setItem(`tdd_attachments_${targetId}`, json);
+              localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
+              localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
+              window.dispatchEvent(new Event("attachments-updated"));
+              window.dispatchEvent(new Event("storage"));
             } catch (err) {
               console.warn("Storage warning for attachments:", err);
             }
@@ -1299,7 +1304,12 @@ export default function TechnicianWorkbenchPage() {
         setAttachments((prev) => {
           const updated = [...(prev[targetId] || []), newAtt];
           try {
-            localStorage.setItem(`tdd_attachments_${targetId}`, JSON.stringify(updated));
+            const json = JSON.stringify(updated);
+            localStorage.setItem(`tdd_attachments_${targetId}`, json);
+            localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
+            localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
+            window.dispatchEvent(new Event("attachments-updated"));
+            window.dispatchEvent(new Event("storage"));
           } catch (err) {
             console.warn("Storage warning for attachments:", err);
           }
@@ -1337,7 +1347,12 @@ export default function TechnicianWorkbenchPage() {
 
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(updated));
+        const json = JSON.stringify(updated);
+        localStorage.setItem(`tdd_attachments_${ticketId}`, json);
+        localStorage.setItem(`tdd_attachments_${ticketId.toUpperCase()}`, json);
+        localStorage.setItem(`tdd_attachments_${ticketId.toLowerCase()}`, json);
+        window.dispatchEvent(new Event("attachments-updated"));
+        window.dispatchEvent(new Event("storage"));
       } catch (err) {
         console.warn("Failed to update attachments storage:", err);
       }

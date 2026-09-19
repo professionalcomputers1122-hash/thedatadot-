@@ -21,6 +21,47 @@ export interface Ticket {
   techNotes: string;
 }
 
+export interface TicketAttachment {
+  id: string;
+  name: string;
+  size: string;
+  type: string;
+  url?: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export function getTicketAttachments(ticketId: string): TicketAttachment[] {
+  if (typeof window === "undefined" || !ticketId) return [];
+  try {
+    const raw =
+      localStorage.getItem(`tdd_attachments_${ticketId}`) ||
+      localStorage.getItem(`tdd_attachments_${ticketId.toUpperCase()}`) ||
+      localStorage.getItem(`tdd_attachments_${ticketId.toLowerCase()}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read attachments:", e);
+  }
+  return [];
+}
+
+export function saveTicketAttachments(ticketId: string, atts: TicketAttachment[]): void {
+  if (typeof window === "undefined" || !ticketId) return;
+  try {
+    const json = JSON.stringify(atts);
+    localStorage.setItem(`tdd_attachments_${ticketId}`, json);
+    localStorage.setItem(`tdd_attachments_${ticketId.toUpperCase()}`, json);
+    localStorage.setItem(`tdd_attachments_${ticketId.toLowerCase()}`, json);
+    window.dispatchEvent(new Event("attachments-updated"));
+    window.dispatchEvent(new Event("storage"));
+  } catch (e) {
+    console.warn("Could not save attachments:", e);
+  }
+}
+
 export const initialTickets: Ticket[] = [];
 
 export const initialCustomers = [

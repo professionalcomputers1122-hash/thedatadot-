@@ -11,6 +11,7 @@ export interface CustomerUser {
   password?: string;
   status?: string;
   activeTickets?: number;
+  avatarUrl?: string;
 }
 
 // Fallback seed presets (WITHOUT universal passwords)
@@ -201,6 +202,7 @@ export function getCustomerSession(): CustomerUser | null {
           localStorage.removeItem("tdd_customer_session");
           return null;
         }
+        parsed.avatarUrl = parsed.avatarUrl || getCustomerAvatar() || undefined;
         return parsed;
       }
     }
@@ -209,6 +211,80 @@ export function getCustomerSession(): CustomerUser | null {
   }
 
   return null;
+}
+
+/**
+ * Retrieves the custom client avatar from localStorage
+ */
+export function getCustomerAvatar(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const avatar = localStorage.getItem("tdd_customer_avatar");
+    if (avatar && (avatar.startsWith("data:image") || avatar.startsWith("http"))) return avatar;
+  } catch (e) {
+    console.warn("Failed reading customer avatar:", e);
+  }
+  return null;
+}
+
+/**
+ * Updates the custom client avatar and synchronizes across session
+ */
+export function updateCustomerAvatar(avatarDataUrl: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (avatarDataUrl) {
+      localStorage.setItem("tdd_customer_avatar", avatarDataUrl);
+    } else {
+      localStorage.removeItem("tdd_customer_avatar");
+    }
+
+    // Also update customer session object if present
+    const raw = localStorage.getItem("tdd_customer_session");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed) {
+        parsed.avatarUrl = avatarDataUrl || undefined;
+        localStorage.setItem("tdd_customer_session", JSON.stringify(parsed));
+      }
+    }
+
+    window.dispatchEvent(new Event("customer-profile-updated"));
+    window.dispatchEvent(new Event("storage"));
+  } catch (e) {
+    console.warn("Failed saving customer avatar:", e);
+  }
+}
+
+/**
+ * Retrieves client dashboard theme ("light" | "dark")
+ */
+export function getCustomerTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = localStorage.getItem("tdd_customer_theme");
+    if (stored === "dark" || stored === "light") return stored;
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+  } catch (e) {
+    console.warn("Failed reading customer theme:", e);
+  }
+  return "light";
+}
+
+/**
+ * Sets client dashboard theme and dispatches events
+ */
+export function setCustomerTheme(theme: "light" | "dark"): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("tdd_customer_theme", theme);
+    window.dispatchEvent(new Event("customer-theme-changed"));
+    window.dispatchEvent(new Event("storage"));
+  } catch (e) {
+    console.warn("Failed saving customer theme:", e);
+  }
 }
 
 /**

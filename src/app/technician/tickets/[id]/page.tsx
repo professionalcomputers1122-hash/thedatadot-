@@ -10,6 +10,9 @@ import {
   fetchMessagesFromSupabase,
   sendMessageToSupabase,
   updateTicketInSupabase,
+  TicketAttachment,
+  getTicketAttachments,
+  saveTicketAttachments,
 } from "@/lib/portalData";
 
 interface Message {
@@ -17,16 +20,6 @@ interface Message {
   author: string;
   time: string;
   text: string;
-}
-
-export interface TicketAttachment {
-  id: string;
-  name: string;
-  size: string;
-  type: string;
-  url?: string;
-  uploadedAt: string;
-  uploadedBy: string;
 }
 
 export default function TechnicianTicketDetailPage({
@@ -168,11 +161,11 @@ export default function TechnicianTicketDetailPage({
           // Load attachments for this ticket
           if (typeof window !== "undefined") {
             try {
-              const storedAtts = localStorage.getItem(`tdd_attachments_${ticketId}`);
-              if (storedAtts) {
-                setAttachments(JSON.parse(storedAtts));
+              const storedAtts = getTicketAttachments(ticketId);
+              if (storedAtts && storedAtts.length > 0) {
+                setAttachments(storedAtts);
               } else {
-                setAttachments([
+                const defaultAtt = [
                   {
                     id: `att-${ticketId}-1`,
                     name: `${(found.category || "Service").toLowerCase().replace(/\s+/g, "_")}_diagnostic_telemetry.pdf`,
@@ -181,7 +174,9 @@ export default function TechnicianTicketDetailPage({
                     uploadedAt: found.createdAt || "Today",
                     uploadedBy: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Bench Intake Desk",
                   },
-                ]);
+                ];
+                setAttachments(defaultAtt);
+                saveTicketAttachments(ticketId, defaultAtt);
               }
             } catch (attErr) {
               console.warn("Could not load stored attachments:", attErr);
@@ -254,8 +249,8 @@ export default function TechnicianTicketDetailPage({
     const files = e.target.files;
     if (!files || files.length === 0 || !ticket) return;
 
-    const newAtts: TicketAttachment[] = [];
-    Array.from(files).forEach((file, index) => {
+    const fileList = Array.from(files);
+    fileList.forEach((file, index) => {
       const bytes = file.size;
       let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
       if (bytes > 1024 * 1024) {
@@ -270,35 +265,46 @@ export default function TechnicianTicketDetailPage({
       else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
       else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
 
-      const objectUrl = URL.createObjectURL(file);
-
-      newAtts.push({
-        id: `att-${Date.now()}-${index}`,
-        name: file.name,
-        size: sizeStr,
-        type: fileType,
-        url: objectUrl,
-        uploadedAt: "Just now",
-        uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
-      });
+      if (bytes < 4 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const newAtt: TicketAttachment = {
+            id: `att-${Date.now()}-${index}`,
+            name: file.name,
+            size: sizeStr,
+            type: fileType,
+            url: dataUrl,
+            uploadedAt: "Just now",
+            uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
+          };
+          setAttachments((prev) => {
+            const updated = [...prev, newAtt];
+            saveTicketAttachments(ticketId, updated);
+            return updated;
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const objectUrl = URL.createObjectURL(file);
+        const newAtt: TicketAttachment = {
+          id: `att-${Date.now()}-${index}`,
+          name: file.name,
+          size: sizeStr,
+          type: fileType,
+          url: objectUrl,
+          uploadedAt: "Just now",
+          uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
+        };
+        setAttachments((prev) => {
+          const updated = [...prev, newAtt];
+          saveTicketAttachments(ticketId, updated);
+          return updated;
+        });
+      }
     });
 
-    const updated = [...attachments, ...newAtts];
-    setAttachments(updated);
-
-    if (typeof window !== "undefined") {
-      try {
-        const serializable = updated.map((a) => ({
-          ...a,
-          url: a.url?.startsWith("blob:") ? undefined : a.url,
-        }));
-        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(serializable));
-      } catch (err) {
-        console.warn("Storage warning for attachments:", err);
-      }
-    }
-
-    setNotification(`${newAtts.length} file(s) attached successfully!`);
+    setNotification(`${fileList.length} file(s) attached successfully!`);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -308,13 +314,7 @@ export default function TechnicianTicketDetailPage({
   const handleDeleteAttachment = (attId: string) => {
     const updated = attachments.filter((a) => a.id !== attId);
     setAttachments(updated);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(`tdd_attachments_${ticketId}`, JSON.stringify(updated));
-      } catch (err) {
-        console.warn("Storage warning for attachments:", err);
-      }
-    }
+    saveTicketAttachments(ticketId, updated);
     setNotification("Attachment removed.");
     setTimeout(() => setNotification(""), 3000);
   };

@@ -29,6 +29,7 @@ export default function AdminLayoutShell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showTechSelectorModal, setShowTechSelectorModal] = useState(false);
 
   useEffect(() => {
     const session = getAdminSession();
@@ -239,26 +240,109 @@ export default function AdminLayoutShell({
                 <div className="space-y-1">
                   {grp.items.map((item) => {
                     const active = pathname === item.href;
+                    if (item.name === "Technician Bench") {
+                      return (
+                        <div key={item.name + item.href} className="space-y-1">
+                          <Link
+                            href={item.href}
+                            onClick={() => {
+                              if (typeof window !== "undefined") {
+                                const cur = localStorage.getItem("tdd_tech_user");
+                                if (!cur) {
+                                  const techSession = {
+                                    id: "admin-tech-direct",
+                                    name: adminSession?.name || "Super Admin (Ebinezer)",
+                                    email: adminSession?.email || "ebinezer@thedatadot.com",
+                                    role: "Lead Forensic Cleanroom Engineer",
+                                    station: "PC-3000 Flash & Portable III (Bench 01)",
+                                    department: "Cleanroom Laboratory",
+                                  };
+                                  localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
+                                }
+                              }
+                            }}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl font-semibold transition ${
+                              active
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                                : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={active ? "text-white" : "text-slate-400"}>
+                                {item.icon}
+                              </span>
+                              <span>{item.name}</span>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                              Direct
+                            </span>
+                          </Link>
+
+                          {/* Direct 1-Click Login as Individual Technicians */}
+                          <div className="ml-4 pl-2 border-l border-slate-800/80 space-y-0.5">
+                            {[
+                              {
+                                name: "K. Vignesh",
+                                email: "vignesh.ssd@thedatadot.com",
+                                role: "Solid State & NVMe Specialist",
+                                station: "PC-3000 Flash & Portable III",
+                              },
+                              {
+                                name: "M. Rajesh",
+                                email: "rajesh.lab@thedatadot.com",
+                                role: "Cleanroom Lead Engineer",
+                                station: "PC-3000 Bench 01 (Class-5 Hood)",
+                              },
+                              {
+                                name: "R. Balaji",
+                                email: "balaji.cloud@thedatadot.com",
+                                role: "Cloud & Network Security",
+                                station: "SOC Terminal 03",
+                              },
+                              {
+                                name: "Ebinezer (Admin)",
+                                email: "ebinezer@thedatadot.com",
+                                role: "Lead Cleanroom Director",
+                                station: "Executive Cleanroom Station",
+                              },
+                            ].map((tech) => (
+                              <button
+                                key={tech.email}
+                                type="button"
+                                onClick={() => {
+                                  if (typeof window !== "undefined") {
+                                    localStorage.setItem(
+                                      "tdd_tech_user",
+                                      JSON.stringify({
+                                        id: tech.email,
+                                        name: tech.name,
+                                        email: tech.email,
+                                        role: tech.role,
+                                        station: tech.station,
+                                        department: "Cleanroom Laboratory",
+                                      })
+                                    );
+                                    window.location.href = "/technician/dashboard";
+                                  }
+                                }}
+                                className="w-full text-left px-2 py-1 rounded-lg text-[11px] text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center justify-between group cursor-pointer"
+                                title={`Login directly as ${tech.name} without password`}
+                              >
+                                <span className="truncate">↳ {tech.name}</span>
+                                <span className="text-[9px] font-bold text-blue-400 opacity-0 group-hover:opacity-100 transition">
+                                  ⚡ Login
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <Link
                         key={item.name + item.href}
                         href={item.href}
-                        onClick={() => {
-                          if (item.href.startsWith("/technician") && typeof window !== "undefined") {
-                            const cur = localStorage.getItem("tdd_tech_user");
-                            if (!cur) {
-                              const techSession = {
-                                id: "admin-tech-direct",
-                                name: adminSession?.name || "Super Admin (Ebinezer)",
-                                email: adminSession?.email || "ebinezer@thedatadot.com",
-                                role: "Lead Forensic Cleanroom Engineer",
-                                station: "PC-3000 Flash & Portable III (Bench 01)",
-                                department: "Cleanroom Laboratory",
-                              };
-                              localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
-                            }
-                          }
-                        }}
                         className={`flex items-center gap-3 px-3 py-2 rounded-xl font-semibold transition ${
                           active
                             ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"

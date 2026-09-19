@@ -205,30 +205,50 @@ export default function TechnicianLoginPage() {
 
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold tracking-wider">or</span>
+                <span className="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  or 1-click login as technician
+                </span>
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const techSession = {
-                    id: "tech-direct-access",
+              <div className="space-y-2">
+                {[
+                  ...initialTechnicians,
+                  {
+                    id: "tech-lead-admin",
                     name: "Super Admin (Ebinezer)",
                     email: "ebinezer@thedatadot.com",
                     role: "Lead Forensic Cleanroom Engineer",
-                    station: "PC-3000 Flash & Portable III (Bench 01)",
-                    department: "Cleanroom Laboratory",
-                  };
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
-                  }
-                  router.push("/technician/dashboard");
-                }}
-                className="w-full rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 py-2.5 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>⚡ Direct Workbench Access (No Login)</span>
-              </button>
+                    station: "PC-3000 Cleanroom Bench 01",
+                    activeCases: 2,
+                    status: "On Bench",
+                  },
+                ].map((t) => (
+                  <button
+                    key={t.id + t.email}
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("tdd_tech_user", JSON.stringify(t));
+                      }
+                      router.push("/technician/dashboard");
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 transition flex items-center justify-between group cursor-pointer"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-900 group-hover:text-blue-700 block text-xs">
+                        {t.name}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">
+                        {t.role} • {t.station}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-md group-hover:bg-blue-600 group-hover:text-white transition">
+                      ⚡ Open Bench →
+                    </span>
+                  </button>
+                ))}
+              </div>
             </form>
           </div>
 

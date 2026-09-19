@@ -8,8 +8,11 @@ import {
   Ticket,
   fetchTicketsFromSupabase,
   initialTechnicians,
+  getStoredTechnicians,
   sendMessageToSupabase,
   deleteTicketFromSupabase,
+  createTicketInSupabase,
+  TechnicianRecord,
 } from "@/lib/portalData";
 
 export default function AdminTicketsPage() {
@@ -49,7 +52,93 @@ export default function AdminTicketsPage() {
   const [techDirective, setTechDirective] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  // Load live tickets from Supabase
+  // Create Ticket Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingTicket, setCreatingTicket] = useState(false);
+  const [newTicketData, setNewTicketData] = useState({
+    id: `TDD-${Math.floor(1000 + Math.random() * 9000)}`,
+    customerName: "",
+    companyName: "",
+    customerEmail: "",
+    category: "Data Recovery" as "Data Recovery" | "Cloud Solutions" | "Cybersecurity" | "Managed IT",
+    deviceOrSubject: "",
+    mediaType: "HDD" as "HDD" | "SSD" | "RAID" | "FLASH" | "NETWORK" | "SERVER" | "GENERAL",
+    serialNumber: "",
+    urgency: "Standard" as "Critical" | "High" | "Standard",
+    assignedTech: "",
+    assignedBench: "PC-3000 Bench 01 (Class-5 Hood)",
+    symptoms: "",
+  });
+
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTicketData.customerName || !newTicketData.customerEmail || !newTicketData.deviceOrSubject) {
+      alert("Please enter customer name, email address, and device/subject description.");
+      return;
+    }
+    setCreatingTicket(true);
+    try {
+      const generatedId = await createTicketInSupabase({
+        id: newTicketData.id,
+        customerName: newTicketData.customerName,
+        companyName: newTicketData.companyName || newTicketData.customerName,
+        customerEmail: newTicketData.customerEmail,
+        category: newTicketData.category,
+        deviceOrSubject: newTicketData.deviceOrSubject,
+        mediaType: newTicketData.mediaType,
+        serialNumber: newTicketData.serialNumber,
+        urgency: newTicketData.urgency,
+        assignedTech: newTicketData.assignedTech || "Unassigned",
+        assignedBench: newTicketData.assignedBench || "Pending Allocation",
+        symptoms: newTicketData.symptoms,
+      });
+
+      const newRecord: Ticket = {
+        id: generatedId,
+        companyName: newTicketData.companyName || newTicketData.customerName,
+        customerName: newTicketData.customerName,
+        customerEmail: newTicketData.customerEmail,
+        status: newTicketData.category === "Cybersecurity" ? "Threat Intake" : "Media Intake",
+        priority: (newTicketData.urgency.toUpperCase() as "CRITICAL" | "HIGH" | "STANDARD"),
+        assignedTech: newTicketData.assignedTech || "Unassigned",
+        assignedBench: newTicketData.assignedBench || "Pending Allocation",
+        deviceOrSubject: newTicketData.deviceOrSubject,
+        category: newTicketData.category,
+        mediaType: newTicketData.mediaType,
+        serialNumber: newTicketData.serialNumber,
+        symptoms: newTicketData.symptoms,
+        techNotes: "",
+        createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        lastUpdated: "Just now",
+      };
+
+      setTickets((prev) => [newRecord, ...prev]);
+      setNotification(`✓ Master Case #${generatedId} created successfully & dispatched.`);
+      setShowCreateModal(false);
+      setNewTicketData({
+        id: `TDD-${Math.floor(1000 + Math.random() * 9000)}`,
+        customerName: "",
+        companyName: "",
+        customerEmail: "",
+        category: "Data Recovery",
+        deviceOrSubject: "",
+        mediaType: "HDD",
+        serialNumber: "",
+        urgency: "Standard",
+        assignedTech: "",
+        assignedBench: "PC-3000 Bench 01 (Class-5 Hood)",
+        symptoms: "",
+      });
+      setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      console.error("Failed to create ticket:", err);
+      setNotification("Failed to create ticket. Please check connection.");
+    } finally {
+      setCreatingTicket(false);
+    }
+  };
+
+  // Load live tickets & technicians from Supabase and localStorage
   useEffect(() => {
     async function loadData() {
       try {
@@ -60,6 +149,13 @@ export default function AdminTicketsPage() {
       } finally {
         setLoading(false);
       }
+
+      try {
+        const storedTechs = getStoredTechnicians();
+        if (storedTechs && storedTechs.length > 0) {
+          setTechnicians([...storedTechs, ...initialTechnicians]);
+        }
+      } catch (e) {}
     }
     loadData();
 
@@ -216,8 +312,23 @@ export default function AdminTicketsPage() {
 
   return (
     <AdminLayoutShell
-      title="Master Tickets &amp; Technician Dispatch"
+      title="Master Tickets & Technician Dispatch"
       subtitle="Super Admin case assignment, ISO Class-5 cleanroom dispatch, and engineering workload triage"
+      actions={
+        <button
+          onClick={() => {
+            setNewTicketData((prev) => ({
+              ...prev,
+              id: `TDD-${Math.floor(1000 + Math.random() * 9000)}`,
+            }));
+            setShowCreateModal(true);
+          }}
+          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+        >
+          <span className="text-sm leading-none font-bold">+</span>
+          <span>Create New Ticket</span>
+        </button>
+      }
     >
       <div className="space-y-6 text-xs">
         {notification && (
@@ -589,6 +700,251 @@ export default function AdminTicketsPage() {
             </div>
           </div>
         )}
+        {/* CREATE MASTER TICKET MODAL */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
+            <div className="w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-white">Create New Master Ticket</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Register a new customer case, select service division, and dispatch to engineering workbench
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-slate-400 hover:text-white p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateTicket} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Case Tracking ID
+                    </label>
+                    <input
+                      type="text"
+                      value={newTicketData.id}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, id: e.target.value.toUpperCase() })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 font-mono text-indigo-400 font-bold outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Service Division <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={newTicketData.category}
+                      onChange={(e: any) =>
+                        setNewTicketData({ ...newTicketData, category: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 text-xs"
+                    >
+                      <option value="Data Recovery">Data Recovery Lab</option>
+                      <option value="Cloud Solutions">Cloud Solutions</option>
+                      <option value="Cybersecurity">Cybersecurity & Forensics</option>
+                      <option value="Managed IT">Managed IT & Support</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Client / Customer Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Kumar"
+                      value={newTicketData.customerName}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, customerName: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Company / Organization
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Apollo Diagnostics Ltd"
+                      value={newTicketData.companyName}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, companyName: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Customer Email <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="client@company.com"
+                      value={newTicketData.customerEmail}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, customerEmail: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Device / Subject Description <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Seagate IronWolf 4TB NAS RAID Drive - Clicking sound & undetectable"
+                      value={newTicketData.deviceOrSubject}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, deviceOrSubject: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Hardware / Media Architecture
+                    </label>
+                    <select
+                      value={newTicketData.mediaType}
+                      onChange={(e: any) =>
+                        setNewTicketData({ ...newTicketData, mediaType: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option value="HDD">HDD (Mechanical Platters)</option>
+                      <option value="SSD">SSD (NAND Flash / NVMe)</option>
+                      <option value="RAID">RAID / Server Array / NAS</option>
+                      <option value="FLASH">USB Flash / Monolith / SD</option>
+                      <option value="NETWORK">Network Infrastructure / Firewall</option>
+                      <option value="SERVER">Cloud Tenant / Virtual Server</option>
+                      <option value="GENERAL">General IT Workstation</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Serial Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. WX12A49018"
+                      value={newTicketData.serialNumber}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, serialNumber: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white font-mono outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Case Priority SLA
+                    </label>
+                    <select
+                      value={newTicketData.urgency}
+                      onChange={(e: any) =>
+                        setNewTicketData({ ...newTicketData, urgency: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option value="Standard">Standard (24 - 48 Hours)</option>
+                      <option value="High">High Priority (12 - 24 Hours)</option>
+                      <option value="Critical">Critical Cleanroom Emergency (Immediate)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Dispatch Assigned Technician
+                    </label>
+                    <select
+                      value={newTicketData.assignedTech}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, assignedTech: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option value="">Unassigned (Awaiting Queue)</option>
+                      {technicians.map((t) => (
+                        <option key={t.id + t.email} value={t.name}>
+                          {t.name} — {t.role} ({t.station})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Assigned Hardware Station / Bench
+                    </label>
+                    <select
+                      value={newTicketData.assignedBench}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, assignedBench: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    >
+                      <option value="PC-3000 Bench 01 (Class-5 Hood)">PC-3000 Bench 01 (Class-5 Hood)</option>
+                      <option value="PC-3000 Flash & Portable III">PC-3000 Flash & Portable III</option>
+                      <option value="SOC Terminal 03">SOC Terminal 03</option>
+                      <option value="Pending Allocation">Pending Allocation</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-300 mb-1">
+                      Initial Symptoms & Diagnosis Instructions
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Enter client description of failure, clicking noises, bad sectors, ransom notes, etc..."
+                      value={newTicketData.symptoms}
+                      onChange={(e) =>
+                        setNewTicketData({ ...newTicketData, symptoms: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="rounded-xl border border-slate-800 px-4 py-2 font-semibold text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingTicket}
+                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 shadow-md transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>{creatingTicket ? "Creating..." : "Create & Dispatch Master Ticket"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* MODERN DELETE MODAL */}
         <ModernDeleteModal
           isOpen={!!deleteModalTicket}

@@ -59,8 +59,10 @@ export default function AdminTechniciansPage() {
             !t.name?.toLowerCase().includes("murugan") &&
             !t.email?.toLowerCase().includes("murugan")
         );
+        const hasAdmin = filtered.some((t: TechnicianRecord) => t.email?.toLowerCase() === "ebinezer@thedatadot.com");
+        const listToNormalize = hasAdmin ? filtered : [initialTechnicians[0], ...filtered];
         // Ensure every tech has at least a default PIN
-        const normalized = filtered.map((t, index) => ({
+        const normalized = listToNormalize.map((t, index) => ({
           ...t,
           pin: t.pin || ["8942", "7103", "5519"][index % 3] || "8942",
           password: t.password || `Tech@DataDot${index + 1}!`,
@@ -232,22 +234,10 @@ export default function AdminTechniciansPage() {
 
   return (
     <AdminLayoutShell
-      title="Laboratory Technicians & Workbenches"
-      subtitle="Cleanroom forensic staff roster, ISO Class-5 laminar station allocations, and secure workbench access PIN management"
+      title="Technician Bench & Staff Roster"
+      subtitle="Direct 1-click access to laboratory hardware workbenches and ISO cleanroom workstations without login or PIN"
       actions={
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new Event("tdd_open_tech_bench_modal"));
-              }
-            }}
-            className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <span>⚡ Open Technician Bench</span>
-            <span>↗</span>
-          </button>
           <button
             onClick={() => {
               setNewTech((prev) => ({
@@ -274,22 +264,22 @@ export default function AdminTechniciansPage() {
           </div>
         )}
 
-        {/* DIRECT WORKBENCH ACCESS / INSTANT LOGIN ROSTER */}
+        {/* DIRECT WORKBENCH ACCESS / INSTANT BENCH LIST */}
         <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>⚡ Instant Technician Workbench Login (No PIN Required)</span>
+                <span>⚡ Laboratory Technician Benches</span>
                 <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold">
-                  Direct Access Active
+                  Direct 1-Click Access Active
                 </span>
               </h2>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Select any technician below to instantly log into their dedicated hardware workbench without typing a PIN or password.
+                Select any technician below and click &quot;Open Bench&quot; to immediately launch their active hardware workbench without typing a PIN or password.
               </p>
             </div>
             <span className="text-[11px] text-slate-400 font-mono">
-              {technicians.length} Dedicated Benches
+              {technicians.length} Dedicated Workbenches
             </span>
           </div>
 
@@ -330,7 +320,7 @@ export default function AdminTechniciansPage() {
                     }}
                     className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <span>⚡ Login as {tech.name.split(" ")[0]}</span>
+                    <span>⚡ Open Bench</span>
                     <span>→</span>
                   </button>
 
@@ -343,7 +333,7 @@ export default function AdminTechniciansPage() {
                       }
                     }}
                     className="rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 p-2 text-xs transition cursor-pointer shadow-2xs"
-                    title="Open in new tab"
+                    title="Open bench in new tab"
                   >
                     <span>↗</span>
                   </button>
@@ -404,10 +394,10 @@ export default function AdminTechniciansPage() {
                           onClick={() => {
                             if (typeof window !== "undefined") {
                               localStorage.setItem("tdd_tech_user", JSON.stringify(t));
-                              window.open("/technician/dashboard", "_blank");
+                              window.location.href = "/technician/dashboard";
                             }
                           }}
-                          className="rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                          className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                           title={`Open ${t.name}'s hardware bench directly without login`}
                         >
                           <span>⚡</span> Open Bench

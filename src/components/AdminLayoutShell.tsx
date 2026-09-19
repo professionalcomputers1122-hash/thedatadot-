@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useState, useEffect, useMemo } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { getAdminSession, clearAdminSession, AdminSession } from "@/lib/adminAuth";
-import { getStoredTechnicians, TechnicianRecord } from "@/lib/portalData";
 
 interface AdminLayoutShellProps {
   children: ReactNode;
@@ -30,9 +29,6 @@ export default function AdminLayoutShell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showTechSelectorModal, setShowTechSelectorModal] = useState(false);
-  const [techniciansList, setTechniciansList] = useState<TechnicianRecord[]>([]);
-  const [techSearchQuery, setTechSearchQuery] = useState("");
 
   useEffect(() => {
     const session = getAdminSession();
@@ -54,121 +50,6 @@ export default function AdminLayoutShell({
     window.addEventListener("tdd_admin_session_changed", handleSessionChange);
     return () => window.removeEventListener("tdd_admin_session_changed", handleSessionChange);
   }, [router]);
-
-  // Load Technicians & Listen for Updates or Open Modal Event
-  useEffect(() => {
-    const loadTechs = () => {
-      try {
-        const stored = getStoredTechnicians();
-        setTechniciansList(stored || []);
-      } catch (e) {
-        console.warn("Failed loading technicians in shell:", e);
-      }
-    };
-    loadTechs();
-
-    const handleOpenModal = () => {
-      setTechSearchQuery("");
-      setShowTechSelectorModal(true);
-    };
-
-    window.addEventListener("technicians-updated", loadTechs);
-    window.addEventListener("storage", loadTechs);
-    window.addEventListener("tdd_open_tech_bench_modal", handleOpenModal);
-
-    return () => {
-      window.removeEventListener("technicians-updated", loadTechs);
-      window.removeEventListener("storage", loadTechs);
-      window.removeEventListener("tdd_open_tech_bench_modal", handleOpenModal);
-    };
-  }, []);
-
-  const allTechsToDisplay = useMemo(() => {
-    const defaultTechs: TechnicianRecord[] = [
-      {
-        id: "TECH-ADMIN",
-        name: "Ebinezer (Super Admin)",
-        email: "ebinezer@thedatadot.com",
-        role: "Lead Cleanroom Director",
-        station: "Executive Cleanroom Station (Bench 01)",
-        activeCases: 3,
-        status: "On Bench",
-      },
-      {
-        id: "TECH-052",
-        name: "K. Vignesh",
-        email: "vignesh.ssd@thedatadot.com",
-        role: "Solid State & NVMe Specialist",
-        station: "PC-3000 Flash & Portable III",
-        activeCases: 1,
-        status: "On Bench",
-      },
-      {
-        id: "TECH-064",
-        name: "M. Rajesh",
-        email: "rajesh.lab@thedatadot.com",
-        role: "PC-3000 Cleanroom Lead Engineer",
-        station: "PC-3000 Bench 01 (Class-5 Hood)",
-        activeCases: 1,
-        status: "On Bench",
-      },
-      {
-        id: "TECH-039",
-        name: "R. Balaji",
-        email: "balaji.cloud@thedatadot.com",
-        role: "Cloud & Network Security Engineer",
-        station: "SOC Terminal 03",
-        activeCases: 1,
-        status: "Available",
-      },
-    ];
-
-    if (!techniciansList || techniciansList.length === 0) {
-      return defaultTechs;
-    }
-
-    const hasAdmin = techniciansList.some(
-      (t) => t.email.toLowerCase() === "ebinezer@thedatadot.com"
-    );
-
-    return hasAdmin
-      ? techniciansList
-      : [defaultTechs[0], ...techniciansList];
-  }, [techniciansList]);
-
-  const filteredTechs = useMemo(() => {
-    const q = techSearchQuery.toLowerCase().trim();
-    if (!q) return allTechsToDisplay;
-    return allTechsToDisplay.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.station.toLowerCase().includes(q) ||
-        t.role.toLowerCase().includes(q) ||
-        t.email.toLowerCase().includes(q)
-    );
-  }, [allTechsToDisplay, techSearchQuery]);
-
-  const handleDirectBenchLogin = (tech: {
-    name: string;
-    email: string;
-    role?: string;
-    station?: string;
-    department?: string;
-  }) => {
-    if (typeof window !== "undefined") {
-      const techUser = {
-        id: tech.email || "tech-custom",
-        name: tech.name,
-        email: tech.email || `${tech.name.toLowerCase().replace(/[^a-z0-9]/g, "")}@thedatadot.com`,
-        role: tech.role || "Forensic Cleanroom Engineer",
-        station: tech.station || "PC-3000 Cleanroom Bench",
-        department: tech.department || "Cleanroom Laboratory",
-      };
-      localStorage.setItem("tdd_tech_user", JSON.stringify(techUser));
-      setShowTechSelectorModal(false);
-      window.location.href = "/technician/dashboard";
-    }
-  };
 
   const handleSignOut = () => {
     clearAdminSession();
@@ -222,7 +103,7 @@ export default function AdminLayoutShell({
         },
         {
           name: "Technician Bench",
-          href: "/technician/dashboard",
+          href: "/admin/technicians",
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -244,16 +125,6 @@ export default function AdminLayoutShell({
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          ),
-        },
-        {
-          name: "Lab Technicians",
-          href: "/admin/technicians",
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           ),
         },
@@ -358,34 +229,6 @@ export default function AdminLayoutShell({
                 <div className="space-y-1">
                   {grp.items.map((item) => {
                     const active = pathname === item.href;
-                    if (item.name === "Technician Bench") {
-                      return (
-                        <button
-                          key={item.name + item.href}
-                          type="button"
-                          onClick={() => {
-                            setTechSearchQuery("");
-                            setShowTechSelectorModal(true);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-semibold transition text-xs cursor-pointer ${
-                            pathname.startsWith("/technician")
-                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                              : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className={pathname.startsWith("/technician") ? "text-white" : "text-slate-400"}>
-                              {item.icon}
-                            </span>
-                            <span>{item.name}</span>
-                          </div>
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
-                            ⚡ Select
-                          </span>
-                        </button>
-                      );
-                    }
-
                     return (
                       <Link
                         key={item.name + item.href}
@@ -447,18 +290,15 @@ export default function AdminLayoutShell({
 
           {/* RIGHT ACTIONS: NOTIFICATIONS, SETTINGS & PROFILE PILL */}
           <div className="flex items-center gap-3 shrink-0 text-xs">
-            {/* Direct Technician Bench 1-Click Access */}
-            <button
-              type="button"
-              onClick={() => {
-                setTechSearchQuery("");
-                setShowTechSelectorModal(true);
-              }}
+            {/* Direct Technician Bench Link */}
+            <Link
+              href="/admin/technicians"
               className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              title="Select Technician Workbench (Direct 1-Click Access)"
+              title="View Technician Bench Roster"
             >
               <span>⚡ Technician Bench</span>
-            </button>
+              <span>→</span>
+            </Link>
 
             {/* Notification Bell with Badge 3 */}
             <Link
@@ -564,151 +404,6 @@ export default function AdminLayoutShell({
           {children}
         </main>
       </div>
-
-      {/* DIRECT TECHNICIAN WORKBENCH SELECTOR MODAL */}
-      {showTechSelectorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs animate-in fade-in">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900 animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span>⚡ Select Laboratory Technician Workbench</span>
-                  <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold">
-                    Direct (No Login)
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Select a technician from the list or insert a technician name below, then click bench to launch their live workbench immediately.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowTechSelectorModal(false)}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-400 hover:text-slate-700 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* SEARCH / INSERT TECHNICIAN INPUT */}
-            <div className="mb-4 space-y-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Find or Insert Technician
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">
-                    🔍
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Type technician name (e.g. Vignesh, Rajesh, Balaji, Ebinezer)..."
-                    value={techSearchQuery}
-                    onChange={(e) => setTechSearchQuery(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                {techSearchQuery.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectBenchLogin({
-                        name: techSearchQuery.trim(),
-                        email: `${techSearchQuery.toLowerCase().replace(/[^a-z0-9]/g, "")}@thedatadot.com`,
-                        role: "Forensic Cleanroom Technician",
-                        station: "PC-3000 Cleanroom Bench",
-                      });
-                    }}
-                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/20 shrink-0 cursor-pointer"
-                  >
-                    + Enter as &quot;{techSearchQuery.trim()}&quot; ⚡
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* TECHNICIAN LIST */}
-            <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-              {filteredTechs.length === 0 ? (
-                <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 bg-slate-50">
-                  <p className="text-slate-600 font-semibold mb-1">No technician matching &quot;{techSearchQuery}&quot;</p>
-                  <p className="text-slate-400 text-xs mb-3">Click the button below to insert this technician and enter bench directly:</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectBenchLogin({
-                        name: techSearchQuery.trim(),
-                        email: `${techSearchQuery.toLowerCase().replace(/[^a-z0-9]/g, "")}@thedatadot.com`,
-                        role: "Forensic Cleanroom Technician",
-                        station: "PC-3000 Cleanroom Bench",
-                      });
-                    }}
-                    className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/20 cursor-pointer"
-                  >
-                    Enter Bench as &quot;{techSearchQuery.trim()}&quot; ⚡
-                  </button>
-                </div>
-              ) : (
-                filteredTechs.map((tech) => (
-                  <div
-                    key={tech.id + tech.email}
-                    className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-2xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
-                        {tech.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-sm">{tech.name}</span>
-                          <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold">
-                            {tech.station}
-                          </span>
-                          {tech.status && (
-                            <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
-                              {tech.status}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {tech.role} • <span className="font-mono text-[10px] text-slate-400">{tech.email}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDirectBenchLogin(tech)}
-                      className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 text-xs font-bold transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <span>Enter Bench</span>
-                      <span>⚡</span>
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <Link
-                href="/admin/technicians"
-                onClick={() => setShowTechSelectorModal(false)}
-                className="text-blue-600 hover:underline font-semibold flex items-center gap-1"
-              >
-                <span>Manage Full Technician Roster &amp; Hardware Stations</span>
-                <span>→</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowTechSelectorModal(false)}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

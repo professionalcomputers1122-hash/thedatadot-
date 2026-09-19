@@ -335,6 +335,17 @@ export interface TechnicianRecord {
 
 export const initialTechnicians: TechnicianRecord[] = [
   {
+    id: "TECH-ADMIN",
+    name: "Ebinezer (Super Admin)",
+    email: "ebinezer@thedatadot.com",
+    role: "Lead Cleanroom Director",
+    station: "Executive Cleanroom Station (Bench 01)",
+    activeCases: 3,
+    status: "On Bench",
+    pin: "2005",
+    password: "Tech@Ebinezer2005!",
+  },
+  {
     id: "TECH-052",
     name: "K. Vignesh",
     email: "vignesh.ssd@thedatadot.com",
@@ -408,9 +419,16 @@ export function getStoredTechnicians(): TechnicianRecord[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter(
+        const filtered = parsed.filter(
           (t: TechnicianRecord) => !deletedSet.has(t.email.toLowerCase().trim()) && !deletedSet.has(t.id.toLowerCase().trim())
         );
+        const hasAdmin = filtered.some(
+          (t: TechnicianRecord) => t.email?.toLowerCase().trim() === "ebinezer@thedatadot.com"
+        );
+        if (!hasAdmin && !deletedSet.has("ebinezer@thedatadot.com") && !deletedSet.has("tech-admin")) {
+          return [initialTechnicians[0], ...filtered];
+        }
+        return filtered;
       }
     }
   } catch (e) {

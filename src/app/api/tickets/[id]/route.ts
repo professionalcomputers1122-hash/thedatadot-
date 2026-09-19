@@ -110,44 +110,48 @@ export async function PATCH(
       .or(`id.eq.${cleanId},id.ilike.${cleanId}`)
       .maybeSingle();
 
-    const targetDbId = existingTicket?.id || cleanId;
     let updatedTicket = null;
 
-    const { data: updateData, error: updateErr } = await supabase
-      .from("tickets")
-      .update(updates)
-      .eq("id", targetDbId)
-      .select();
+    if (existingTicket) {
+      const { data: updateData, error: updateErr } = await supabase
+        .from("tickets")
+        .update(updates)
+        .eq("id", existingTicket.id)
+        .select();
 
-    if (updateData && updateData.length > 0) {
-      updatedTicket = updateData[0];
+      if (updateErr) {
+        console.error("[API /api/tickets/[id] PATCH update error]:", updateErr);
+      }
+      if (updateData && updateData.length > 0) {
+        updatedTicket = updateData[0];
+      }
     } else {
-      // If the ticket was not yet in Supabase table, upsert it so updates are permanently stored
+      // Only insert if ticket didn't exist at all in DB
       const insertRecord: Record<string, any> = {
-        id: targetDbId,
-        company_name: body.companyName || body.client || existingTicket?.company_name || "Client Organization",
-        customer_name: body.customerName || body.client || existingTicket?.customer_name || "Client",
-        customer_email: body.customerEmail || existingTicket?.customer_email || "support@thedatadot.com",
-        device_or_subject: body.deviceOrSubject || body.device || existingTicket?.device_or_subject || "Support Incident",
-        status: updates.status || "In Progress",
+        id: cleanId,
+        company_name: body.companyName || body.client || "Client Organization",
+        customer_name: body.customerName || body.client || "Client",
+        customer_email: body.customerEmail || "support@thedatadot.com",
+        device_or_subject: body.deviceOrSubject || body.device || "Support Incident",
+        status: updates.status || "Media Intake",
         cloned_percent: updates.cloned_percent || 0,
         urgency: updates.urgency || "Standard",
         tech_notes: updates.tech_notes || "Updated via technician portal",
         assigned_bench: updates.assigned_bench || "Bench 01",
         assigned_tech: updates.assigned_tech || "Technician",
-        created_at: existingTicket?.created_at || new Date().toISOString(),
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       try {
-        const { data: upsertData } = await supabase
+        const { data: insertData } = await supabase
           .from("tickets")
-          .upsert(insertRecord)
+          .insert([insertRecord])
           .select();
-        if (upsertData && upsertData.length > 0) {
-          updatedTicket = upsertData[0];
+        if (insertData && insertData.length > 0) {
+          updatedTicket = insertData[0];
         }
-      } catch (upsertErr) {
-        console.warn("[API /api/tickets/[id] upsert fallback warn]:", upsertErr);
+      } catch (insertErr) {
+        console.warn("[API /api/tickets/[id] insert fallback warn]:", insertErr);
       }
     }
 
@@ -165,7 +169,7 @@ export async function PATCH(
           id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
           actor,
           action: "UPDATE_TICKET",
-          target: `Ticket #${targetDbId} (${summaryChange})`,
+          target: `Ticket #${cleanId} (${summaryChange})`,
           ip: clientIp,
           created_at: new Date().toISOString(),
         },

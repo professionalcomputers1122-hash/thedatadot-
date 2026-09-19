@@ -142,7 +142,16 @@ export async function POST(req: Request) {
       device_or_subject: deviceOrSubject,
       media_type: mediaType,
       serial_number: serialNumber,
-      status: body.status || "Intake & Diagnostics",
+      status:
+        body.status && body.status.toLowerCase() !== "intake & diagnostics"
+          ? body.status
+          : deviceOrSubject?.toLowerCase().includes("cyber")
+          ? "Threat Intake"
+          : deviceOrSubject?.toLowerCase().includes("cloud")
+          ? "Scope Intake"
+          : deviceOrSubject?.toLowerCase().includes("managed") || deviceOrSubject?.toLowerCase().includes("fleet")
+          ? "Ticket Intake"
+          : "Media Intake",
       cloned_percent: body.clonedPercent !== undefined ? body.clonedPercent : 0,
       urgency,
       symptoms,

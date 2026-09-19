@@ -361,7 +361,19 @@ export function parseTicketRow(row: any): Ticket {
     category,
     deviceOrSubject: cleanSubject,
     serialNumber: row.serial_number,
-    status: row.status || "Intake & Diagnostics",
+    status:
+      !row.status ||
+      row.status.trim().toLowerCase() === "intake & diagnostics" ||
+      row.status.trim().toLowerCase() === "open" ||
+      row.status.trim().toLowerCase() === "new"
+        ? category === "Cybersecurity"
+          ? "Threat Intake"
+          : category === "Cloud Solutions"
+          ? "Scope Intake"
+          : category === "Managed IT"
+          ? "Ticket Intake"
+          : "Media Intake"
+        : row.status.trim(),
     priority: (row.urgency?.toUpperCase() as any) || "STANDARD",
     assignedTech,
     assignedBench:
@@ -771,6 +783,15 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
     ? input.deviceOrSubject
     : `[${chosenCategory}] ${input.deviceOrSubject}`;
 
+  const initialCategoryStatus =
+    chosenCategory === "Cybersecurity"
+      ? "Threat Intake"
+      : chosenCategory === "Cloud Solutions"
+      ? "Scope Intake"
+      : chosenCategory === "Managed IT"
+      ? "Ticket Intake"
+      : "Media Intake";
+
   try {
     if (typeof window !== "undefined") {
       const res = await fetch("/api/tickets", {
@@ -785,7 +806,7 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
           deviceOrSubject: formattedSubject,
           mediaType: mappedMediaType,
           serialNumber: input.serialNumber || "N/A",
-          status: "Intake & Diagnostics",
+          status: initialCategoryStatus,
           clonedPercent: 0,
           urgency: input.urgency || "Standard",
           symptoms: input.symptoms || "",
@@ -815,7 +836,7 @@ export async function createTicketInSupabase(input: NewTicketInput): Promise<str
         device_or_subject: formattedSubject,
         media_type: mappedMediaType,
         serial_number: input.serialNumber || "N/A",
-        status: "Intake & Diagnostics",
+        status: initialCategoryStatus,
         cloned_percent: 0,
         urgency: input.urgency || "Standard",
         symptoms: input.symptoms || "",
@@ -1450,10 +1471,11 @@ export function getTimelineStages(
     norm.includes("sector") ||
     clonedPercent >= 75;
   const isDiag =
-    norm.includes("diagnosis") ||
-    norm.includes("diagnostic") ||
-    norm.includes("cleanroom") ||
-    clonedPercent >= 50;
+    !norm.includes("intake") &&
+    (norm.includes("diagnosis") ||
+      norm.includes("diagnostic") ||
+      norm.includes("cleanroom") ||
+      clonedPercent >= 50);
 
   if (isResolvedDR) {
     s1 = "done";

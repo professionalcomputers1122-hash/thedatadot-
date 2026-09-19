@@ -596,7 +596,7 @@ export default function TechnicianWorkbenchPage() {
     urgency: "Standard" as "Standard" | "High" | "Critical",
     assignedBench: "Forensic Platter Pod 1",
     assignedTech: "Sanjay Vignesh",
-    status: "Intake & Diagnostics",
+    status: "Media Intake",
     symptoms: "",
   });
 
@@ -1195,6 +1195,21 @@ export default function TechnicianWorkbenchPage() {
         overrides[targetId.toLowerCase()] = overrideData;
         localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
         window.dispatchEvent(new Event("tickets-updated"));
+
+        if (typeof BroadcastChannel !== "undefined") {
+          try {
+            const bc = new BroadcastChannel("tdd-ticket-sync");
+            bc.postMessage({
+              type: "TICKET_UPDATED",
+              id: targetId,
+              status: overrideStatus || activeCase.status,
+              priority: newPriority,
+              bench: newBench,
+              timestamp: Date.now(),
+            });
+            bc.close();
+          } catch (bcErr) {}
+        }
       } catch (e) {
         console.warn("Could not save persistent ticket override:", e);
       }
@@ -1316,6 +1331,21 @@ export default function TechnicianWorkbenchPage() {
         overrides[targetId.toLowerCase()] = overrideData;
         localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
         window.dispatchEvent(new Event("tickets-updated"));
+
+        if (typeof BroadcastChannel !== "undefined") {
+          try {
+            const bc = new BroadcastChannel("tdd-ticket-sync");
+            bc.postMessage({
+              type: "TICKET_UPDATED",
+              id: targetId,
+              status: newStatus,
+              progress: autoProgress,
+              bench: currentStation,
+              timestamp: Date.now(),
+            });
+            bc.close();
+          } catch (bcErr) {}
+        }
       } catch (e) {
         console.warn("Could not save persistent ticket override on client update:", e);
       }
@@ -1443,6 +1473,21 @@ export default function TechnicianWorkbenchPage() {
         overrides[targetId.toLowerCase()] = overrideData;
         localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
         window.dispatchEvent(new Event("tickets-updated"));
+
+        if (typeof BroadcastChannel !== "undefined") {
+          try {
+            const bc = new BroadcastChannel("tdd-ticket-sync");
+            bc.postMessage({
+              type: "TICKET_UPDATED",
+              id: targetId,
+              status: stageValue,
+              progress: autoProgress,
+              bench: currentStation,
+              timestamp: Date.now(),
+            });
+            bc.close();
+          } catch (bcErr) {}
+        }
       } catch (e) {
         console.warn("Could not save persistent ticket override:", e);
       }
@@ -1925,7 +1970,7 @@ export default function TechnicianWorkbenchPage() {
           urgency: "Standard",
           assignedBench: "Forensic Platter Pod 1",
           assignedTech: techUser.name,
-          status: "Intake & Diagnostics",
+          status: "Media Intake",
           symptoms: "",
         });
       } else {
@@ -2034,25 +2079,17 @@ export default function TechnicianWorkbenchPage() {
       )
     : null;
 
-  // 4-Stage Category Execution Pipeline (Direct 1:1 match with Customer Portal)
+  // 4-Stage Category Execution Pipeline (Strictly 4 stages - 1:1 match with Customer Portal)
   const ticketStages = useMemo(() => {
-    let stages = currentConfig?.stages && currentConfig.stages.length > 0
-      ? [...currentConfig.stages]
+    return currentConfig?.stages && currentConfig.stages.length === 4
+      ? currentConfig.stages
       : [
-          { value: "Media Intake", label: "1. Media Intake" },
-          { value: "Cleanroom Diagnostics", label: "2. Cleanroom Diagnostics" },
-          { value: "PC-3000 Imaging", label: "3. PC-3000 Imaging" },
-          { value: "Verification & Return", label: "4. Verification & Return (Resolved)" },
+          { value: "Media Intake", label: "1. Media Intake (Cleanroom Barcode Intake)" },
+          { value: "Cleanroom Diagnostics", label: "2. Cleanroom Diagnostics (ISO Class-5 Inspection)" },
+          { value: "PC-3000 Imaging", label: "3. PC-3000 Imaging (Raw Platter Sector Mirror)" },
+          { value: "Verification & Return", label: "4. Verification & Return (Data Recovered / Handover)" },
         ];
-
-    // Keep current status selectable if it was an older legacy state (e.g. Open / Closed)
-    const curStatus = clientStatus || activeCase?.status;
-    if (curStatus && !stages.some((s) => s.value.toLowerCase() === curStatus.toLowerCase())) {
-      stages = [{ value: curStatus, label: `Current: ${curStatus}` }, ...stages];
-    }
-
-    return stages;
-  }, [currentConfig, clientStatus, activeCase?.status]);
+  }, [currentConfig]);
 
   const currentMessages = activeCase
     ? chatMessages[selectedCaseId] || [
@@ -3415,9 +3452,37 @@ export default function TechnicianWorkbenchPage() {
                     {ticketStages.map((st, i) => {
                       const currentStatus = (clientStatus || editStatus || activeCase.status || "").toLowerCase();
                       const isSelected =
-                        currentStatus === st.value.toLowerCase() ||
-                        currentStatus === st.label.toLowerCase() ||
-                        (st.value.toLowerCase() === "verification & return" && (currentStatus.includes("resolved") || currentStatus.includes("return")));
+                        i === 0
+                          ? currentStatus === st.value.toLowerCase() ||
+                            currentStatus.includes("intake") ||
+                            currentStatus.includes("open") ||
+                            currentStatus.includes("new") ||
+                            !currentStatus
+                          : i === 1
+                          ? currentStatus === st.value.toLowerCase() ||
+                            (!currentStatus.includes("intake") &&
+                              (currentStatus.includes("cleanroom") ||
+                               currentStatus.includes("diagnos") ||
+                               currentStatus.includes("forensic") ||
+                               currentStatus.includes("architect") ||
+                               currentStatus.includes("assessment")))
+                          : i === 2
+                          ? currentStatus === st.value.toLowerCase() ||
+                            currentStatus.includes("pc-3000") ||
+                            currentStatus.includes("imaging") ||
+                            currentStatus.includes("clon") ||
+                            currentStatus.includes("containment") ||
+                            currentStatus.includes("remediation") ||
+                            currentStatus.includes("deploy") ||
+                            currentStatus.includes("migrat") ||
+                            currentStatus.includes("rollout")
+                          : currentStatus === st.value.toLowerCase() ||
+                            currentStatus.includes("resolved") ||
+                            currentStatus.includes("closed") ||
+                            currentStatus.includes("return") ||
+                            currentStatus.includes("hardening") ||
+                            currentStatus.includes("handover") ||
+                            currentStatus.includes("verification");
                       return (
                         <button
                           key={st.value}

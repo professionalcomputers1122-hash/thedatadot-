@@ -75,10 +75,32 @@ export default function TechnicianTicketDetailPage({
         }
 
         if (found) {
-          setTicket(found);
-          setStatus(found.status || (found.category === "Data Recovery" ? "Media Received" : "Intake & Diagnostics"));
-          setProgress(Number(found.clonedPercent) || 0);
-          setNotes(found.techNotes || "");
+          let override: any = null;
+          if (typeof window !== "undefined") {
+            try {
+              const raw = localStorage.getItem("tdd_ticket_overrides");
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                override = parsed[ticketId] || (ticketId ? parsed[ticketId.toUpperCase()] : null) || (ticketId ? parsed[ticketId.toLowerCase()] : null);
+              }
+            } catch (e) {
+              console.warn("Override check warning:", e);
+            }
+          }
+
+          const resolvedStatus = override?.status || found.status || (found.category === "Data Recovery" ? "Media Received" : "Intake & Diagnostics");
+          const resolvedProgress = override?.progress !== undefined ? override.progress : (Number(found.clonedPercent) || 0);
+          const resolvedNotes = override?.notes !== undefined ? override.notes : (found.techNotes || "");
+
+          setTicket({
+            ...found,
+            status: resolvedStatus,
+            clonedPercent: resolvedProgress,
+            techNotes: resolvedNotes,
+          });
+          setStatus(resolvedStatus);
+          setProgress(resolvedProgress);
+          setNotes(resolvedNotes);
 
           const liveMsgs = await fetchMessagesFromSupabase(ticketId);
           if (liveMsgs && liveMsgs.length > 0) {
@@ -182,6 +204,27 @@ export default function TechnicianTicketDetailPage({
     if (!ticket) return;
 
     setSaving(true);
+
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("tdd_ticket_overrides");
+        const overrides = raw ? JSON.parse(raw) : {};
+        const overrideData = {
+          status,
+          progress,
+          notes,
+          updatedAt: "Just now",
+        };
+        overrides[ticket.id] = overrideData;
+        overrides[ticket.id.toUpperCase()] = overrideData;
+        overrides[ticket.id.toLowerCase()] = overrideData;
+        localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+        window.dispatchEvent(new Event("tickets-updated"));
+      } catch (storageErr) {
+        console.warn("Could not save persistent override:", storageErr);
+      }
+    }
+
     try {
       await updateTicketInSupabase(ticket.id, {
         status,
@@ -196,7 +239,7 @@ export default function TechnicianTicketDetailPage({
         techNotes: notes,
       }));
 
-      setNotification("Internal workbench status & progress updated successfully!");
+      setNotification("Internal workbench update saved successfully!");
     } catch (err) {
       console.warn("Update sync warning:", err);
       setNotification("Status updated locally.");
@@ -525,7 +568,7 @@ export default function TechnicianTicketDetailPage({
                     className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-500 transition disabled:opacity-50 text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>💾</span>
-                    <span>{saving ? "Saving Changes..." : "Save Internal Status"}</span>
+                    <span>{saving ? "Saving Internal Update..." : "Save Internal Update"}</span>
                   </button>
                 </div>
               </form>
@@ -589,7 +632,7 @@ export default function TechnicianTicketDetailPage({
                     className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-500 transition text-xs shadow-xs cursor-pointer flex items-center gap-1.5"
                   >
                     <span>✉️</span>
-                    <span>Send Update to Client Portal →</span>
+                    <span>Send Client Update</span>
                   </button>
                 </div>
               </form>

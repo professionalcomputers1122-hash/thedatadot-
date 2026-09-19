@@ -441,6 +441,7 @@ export default function TechnicianWorkbenchPage() {
 
   const selectedCaseIdRef = useRef<string>("");
   const lastManualUpdateRef = useRef<number>(0);
+  const prevActiveCaseIdRef = useRef<string>("");
 
   useEffect(() => {
     selectedCaseIdRef.current = selectedCaseId;
@@ -512,7 +513,10 @@ export default function TechnicianWorkbenchPage() {
         else if (devLower.includes("network") || devLower.includes("switch") || devLower.includes("cisco")) mediaType = "NETWORK";
         else if (devLower.includes("server") || devLower.includes("dell poweredge")) mediaType = "SERVER";
 
-        const override = localOverrides[t.id];
+        const override =
+          localOverrides[t.id] ||
+          (t.id ? localOverrides[t.id.toUpperCase()] : null) ||
+          (t.id ? localOverrides[t.id.toLowerCase()] : null);
 
         return {
           id: t.id,
@@ -540,8 +544,8 @@ export default function TechnicianWorkbenchPage() {
 
       setCases((prev) => {
         return mapped.map((m) => {
-          const cur = prev.find((p) => p.id === m.id);
-          if (cur && cur.id === targetId && isRecentlyUpdated) {
+          const cur = prev.find((p) => p.id.toLowerCase() === m.id.toLowerCase());
+          if (cur && targetId && cur.id.toLowerCase() === targetId.toLowerCase() && isRecentlyUpdated) {
             return {
               ...m,
               status: cur.status || m.status,
@@ -731,10 +735,11 @@ export default function TechnicianWorkbenchPage() {
     setActiveView("ticket_details");
   };
 
-  // Load Chat Messages for Active Case
+  // Load Chat Messages & Synchronize Active Case Form
   useEffect(() => {
     if (activeCase) {
-      if (!selectedCaseIdRef.current) {
+      if (activeCase.id !== prevActiveCaseIdRef.current) {
+        prevActiveCaseIdRef.current = activeCase.id;
         selectedCaseIdRef.current = activeCase.id;
         setSelectedCaseId(activeCase.id);
         setEditStatus(activeCase.status);
@@ -853,7 +858,7 @@ export default function TechnicianWorkbenchPage() {
     // Optimistically update in local state
     setCases((prev) =>
       prev.map((c) =>
-        c.id === targetId
+        c.id.toLowerCase() === targetId.toLowerCase()
           ? {
               ...c,
               status: newStatus,
@@ -871,7 +876,7 @@ export default function TechnicianWorkbenchPage() {
       try {
         const raw = localStorage.getItem("tdd_ticket_overrides");
         const overrides = raw ? JSON.parse(raw) : {};
-        overrides[targetId] = {
+        const overrideData = {
           status: newStatus,
           priority: newPriority,
           bench: newBench,
@@ -879,7 +884,11 @@ export default function TechnicianWorkbenchPage() {
           notes: newNotes,
           updatedAt: "Just now",
         };
+        overrides[targetId] = overrideData;
+        overrides[targetId.toUpperCase()] = overrideData;
+        overrides[targetId.toLowerCase()] = overrideData;
         localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+        window.dispatchEvent(new Event("tickets-updated"));
       } catch (e) {
         console.warn("Could not save persistent ticket override:", e);
       }
@@ -2213,8 +2222,18 @@ export default function TechnicianWorkbenchPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {paginatedCases.map((c) => (
-                        <tr key={c.id} className="hover:bg-slate-50 text-slate-700">
+                      {paginatedCases.map((c) => {
+                        const isSelected = c.id === activeCase?.id;
+                        return (
+                          <tr
+                            key={c.id}
+                            onClick={() => handleSelectCase(c)}
+                            className={`cursor-pointer transition ${
+                              isSelected
+                                ? "bg-blue-50/60 font-medium text-slate-900"
+                                : "hover:bg-slate-50 text-slate-700"
+                            }`}
+                          >
                           <td className="py-3.5 pr-2 font-mono text-[11px] font-bold text-slate-800">
                             #{c.id}
                           </td>
@@ -2275,7 +2294,8 @@ export default function TechnicianWorkbenchPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                     </tbody>
                   </table>
                 </div>

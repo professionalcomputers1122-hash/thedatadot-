@@ -159,10 +159,7 @@ export default function CustomerNav() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
                 <span className="font-bold text-slate-900">
-                  {customer.company}
-                </span>
-                <span className="text-[11px] opacity-60">
-                  • #{customer.accountNumber}
+                  {customer.company || customer.name}
                 </span>
               </div>
 

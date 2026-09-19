@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
@@ -9,8 +9,6 @@ import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   getCustomerSession,
   CustomerUser,
-  updateCustomerAvatar,
-  compressImageToDataUrl,
 } from "@/lib/clientAuth";
 import {
   fetchTicketsFromSupabase,
@@ -411,7 +409,6 @@ export default function CustomerDashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
@@ -553,41 +550,6 @@ export default function CustomerDashboardPage() {
     };
   }, [activeTicket?.id]);
 
-  // Photo Upload Handler with client-side compression
-  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Please select a valid image file (JPEG, PNG, WebP).");
-      return;
-    }
-
-    try {
-      const compressed = await compressImageToDataUrl(file, 320, 0.85);
-      updateCustomerAvatar(compressed);
-      setCustomer((prev) => (prev ? { ...prev, avatarUrl: compressed } : prev));
-    } catch (err) {
-      console.error("Failed compressing photo:", err);
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        updateCustomerAvatar(result);
-        setCustomer((prev) => (prev ? { ...prev, avatarUrl: result } : prev));
-      };
-      reader.readAsDataURL(file);
-    }
-    e.target.value = "";
-  };
-
-  const handleRemoveAvatar = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (window.confirm("Remove custom profile photo and revert to company initials?")) {
-      updateCustomerAvatar(null);
-      setCustomer((prev) => (prev ? { ...prev, avatarUrl: undefined } : prev));
-    }
-  };
-
   const getInitials = (name?: string) => {
     if (!name) return "CL";
     const parts = name.trim().split(" ").filter(Boolean);
@@ -602,49 +564,26 @@ export default function CustomerDashboardPage() {
       <CustomerNav />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        {/* WELCOME BANNER WITH PHOTO PROFILE */}
+        {/* WELCOME BANNER */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-3xl border border-slate-200 bg-white shadow-xs">
           {/* USER AVATAR & INFO */}
           <div className="flex items-center gap-4">
-            {/* AVATAR WITH PHOTO UPLOAD TRIGGER */}
-            <div className="relative group">
-              <div className="relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden font-black text-xl sm:text-2xl shadow-sm border-2 border-blue-200 bg-blue-600 text-white transition">
-                {customer?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={customer.avatarUrl}
-                    alt={customer?.name || "Client"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span>{getInitials(customer?.name)}</span>
-                )}
-
-                {/* CAMERA OVERLAY ON HOVER */}
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  title="Upload or change profile photo"
-                  className="absolute inset-0 bg-slate-950/70 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-semibold"
-                >
-                  <svg className="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                    <circle cx="12" cy="13" r="3" />
-                  </svg>
-                  <span>Edit</span>
-                </button>
-              </div>
-
-              {/* HIDDEN FILE INPUT */}
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={handleAvatarFileChange}
-                aria-label="Upload profile photo"
-              />
-            </div>
+            <Link
+              href="/customer/profile"
+              className="relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden font-black text-xl sm:text-2xl shadow-sm border-2 border-blue-200 bg-blue-600 text-white transition hover:ring-2 hover:ring-blue-400 shrink-0 cursor-pointer"
+              title="View Profile Settings"
+            >
+              {customer?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={customer.avatarUrl}
+                  alt={customer?.name || "Client"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>{getInitials(customer?.name)}</span>
+              )}
+            </Link>
 
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -652,16 +591,6 @@ export default function CustomerDashboardPage() {
                   <span>{customer?.company || "Enterprise Client Desk"}</span>
                   <span className="opacity-60">• #{customer?.accountNumber || "TDD-CLI-8492"}</span>
                 </span>
-
-                {customer?.avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveAvatar}
-                    className="text-[10px] text-slate-500 hover:text-rose-600 underline cursor-pointer transition"
-                  >
-                    Remove Photo
-                  </button>
-                )}
               </div>
 
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950">
@@ -675,18 +604,6 @@ export default function CustomerDashboardPage() {
 
           {/* ACTION BUTTONS */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer shadow-xs"
-            >
-              <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                <circle cx="12" cy="13" r="3" />
-              </svg>
-              <span>{customer?.avatarUrl ? "Change Photo" : "Upload Your Photo"}</span>
-            </button>
-
             <Link
               href="/customer/tickets/new"
               className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"

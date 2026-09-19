@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -99,20 +100,19 @@ export default function CustomerNav() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
         {/* LOGO & BRAND */}
         <div className="flex items-center gap-6">
-          <Link href="/customer/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 font-black text-white text-base shadow-sm">
-              •
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold tracking-tight text-slate-950">
-                  The Data Dot
-                </span>
-                <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80">
-                  Customer Desk
-                </span>
-              </div>
-            </div>
+          <Link href="/customer/dashboard" className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="The Data Dot"
+              width={165}
+              height={28}
+              priority
+              style={{ height: "auto" }}
+              className="w-[140px] sm:w-[160px]"
+            />
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80 hidden sm:inline-block">
+              Customer Desk
+            </span>
           </Link>
 
           {/* DESKTOP NAV LINKS */}

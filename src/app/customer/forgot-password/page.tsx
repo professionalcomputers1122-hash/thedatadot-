@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function CustomerForgotPasswordPage() {
@@ -23,11 +24,16 @@ export default function CustomerForgotPasswordPage() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
-            <div className="h-11 w-11 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/25">
-              •
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-950">The Data Dot</span>
+          <Link href="/" className="inline-flex items-center justify-center mb-4">
+            <Image
+              src="/logo.png"
+              alt="The Data Dot"
+              width={180}
+              height={32}
+              priority
+              style={{ height: "auto" }}
+              className="w-[170px]"
+            />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight text-slate-950">
             Reset Portal Password

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { loginCustomer } from "@/lib/clientAuth";
 
@@ -23,24 +24,19 @@ export default function CustomerLoginPage() {
     }
 
     if (!password) {
-      setError("Please enter your account password or access key.");
+      setError("Please enter your account password.");
       return;
     }
 
     setLoading(true);
-    try {
-      const result = await loginCustomer(email, password);
-      if (!result.success) {
-        setError(result.error || "Access Denied: Invalid credentials or unauthorized account.");
-        setLoading(false);
-        return;
-      }
-      router.push("/customer/dashboard");
-    } catch (err) {
-      console.error("Login failed:", err);
-      setError("An unexpected authentication error occurred. Please try again.");
+    const res = await loginCustomer(email, password);
+    if (!res.success) {
+      setError(res.error || "Authentication failed.");
       setLoading(false);
+      return;
     }
+
+    router.push("/customer/dashboard");
   };
 
   return (
@@ -51,11 +47,16 @@ export default function CustomerLoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* BRAND HEADER */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
-            <div className="h-11 w-11 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/25">
-              •
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-950">The Data Dot</span>
+          <Link href="/" className="inline-flex items-center justify-center mb-4">
+            <Image
+              src="/logo.png"
+              alt="The Data Dot"
+              width={180}
+              height={32}
+              priority
+              style={{ height: "auto" }}
+              className="w-[170px]"
+            />
           </Link>
           <h1 className="text-2xl font-bold tracking-tight text-slate-950">Client Portal Sign In</h1>
           <p className="mt-1 text-xs text-slate-500">

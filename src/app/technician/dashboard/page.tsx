@@ -1589,6 +1589,7 @@ export default function TechnicianWorkbenchPage() {
               { id: "my_tickets", label: "My Tickets", icon: "🎫" },
               { id: "assigned_to_me", label: "Assigned to Me", icon: "👤" },
               { id: "unassigned", label: "Unassigned", icon: "📥", badge: cases.filter((c) => !c.leadTech || c.leadTech === "Unassigned").length },
+              { id: "diagnosis_report", label: "Diagnosis Report", icon: "📄" },
               { id: "all_tickets", label: "All Tickets", icon: "📑" },
               { id: "knowledge_base", label: "Knowledge Base", icon: "📚" },
               { id: "reports", label: "Reports", icon: "📈" },
@@ -1596,54 +1597,38 @@ export default function TechnicianWorkbenchPage() {
             ].map((item) => {
               const isActive = activeView === item.id || (item.id === "my_tickets" && activeView === "ticket_details");
               return (
-                <div key={item.id} className="space-y-1">
-                  <button
-                    onClick={() => {
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    if (item.id === "diagnosis_report") {
+                      handleOpenReportModal();
+                      setSidebarOpen(false);
+                    } else {
                       setActiveView(item.id as PortalNavView);
                       setSidebarOpen(false);
-                    }}
-                    className={`group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-medium transition ${
-                      isActive
-                        ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30"
-                        : "text-slate-300 hover:bg-[#132238] hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm opacity-90">{item.icon}</span>
-                      <span className="text-[13px]">{item.label}</span>
-                    </div>
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
-                          isActive ? "bg-white text-blue-600" : "bg-blue-500/30 text-blue-200"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* CREATE DIAGNOSTIC REPORT BUTTON (BELOW UNASSIGNED) */}
-                  {item.id === "unassigned" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleOpenReportModal();
-                        setSidebarOpen(false);
-                      }}
-                      className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-semibold transition bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-900/30 border border-blue-400/20 my-1 cursor-pointer"
-                      title="Open Advanced Data Recovery Diagnostic Report Generator"
+                    }
+                  }}
+                  className={`group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-medium transition cursor-pointer ${
+                    isActive
+                      ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30"
+                      : "text-slate-300 hover:bg-[#132238] hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm opacity-90">{item.icon}</span>
+                    <span className="text-[13px]">{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
+                        isActive ? "bg-white text-blue-600" : "bg-blue-500/30 text-blue-200"
+                      }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-sm">📄</span>
-                        <span className="text-[12.5px] font-bold tracking-tight">Create Diagnostic Report</span>
-                      </div>
-                      <span className="rounded bg-white/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
-                        A4
-                      </span>
-                    </button>
+                      {item.badge}
+                    </span>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -2600,7 +2585,7 @@ export default function TechnicianWorkbenchPage() {
                     title="Generate Advanced Diagnostic Report PDF for this ticket"
                   >
                     <span>📄</span>
-                    <span>Generate Diagnostic Report</span>
+                    <span>Diagnosis Report</span>
                   </button>
                   <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
                     <span>Created: {activeCase.createdAt || "4 Aug 2025, 10:24 AM"}</span>

@@ -200,7 +200,7 @@ export default function AdvancedDataRecoveryReportModal({
             <span className="flex h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse"></span>
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>Diagnostic Report Generator</span>
+                <span>Diagnosis Report</span>
                 <span className="rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 text-[10px] font-mono">
                   Strict 1-Page A4
                 </span>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getStoredTechnicians, initialTechnicians, TechnicianRecord } from "@/lib/portalData";
+import { getAdminSession } from "@/lib/adminAuth";
 
 export default function TechnicianLoginPage() {
   const router = useRouter();
@@ -13,6 +14,25 @@ export default function TechnicianLoginPage() {
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Auto-bypass if admin session exists
+  useEffect(() => {
+    const admin = getAdminSession();
+    if (admin) {
+      const techSession = {
+        id: "admin-tech-direct",
+        name: admin.name || "Super Admin (Ebinezer)",
+        email: admin.email || "ebinezer@thedatadot.com",
+        role: "Lead Forensic Cleanroom Engineer",
+        station: "PC-3000 Flash & Portable III (Bench 01)",
+        department: "Cleanroom Laboratory",
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
+      }
+      router.push("/technician/dashboard");
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,6 +201,33 @@ export default function TechnicianLoginPage() {
                 className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-md shadow-blue-600/30 hover:bg-blue-500 transition disabled:opacity-50 active:scale-[0.99]"
               >
                 {loading ? "Signing in..." : "Sign In"}
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold tracking-wider">or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const techSession = {
+                    id: "tech-direct-access",
+                    name: "Super Admin (Ebinezer)",
+                    email: "ebinezer@thedatadot.com",
+                    role: "Lead Forensic Cleanroom Engineer",
+                    station: "PC-3000 Flash & Portable III (Bench 01)",
+                    department: "Cleanroom Laboratory",
+                  };
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
+                  }
+                  router.push("/technician/dashboard");
+                }}
+                className="w-full rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 py-2.5 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>⚡ Direct Workbench Access (No Login)</span>
               </button>
             </form>
           </div>

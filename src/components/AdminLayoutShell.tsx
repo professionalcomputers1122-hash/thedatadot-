@@ -102,6 +102,15 @@ export default function AdminLayoutShell({
           ),
         },
         {
+          name: "Technician Bench",
+          href: "/technician/dashboard",
+          icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          ),
+        },
+        {
           name: "Customer Accounts",
           href: "/admin/customers",
           icon: (
@@ -234,6 +243,22 @@ export default function AdminLayoutShell({
                       <Link
                         key={item.name + item.href}
                         href={item.href}
+                        onClick={() => {
+                          if (item.href.startsWith("/technician") && typeof window !== "undefined") {
+                            const cur = localStorage.getItem("tdd_tech_user");
+                            if (!cur) {
+                              const techSession = {
+                                id: "admin-tech-direct",
+                                name: adminSession?.name || "Super Admin (Ebinezer)",
+                                email: adminSession?.email || "ebinezer@thedatadot.com",
+                                role: "Lead Forensic Cleanroom Engineer",
+                                station: "PC-3000 Flash & Portable III (Bench 01)",
+                                department: "Cleanroom Laboratory",
+                              };
+                              localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
+                            }
+                          }
+                        }}
                         className={`flex items-center gap-3 px-3 py-2 rounded-xl font-semibold transition ${
                           active
                             ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
@@ -253,79 +278,18 @@ export default function AdminLayoutShell({
           </nav>
         </div>
 
-        {/* BOTTOM SECTION: QUICK ACTIONS & TAGLINE */}
-        <div className="p-4 border-t border-slate-800/80 space-y-3 bg-[#090f1c]">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 block mb-2">
-              Quick Actions
-            </span>
-
-            {/* + New Job Button */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onNewJobClick) onNewJobClick();
-                else router.push("/admin/tickets");
-              }}
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-3 text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/30 transition cursor-pointer"
-            >
-              <span className="text-base leading-none font-bold">+</span>
-              <span>New Job</span>
-            </button>
-
-            {/* Mini action links */}
-            <div className="mt-2.5 space-y-1 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onCreateReportClick) onCreateReportClick();
-                  else router.push("/admin/reports");
-                }}
-                className="w-full text-left px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2.5 transition text-[11px]"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>Create Report</span>
-              </button>
-
-              <Link
-                href="/admin/customers"
-                className="w-full px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2.5 transition text-[11px]"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                <span>Add Client</span>
-              </Link>
-
-              <Link
-                href="/admin/tickets"
-                className="w-full px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2.5 transition text-[11px]"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>Record Payment</span>
-              </Link>
-
-              <Link
-                href="/admin/tickets"
-                className="w-full px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center gap-2.5 transition text-[11px]"
-              >
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                <span>View All Jobs</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Tagline */}
-          <div className="pt-2 border-t border-slate-800 text-[9.5px] font-bold tracking-wider text-slate-400">
-            DATA TODAY.
-            <br />
-            A BETTER TOMORROW.
+        {/* BOTTOM SECTION: CLEAN PROFILE & WEBSITE LINK */}
+        <div className="p-4 border-t border-slate-800/80 bg-[#090f1c] text-xs">
+          <Link
+            href="/"
+            target="_blank"
+            className="flex items-center justify-between text-[11px] font-semibold text-slate-400 hover:text-white transition py-1"
+          >
+            <span>View Public Website</span>
+            <span>↗</span>
+          </Link>
+          <div className="pt-2 mt-1.5 border-t border-slate-800/80 text-[9.5px] font-bold tracking-wider text-slate-500">
+            DATA TODAY. A BETTER TOMORROW.
           </div>
         </div>
       </aside>

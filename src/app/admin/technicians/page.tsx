@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
@@ -231,22 +232,47 @@ export default function AdminTechniciansPage() {
 
   return (
     <AdminLayoutShell
-      title="Laboratory Technicians &amp; Workbenches"
+      title="Laboratory Technicians & Workbenches"
       subtitle="Cleanroom forensic staff roster, ISO Class-5 laminar station allocations, and secure workbench access PIN management"
       actions={
-        <button
-          onClick={() => {
-            setNewTech((prev) => ({
-              ...prev,
-              pin: generateRandomPin(),
-              password: generateRandomPassword(),
-            }));
-            setShowAddModal(true);
-          }}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
-        >
-          <span>+</span> Add Laboratory Technician
-        </button>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/technician/dashboard"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const current = localStorage.getItem("tdd_tech_user");
+                if (!current) {
+                  const techSession = {
+                    id: "admin-tech-direct",
+                    name: "Super Admin (Ebinezer)",
+                    email: "ebinezer@thedatadot.com",
+                    role: "Lead Forensic Cleanroom Engineer",
+                    station: "PC-3000 Flash & Portable III (Bench 01)",
+                    department: "Cleanroom Laboratory",
+                  };
+                  localStorage.setItem("tdd_tech_user", JSON.stringify(techSession));
+                }
+              }
+            }}
+            className="rounded-xl border border-blue-500/40 bg-blue-600/15 text-blue-400 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+          >
+            <span>⚡ Open Technician Bench (No Login)</span>
+            <span>↗</span>
+          </Link>
+          <button
+            onClick={() => {
+              setNewTech((prev) => ({
+                ...prev,
+                pin: generateRandomPin(),
+                password: generateRandomPassword(),
+              }));
+              setShowAddModal(true);
+            }}
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
+          >
+            <span>+</span> Add Laboratory Technician
+          </button>
+        </div>
       }
     >
       <div className="space-y-6 text-xs">
@@ -306,6 +332,18 @@ export default function AdminTechniciansPage() {
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("tdd_tech_user", JSON.stringify(t));
+                              window.open("/technician/dashboard", "_blank");
+                            }
+                          }}
+                          className="rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                          title={`Open ${t.name}'s hardware bench directly without login`}
+                        >
+                          <span>⚡</span> Open Bench
+                        </button>
                         <button
                           onClick={() => copyCredentials(t)}
                           className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition"

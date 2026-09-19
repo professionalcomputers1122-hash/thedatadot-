@@ -51,12 +51,6 @@ export default function AdminLoginPage() {
     }, 400);
   };
 
-  const handleFillCredentials = () => {
-    setEmail("ebinezer@thedatadot.com");
-    setPassword("Ebinezer@2005");
-    setError("");
-  };
-
   return (
     <main className="min-h-screen bg-[#050b14] text-white flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden antialiased">
       {/* Dynamic ambient background glow */}
@@ -91,17 +85,19 @@ export default function AdminLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4 text-xs">
+          <form onSubmit={handleLogin} autoComplete="off" className="space-y-4 text-xs">
             <div>
               <label className="block font-semibold text-slate-300 mb-1.5">
                 Executive Admin Email
               </label>
               <input
                 type="email"
+                name="admin_login_email"
                 required
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ebinezer@thedatadot.com"
+                placeholder="name@thedatadot.com"
                 className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white placeholder-slate-500 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-sm font-medium"
               />
             </div>
@@ -112,7 +108,9 @@ export default function AdminLoginPage() {
               </label>
               <input
                 type="password"
+                name="admin_login_password"
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
@@ -128,18 +126,6 @@ export default function AdminLoginPage() {
               {loading ? "Verifying Credentials..." : "Unlock Admin Console →"}
             </button>
           </form>
-
-          {/* Quick-fill helper for convenience */}
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Security Account: <strong>ebinezer@...</strong></span>
-            <button
-              type="button"
-              onClick={handleFillCredentials}
-              className="text-red-400 hover:text-red-300 hover:underline font-semibold cursor-pointer"
-            >
-              Autofill Credentials
-            </button>
-          </div>
 
           <div className="mt-6 border-t border-slate-800 pt-5 text-center flex items-center justify-between text-xs">
             <Link

@@ -32,5 +32,11 @@
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "unrs-resolver": true,
+      "eslint-config-next>eslint-import-resolver-typescript>unrs-resolver#1.12.2": true
+    }
   }
 }

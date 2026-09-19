@@ -101,7 +101,18 @@ export async function PATCH(
     if (body.assigned_bench !== undefined) updates.assigned_bench = body.assigned_bench;
     if (body.assignedTech !== undefined) updates.assigned_tech = body.assignedTech;
     if (body.assigned_tech !== undefined) updates.assigned_tech = body.assigned_tech;
-    if (body.urgency !== undefined) updates.urgency = body.urgency;
+    const rawUrgency = body.urgency || body.priority;
+    if (rawUrgency !== undefined) {
+      const u = String(rawUrgency).trim().toLowerCase();
+      updates.urgency =
+        u.includes("crit")
+          ? "Critical"
+          : u.includes("high")
+          ? "High"
+          : u.includes("low")
+          ? "Low"
+          : "Standard";
+    }
 
     // Check if ticket exists in database (case-insensitive)
     const { data: existingTicket } = await supabase
@@ -121,6 +132,10 @@ export async function PATCH(
 
       if (updateErr) {
         console.error("[API /api/tickets/[id] PATCH update error]:", updateErr);
+        return NextResponse.json(
+          { success: false, error: updateErr.message },
+          { status: 500, headers: NO_CACHE_HEADERS }
+        );
       }
       if (updateData && updateData.length > 0) {
         updatedTicket = updateData[0];

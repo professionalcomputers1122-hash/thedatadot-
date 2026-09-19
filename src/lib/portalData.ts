@@ -619,6 +619,19 @@ export async function updateTicketInSupabase(
 ) {
   const cleanId = (id || "").trim().toUpperCase();
 
+  let cleanUrgency: string | undefined = undefined;
+  const rawUrgency = updates.urgency || updates.priority;
+  if (rawUrgency) {
+    const u = rawUrgency.toLowerCase();
+    cleanUrgency = u.includes("crit")
+      ? "Critical"
+      : u.includes("high")
+      ? "High"
+      : u.includes("low")
+      ? "Low"
+      : "Standard";
+  }
+
   // Optimistic broadcast and local override for instant 0ms cross-tab reflection
   if (typeof window !== "undefined") {
     try {
@@ -628,7 +641,7 @@ export async function updateTicketInSupabase(
         ...(overrides[cleanId] || {}),
         status: updates.status,
         progress: updates.clonedPercent,
-        priority: updates.priority || updates.urgency,
+        priority: cleanUrgency || updates.priority || updates.urgency,
         bench: updates.assignedBench,
         notes: updates.techNotes,
         timestamp: Date.now(),
@@ -663,7 +676,7 @@ export async function updateTicketInSupabase(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...updates,
-          urgency: updates.urgency || updates.priority,
+          urgency: cleanUrgency || updates.urgency || updates.priority,
         }),
       });
       if (res.ok) return;
@@ -680,7 +693,7 @@ export async function updateTicketInSupabase(
     if (updates.techNotes !== undefined) payload.tech_notes = updates.techNotes;
     if (updates.assignedBench !== undefined) payload.assigned_bench = updates.assignedBench;
     if (updates.assignedTech !== undefined) payload.assigned_tech = updates.assignedTech;
-    if (updates.urgency || updates.priority) payload.urgency = updates.urgency || updates.priority;
+    if (cleanUrgency) payload.urgency = cleanUrgency;
 
     await supabase.from("tickets").update(payload).or(`id.eq.${cleanId},id.ilike.${cleanId}`);
   } catch (err) {

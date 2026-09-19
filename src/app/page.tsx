@@ -728,32 +728,39 @@ function BackupRecoveryIcon() {
           <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
       </defs>
+      {/* Top disk plate */}
+      <ellipse cx="14" cy="7" rx="9" ry="3.2" fill="url(#dbGrad)" />
+
+      {/* Complete first cylinder tier */}
       <path
-        d="M5 8c0-2.2 4.9-4 11-4s11 1.8 11 4-4.9 4-11 4-11-1.8-11-4z"
-        fill="url(#dbGrad)"
-      />
-      <path
-        d="M5 8v6c0 2.2 4.9 4 11 4 1.5 0 2.9-.1 4.2-.35"
-        stroke="url(#dbGrad)"
-        strokeWidth="3.2"
-        fill="none"
-      />
-      <path
-        d="M5 14v6c0 2.2 4.9 4 11 4 1.1 0 2.1-.06 3.1-.18"
-        stroke="url(#dbGrad)"
-        strokeWidth="3.2"
-        fill="none"
-      />
-      <path
-        d="M26.5 19.5a4.5 4.5 0 1 1-4.2 6.1"
+        d="M5 7v5.5c0 1.77 4.03 3.2 9 3.2s9-1.43 9-3.2V7"
         stroke="url(#dbGrad)"
         strokeWidth="2.6"
         strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       />
+
+      {/* Second cylinder tier */}
       <path
-        d="M22 19.5h4.5v4.5"
+        d="M5 12.5v5.5c0 1.77 4.03 3.2 9 3.2 1.3 0 2.5-.1 3.6-.3"
         stroke="url(#dbGrad)"
         strokeWidth="2.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Recovery Circular Arrow at bottom right */}
+      <path
+        d="M23.5 16.5a5.5 5.5 0 1 1-4.8 2.8"
+        stroke="url(#dbGrad)"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M19 16.5h4.5v4.5"
+        stroke="url(#dbGrad)"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -770,20 +777,23 @@ function ConsultingIcon() {
           <stop offset="100%" stopColor="#1d4ed8" />
         </linearGradient>
       </defs>
-      <rect x="4" y="19" width="5.5" height="9" rx="1.5" fill="url(#barGrad)" />
-      <rect x="13.25" y="14" width="5.5" height="14" rx="1.5" fill="url(#barGrad)" />
-      <rect x="22.5" y="9" width="5.5" height="19" rx="1.5" fill="url(#barGrad)" />
+      {/* 3 Rising Analytics Bars */}
+      <rect x="4" y="18" width="5.5" height="10" rx="1.5" fill="url(#barGrad)" />
+      <rect x="13" y="13" width="5.5" height="15" rx="1.5" fill="url(#barGrad)" />
+      <rect x="22" y="8" width="5.5" height="20" rx="1.5" fill="url(#barGrad)" />
+
+      {/* Upward trend arrow soaring cleanly above */}
       <path
-        d="M5 12l8-7 13-1"
+        d="M4 14l8-7 7 4 8-8"
         stroke="url(#barGrad)"
-        strokeWidth="2.8"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M21 4h5v5"
+        d="M21 3h6v6"
         stroke="url(#barGrad)"
-        strokeWidth="2.8"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

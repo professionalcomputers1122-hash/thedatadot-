@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import "./Tech3D.css";
 
 const securityItems = [
@@ -48,13 +48,8 @@ const securityItems = [
 ];
 
 export default function Tech3D() {
-  const [poweredOn, setPoweredOn] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-
   const sceneRef = useRef<HTMLDivElement>(null);
   const mouseAnimationRef = useRef<number | null>(null);
-  const bootAnimationRef = useRef<number | null>(null);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -108,63 +103,10 @@ export default function Tech3D() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!loading) return;
-
-    const start = performance.now();
-    const duration = 3000;
-
-    const updateProgress = (time: number) => {
-      const elapsed = time - start;
-
-      const percentage = Math.min(
-        100,
-        Math.round((elapsed / duration) * 100)
-      );
-
-      setProgress(percentage);
-
-      if (percentage < 100) {
-        bootAnimationRef.current =
-          requestAnimationFrame(updateProgress);
-      } else {
-        setLoading(false);
-        setPoweredOn(true);
-      }
-    };
-
-    bootAnimationRef.current =
-      requestAnimationFrame(updateProgress);
-
-    return () => {
-      if (bootAnimationRef.current !== null) {
-        cancelAnimationFrame(bootAnimationRef.current);
-      }
-    };
-  }, [loading]);
-
-  const handlePowerOn = () => {
-    if (poweredOn || loading) return;
-
-    setProgress(0);
-    setLoading(true);
-  };
-
-  const handlePowerOff = () => {
-    if (bootAnimationRef.current !== null) {
-      cancelAnimationFrame(bootAnimationRef.current);
-    }
-    setLoading(false);
-    setPoweredOn(false);
-    setProgress(0);
-  };
-
   return (
     <div
       ref={sceneRef}
-      className={`security-scene ${
-        loading ? "loading" : ""
-      } ${poweredOn ? "powered-on" : ""}`}
+      className="security-scene powered-on"
     >
       {/* Ambient background */}
       <div className="ambient-glow ambient-glow-one" />
@@ -308,65 +250,6 @@ export default function Tech3D() {
         </div>
 
         {/* =========================
-            POWER ON
-        ========================== */}
-
-        {!poweredOn && !loading && (
-          <button
-            type="button"
-            className="power-button"
-            onClick={handlePowerOn}
-          >
-            <span className="power-icon">
-              <span />
-            </span>
-
-            <span className="power-text">
-              POWER ON SYSTEM
-            </span>
-
-            <span className="power-arrow">
-              →
-            </span>
-          </button>
-        )}
-
-        {/* =========================
-            LOADING
-        ========================== */}
-
-        {loading && (
-          <div className="boot-panel">
-            <div className="boot-spinner">
-              <div className="spinner-inner" />
-            </div>
-
-            <div className="boot-copy">
-              <strong>
-                POWERING ON...
-              </strong>
-
-              <span>
-                Initializing security infrastructure
-              </span>
-            </div>
-
-            <div className="boot-percentage">
-              {progress}%
-            </div>
-
-            <div className="boot-progress">
-              <div
-                className="boot-progress-fill"
-                style={{
-                  width: `${progress}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* =========================
             SECURITY FEATURES
         ========================== */}
 
@@ -388,43 +271,12 @@ export default function Tech3D() {
         </div>
 
         {/* =========================
-            ONLINE STATUS & TURN OFF BUTTON
-        ========================== */}
-
-        {poweredOn && (
-          <button
-            type="button"
-            className="power-button power-button-online"
-            onClick={handlePowerOff}
-            title="Click to turn off security system"
-            aria-label="Turn off security system"
-          >
-            <span className="online-dot" />
-
-            <span className="power-text">
-              TURN OFF SYSTEM
-            </span>
-
-            <span className="power-subtext">
-              (ONLINE)
-            </span>
-          </button>
-        )}
-
-        {/* =========================
             TOP STATUS
         ========================== */}
 
         <div className="system-label">
-          <span
-            className={poweredOn ? "active" : ""}
-          />
-
-          {poweredOn
-            ? "SECURITY SYSTEM ACTIVE"
-            : loading
-              ? "INITIALIZING SYSTEM"
-              : "SECURITY SYSTEM STANDBY"}
+          <span className="active" />
+          SECURITY SYSTEM ACTIVE
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -404,12 +404,24 @@ export default function TechnicianWorkbenchPage() {
   const [replyMode, setReplyMode] = useState<"customer" | "internal">("customer");
   const [notification, setNotification] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
+  const [editPriority, setEditPriority] = useState<"CRITICAL" | "HIGH" | "STANDARD">("STANDARD");
   const [editProgress, setEditProgress] = useState<number>(0);
   const [editNotes, setEditNotes] = useState<string>("");
   const [editBench, setEditBench] = useState<string>("");
+  const [clientUpdateText, setClientUpdateText] = useState<string>("");
+  const [notifyClientWithTelemetry, setNotifyClientWithTelemetry] = useState<boolean>(true);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+  const [isSendingClientUpdate, setIsSendingClientUpdate] = useState<boolean>(false);
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({});
   const [replyText, setReplyText] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
+
+  const selectedCaseIdRef = useRef<string>("");
+  const lastManualUpdateRef = useRef<number>(0);
+
+  useEffect(() => {
+    selectedCaseIdRef.current = selectedCaseId;
+  }, [selectedCaseId]);
 
   // User Profile Session
   const [techUser, setTechUser] = useState({
@@ -488,28 +500,35 @@ export default function TechnicianWorkbenchPage() {
         };
       });
 
+      const targetId = selectedCaseIdRef.current;
+      const isRecentlyUpdated = Date.now() - lastManualUpdateRef.current < 15000;
+
       setCases((prev) => {
-        const targetId = selectedCaseId || "";
         return mapped.map((m) => {
           const cur = prev.find((p) => p.id === m.id);
-          if (cur && (cur.id === targetId) && (cur.status !== m.status || cur.progress !== m.progress)) {
+          if (cur && cur.id === targetId && isRecentlyUpdated) {
             return {
               ...m,
               status: cur.status || m.status,
               progress: cur.progress !== undefined ? cur.progress : m.progress,
               notes: cur.notes || m.notes,
               bench: cur.bench || m.bench,
+              priority: cur.priority || m.priority,
             };
           }
           return m;
         });
       });
-      if (mapped.length > 0 && !selectedCaseId) {
-        setSelectedCaseId(mapped[0].id);
-        setEditStatus(mapped[0].status);
-        setEditProgress(mapped[0].progress);
-        setEditNotes(mapped[0].notes);
-        setEditBench(mapped[0].bench);
+
+      if (mapped.length > 0 && !selectedCaseIdRef.current) {
+        const first = mapped[0];
+        selectedCaseIdRef.current = first.id;
+        setSelectedCaseId(first.id);
+        setEditStatus(first.status);
+        setEditProgress(first.progress);
+        setEditNotes(first.notes);
+        setEditBench(first.bench);
+        setEditPriority(first.priority);
       }
     } catch (err) {
       console.warn("Failed to load tickets in technician portal:", err);
@@ -650,8 +669,10 @@ export default function TechnicianWorkbenchPage() {
 
     if (targetCases.length > 0) {
       const match = targetCases.find((c) => c.id === selectedCaseId) || targetCases[0];
+      selectedCaseIdRef.current = match.id;
       setSelectedCaseId(match.id);
       setEditStatus(match.status);
+      setEditPriority(match.priority);
       setEditProgress(match.progress);
       setEditNotes(match.notes);
       setEditBench(match.bench);
@@ -660,8 +681,10 @@ export default function TechnicianWorkbenchPage() {
 
   // Case Selection
   const handleSelectCase = (c: CaseItem) => {
+    selectedCaseIdRef.current = c.id;
     setSelectedCaseId(c.id);
     setEditStatus(c.status);
+    setEditPriority(c.priority);
     setEditProgress(c.progress);
     setEditNotes(c.notes);
     setEditBench(c.bench);
@@ -676,9 +699,11 @@ export default function TechnicianWorkbenchPage() {
   // Load Chat Messages for Active Case
   useEffect(() => {
     if (activeCase) {
-      if (!selectedCaseId || selectedCaseId !== activeCase.id) {
+      if (!selectedCaseIdRef.current) {
+        selectedCaseIdRef.current = activeCase.id;
         setSelectedCaseId(activeCase.id);
         setEditStatus(activeCase.status);
+        setEditPriority(activeCase.priority);
         setEditProgress(activeCase.progress);
         setEditNotes(activeCase.notes);
         setEditBench(activeCase.bench);
@@ -709,38 +734,54 @@ export default function TechnicianWorkbenchPage() {
       }
       loadChat();
     }
-  }, [selectedCaseId, activeCase?.id]);
+  }, [activeCase?.id]);
 
-  // Save Telemetry & Update to Supabase
-  const handleSaveUpdate = async (e?: React.FormEvent, overrideStatus?: string) => {
-    if (e) e.preventDefault();
+  // Save Workbench / Dashboard Status (Button Only)
+  const handleSaveWorkbenchStatus = async (overrideStatus?: string) => {
     if (!activeCase) return;
 
-    const targetId = selectedCaseId || activeCase.id;
-    if (!selectedCaseId && activeCase.id) {
-      setSelectedCaseId(activeCase.id);
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    if (!selectedCaseId && targetId) {
+      selectedCaseIdRef.current = targetId;
+      setSelectedCaseId(targetId);
     }
 
+    setIsUpdatingStatus(true);
+    lastManualUpdateRef.current = Date.now();
+
     const newStatus = overrideStatus || editStatus || activeCase.status;
-    setEditStatus(newStatus);
+    const newPriority = editPriority || activeCase.priority;
+    const newBench = editBench || activeCase.bench;
     const newProgress = editProgress !== undefined ? editProgress : activeCase.progress;
     const newNotes = editNotes !== undefined ? editNotes : activeCase.notes;
-    const newBench = editBench || activeCase.bench;
 
+    setEditStatus(newStatus);
+    setEditPriority(newPriority);
+    setEditBench(newBench);
+    setEditProgress(newProgress);
+
+    // Optimistically update in local state
     setCases((prev) =>
       prev.map((c) =>
         c.id === targetId
-          ? { ...c, status: newStatus, progress: newProgress, notes: newNotes, bench: newBench }
+          ? {
+              ...c,
+              status: newStatus,
+              priority: newPriority,
+              bench: newBench,
+              progress: newProgress,
+              notes: newNotes,
+            }
           : c
       )
     );
 
-    setNotification(`Case #${targetId} saved! Status updated to "${newStatus}".`);
+    setNotification(`Case #${targetId} status updated to "${newStatus}".`);
 
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You updated #${targetId} to "${newStatus}"`,
+        text: `You updated #${targetId} status to "${newStatus}"`,
         time: "Just now",
         dotColor: newStatus.toLowerCase().includes("closed")
           ? "bg-slate-500"
@@ -751,27 +792,88 @@ export default function TechnicianWorkbenchPage() {
       ...prev.slice(0, 4),
     ]);
 
-    await updateTicketInSupabase(targetId, {
-      status: newStatus,
-      clonedPercent: newProgress,
-      techNotes: newNotes,
-      assignedBench: newBench,
-    });
-
     try {
-      await sendMessageToSupabase(
-        targetId,
-        "Technician",
-        techUser.name,
-        `Specialist Telemetry: Station "${newBench}" • Status "${newStatus}" • Progress at ${newProgress}%.${
-          newNotes ? ` Notes: ${newNotes}` : ""
-        }`
-      );
-    } catch (msgErr) {
-      console.warn("Broadcast warning:", msgErr);
+      await updateTicketInSupabase(targetId, {
+        status: newStatus,
+        priority: newPriority,
+        clonedPercent: newProgress,
+        techNotes: newNotes,
+        assignedBench: newBench,
+      });
+    } catch (err) {
+      console.warn("Error updating ticket in Supabase:", err);
+    } finally {
+      setIsUpdatingStatus(false);
+      setTimeout(() => setNotification(""), 4500);
+    }
+  };
+
+  // Backwards-compatible alias if any old caller remains
+  const handleSaveUpdate = async (e?: React.FormEvent, overrideStatus?: string) => {
+    if (e) e.preventDefault();
+    await handleSaveWorkbenchStatus(overrideStatus);
+  };
+
+  // Dispatch Customer-Facing Update to Portal (Button Only)
+  const handleSendClientUpdate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!activeCase || !clientUpdateText.trim()) return;
+
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    setIsSendingClientUpdate(true);
+    lastManualUpdateRef.current = Date.now();
+
+    const currentStatus = editStatus || activeCase.status;
+    const currentProgress = editProgress !== undefined ? editProgress : activeCase.progress;
+    const currentStation = editBench || activeCase.bench;
+
+    let broadcastMessage = clientUpdateText.trim();
+    if (notifyClientWithTelemetry) {
+      broadcastMessage += `\n\n[Status: ${currentStatus} • Progress: ${currentProgress}% • Station: ${currentStation}]`;
     }
 
-    setTimeout(() => setNotification(""), 4500);
+    const newMsg: ChatMessage = {
+      sender: "Technician",
+      author: techUser.name,
+      time: "Just now",
+      text: broadcastMessage,
+    };
+
+    setChatMessages((prev) => ({
+      ...prev,
+      [targetId]: [...(prev[targetId] || []), newMsg],
+    }));
+
+    setClientUpdateText("");
+    setNotification(`Client update successfully broadcast to #${targetId} customer portal!`);
+
+    setActivityFeed((prev) => [
+      {
+        id: Date.now(),
+        text: `You broadcast an update to customer on #${targetId}`,
+        time: "Just now",
+        dotColor: "bg-indigo-500",
+      },
+      ...prev.slice(0, 4),
+    ]);
+
+    try {
+      await sendMessageToSupabase(targetId, "Technician", techUser.name, broadcastMessage);
+    } catch (err) {
+      console.warn("Failed to broadcast client update:", err);
+    } finally {
+      setIsSendingClientUpdate(false);
+      setTimeout(() => setNotification(""), 4500);
+    }
+  };
+
+  // Administrative Close Ticket
+  const handleCloseTicket = async () => {
+    if (!activeCase) return;
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    if (!window.confirm(`Are you sure you want to close Ticket #${targetId}?`)) return;
+    setEditStatus("Closed");
+    await handleSaveWorkbenchStatus("Closed");
   };
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -1512,7 +1614,7 @@ export default function TechnicianWorkbenchPage() {
                         </button>
                       </div>
 
-                      {/* QUICK STATUS SELECT & BROADCAST */}
+                      {/* QUICK STATUS SELECT & WORKBENCH UPDATE */}
                       <div className="space-y-3 text-xs">
                         <div>
                           <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
@@ -1520,11 +1622,7 @@ export default function TechnicianWorkbenchPage() {
                           </label>
                           <select
                             value={editStatus || activeCase.status}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditStatus(val);
-                              handleSaveUpdate(undefined, val);
-                            }}
+                            onChange={(e) => setEditStatus(e.target.value)}
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
                           >
                             <optgroup label="Core Lifecycle (Steps 1 - 6)">
@@ -1546,28 +1644,74 @@ export default function TechnicianWorkbenchPage() {
                           </select>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Priority:
+                            </label>
+                            <select
+                              value={editPriority || activeCase.priority}
+                              onChange={(e) => setEditPriority(e.target.value as any)}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
+                            >
+                              <option value="CRITICAL">High</option>
+                              <option value="HIGH">Medium</option>
+                              <option value="STANDARD">Low</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Station:
+                            </label>
+                            <select
+                              value={editBench || activeCase.bench}
+                              onChange={(e) => setEditBench(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate"
+                            >
+                              {currentConfig?.benchOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
                         <div>
-                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                            Allocated Station:
-                          </label>
-                          <select
-                            value={editBench || activeCase.bench}
-                            onChange={(e) => setEditBench(e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                          >
-                            {currentConfig?.benchOptions.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-semibold text-slate-700">Progress:</span>
+                            <span className="font-mono font-bold text-blue-600">
+                              {editProgress !== undefined ? editProgress : activeCase.progress}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={editProgress !== undefined ? editProgress : activeCase.progress}
+                            onChange={(e) => setEditProgress(Number(e.target.value))}
+                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                          />
                         </div>
 
                         <button
-                          onClick={handleSaveUpdate}
-                          className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition"
+                          type="button"
+                          onClick={() => handleSaveWorkbenchStatus()}
+                          disabled={isUpdatingStatus}
+                          className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                          Update Ticket Status
+                          {isUpdatingStatus ? (
+                            <>
+                              <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Saving Status...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>💾</span>
+                              <span>Update Ticket Status</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1878,30 +2022,41 @@ export default function TechnicianWorkbenchPage() {
                 </div>
 
                 {/* WORKFLOW STEPPER (Interactive Steps 1-6 Matching Panel 7) */}
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-4 border-t border-slate-100">
-                  {["Open", "Assigned", "In Progress", "Waiting for Customer", "Resolved", "Closed"].map((st, i) => {
-                    const currentStatus = (editStatus || activeCase.status || "").toLowerCase();
-                    const isCurrent = currentStatus === st.toLowerCase();
-                    return (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => {
-                          setEditStatus(st);
-                          handleSaveUpdate(undefined, st);
-                        }}
-                        title={`Click to set status to Step ${i + 1}: ${st}`}
-                        className={`text-center p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
-                          isCurrent
-                            ? "bg-blue-50 border-blue-400 text-blue-700 shadow-sm ring-2 ring-blue-500/20"
-                            : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span className="text-[10px] block font-mono text-slate-400 font-bold">Step {i + 1}</span>
-                        <span className="truncate block mt-0.5 font-bold">{st}</span>
-                      </button>
-                    );
-                  })}
+                <div className="pt-4 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                      Workflow Lifecycle Progression
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Update Ticket Status</strong> to save
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                    {["Open", "Assigned", "In Progress", "Waiting for Customer", "Resolved", "Closed"].map((st, i) => {
+                      const currentStatus = (editStatus || activeCase.status || "").toLowerCase();
+                      const isSelected = currentStatus === st.toLowerCase();
+                      return (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setEditStatus(st)}
+                          title={`Select Step ${i + 1}: ${st}`}
+                          className={`text-center p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
+                            isSelected
+                              ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-500/25"
+                              : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span className={`text-[10px] block font-mono font-bold ${
+                            isSelected ? "text-blue-100" : "text-slate-400"
+                          }`}>
+                            Step {i + 1}
+                          </span>
+                          <span className="truncate block mt-0.5 font-bold">{st}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -1965,7 +2120,7 @@ export default function TechnicianWorkbenchPage() {
                             </div>
                             <span className="text-slate-400 text-[11px]">{msg.time}</span>
                           </div>
-                          <p className="text-xs text-slate-700 leading-relaxed">{msg.text}</p>
+                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{msg.text}</p>
                         </div>
                       ))}
                     </div>
@@ -2023,21 +2178,38 @@ export default function TechnicianWorkbenchPage() {
                   </div>
                 </div>
 
-                {/* RIGHT: TICKET ACTIONS CARD (4 COLS - Matching Panel 7) */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-4 text-xs">
-                    <h3 className="font-bold text-slate-900 text-sm">Ticket Actions</h3>
+                {/* RIGHT: TICKET ACTIONS (4 COLS - SEPARATED WORKBENCH & CLIENT DISPATCH) */}
+                <div className="lg:col-span-4 space-y-5">
+                  {/* 1. INTERNAL WORKBENCH STATUS UPDATE */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4 text-xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
+                          ⚙️
+                        </span>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                            Workbench Status
+                          </h3>
+                          <span className="text-[10px] text-slate-400 block">
+                            Internal operational controls
+                          </span>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 font-mono text-[10px] font-bold text-blue-600 border border-blue-100">
+                        Internal
+                      </span>
+                    </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Status</label>
+                    {/* Status Dropdown */}
+                    <div className="space-y-1">
+                      <label className="block font-semibold text-slate-700 text-[11px]">
+                        Lifecycle Stage:
+                      </label>
                       <select
                         value={editStatus || activeCase.status}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEditStatus(val);
-                          handleSaveUpdate(undefined, val);
-                        }}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
+                        onChange={(e) => setEditStatus(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
                       >
                         <optgroup label="Core Lifecycle (Steps 1 - 6)">
                           {availableStages.core.map((st) => (
@@ -2058,62 +2230,216 @@ export default function TechnicianWorkbenchPage() {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Priority</label>
-                      <select
-                        value={activeCase.priority}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none"
-                      >
-                        <option value="CRITICAL">High Priority</option>
-                        <option value="HIGH">Medium Priority</option>
-                        <option value="STANDARD">Low Priority</option>
-                      </select>
+                    {/* Priority & Station Grid */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="block font-semibold text-slate-700 text-[11px]">
+                          Priority:
+                        </label>
+                        <select
+                          value={editPriority || activeCase.priority}
+                          onChange={(e) => setEditPriority(e.target.value as any)}
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
+                        >
+                          <option value="CRITICAL">High</option>
+                          <option value="HIGH">Medium</option>
+                          <option value="STANDARD">Low</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block font-semibold text-slate-700 text-[11px]">
+                          Station:
+                        </label>
+                        <select
+                          value={editBench || activeCase.bench}
+                          onChange={(e) => setEditBench(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium truncate"
+                        >
+                          {currentConfig?.benchOptions.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Allocated Station</label>
-                      <select
-                        value={editBench || activeCase.bench}
-                        onChange={(e) => setEditBench(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 outline-none"
-                      >
-                        {currentConfig?.benchOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Progress Slider */}
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-slate-700">Completion Progress:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          {editProgress !== undefined ? editProgress : activeCase.progress}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={editProgress !== undefined ? editProgress : activeCase.progress}
+                        onChange={(e) => setEditProgress(Number(e.target.value))}
+                        className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                      />
                     </div>
+
+                    {/* Internal Tech Notes */}
+                    <div className="space-y-1 pt-1">
+                      <label className="block font-semibold text-slate-700 text-[11px]">
+                        Internal Workbench Notes:
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editNotes}
+                        onChange={(e) => setEditNotes(e.target.value)}
+                        placeholder="Technical notes, lab log, firmware revision..."
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
+                      />
+                    </div>
+
+                    {/* Dedicated Status Update Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleSaveWorkbenchStatus()}
+                      disabled={isUpdatingStatus}
+                      className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Saving Status...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>💾</span>
+                          <span>Update Ticket Status</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 2. CLIENT PORTAL UPDATE (CUSTOMER-FACING BROADCAST) */}
+                  <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-b from-blue-50/40 to-white p-5 shadow-sm space-y-3.5 text-xs">
+                    <div className="flex items-center justify-between border-b border-blue-100/70 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-sm">
+                          📢
+                        </span>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                            Client Portal Update
+                          </h3>
+                          <span className="text-[10px] text-slate-500 block">
+                            Direct broadcast to customer portal
+                          </span>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                        Customer Visible
+                      </span>
+                    </div>
+
+                    {/* Preset Status Quick Chips */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold text-slate-600">
+                        Quick Preset Messages:
+                      </label>
+                      <div className="flex flex-col gap-1">
+                        {[
+                          "Diagnostics completed, bench operations underway.",
+                          "Replacement components acquired, resuming procedure.",
+                          "Recovery 100% verified, preparing files for handover.",
+                          "Awaiting customer authorization for next phase.",
+                        ].map((tmpl, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setClientUpdateText(tmpl)}
+                            className="rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/60 px-2.5 py-1 text-[11px] text-slate-700 transition text-left truncate"
+                          >
+                            + {tmpl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Client Update Message Textarea */}
+                    <div className="space-y-1">
+                      <label className="block font-semibold text-slate-700 text-[11px]">
+                        Customer Message / Dispatch:
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={clientUpdateText}
+                        onChange={(e) => setClientUpdateText(e.target.value)}
+                        placeholder="Type update message for client to view on tracking portal..."
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Telemetry Toggle */}
+                    <label className="flex items-center gap-2 text-[11px] font-medium text-slate-600 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={notifyClientWithTelemetry}
+                        onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Include stage ({editStatus || activeCase.status}) &amp; progress stamp</span>
+                    </label>
+
+                    {/* Send Client Update Button */}
+                    <button
+                      type="button"
+                      onClick={handleSendClientUpdate}
+                      disabled={isSendingClientUpdate || !clientUpdateText.trim()}
+                      className="w-full rounded-xl bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSendingClientUpdate ? (
+                        <>
+                          <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Broadcasting to Portal...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>✉️</span>
+                          <span>Send Client Update</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 3. ADMINISTRATIVE QUICK ACTIONS */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm space-y-2 text-xs">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+                      Quick Actions
+                    </span>
 
                     <button
-                      onClick={handleSaveUpdate}
-                      className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-sm"
+                      type="button"
+                      onClick={() => setNotification("Reassign ticket dialog opened.")}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2 transition"
                     >
-                      Update Ticket
+                      <span>🔄</span>
+                      <span>Reassign Ticket</span>
                     </button>
 
-                    <div className="pt-2 border-t border-slate-100 space-y-2">
-                      <button
-                        onClick={() => setNotification("Reassign ticket dialog opened.")}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2"
-                      >
-                        <span>🔄</span>
-                        <span>Reassign</span>
-                      </button>
-                      <button
-                        onClick={() => setNotification("Attachment dialog opened.")}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2"
-                      >
-                        <span>📎</span>
-                        <span>Add Attachment</span>
-                      </button>
-                      <button
-                        onClick={() => handleSaveUpdate(undefined, "Closed")}
-                        className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2 font-bold text-rose-600 hover:bg-rose-100 text-center block transition cursor-pointer"
-                      >
-                        ✕ Close Ticket
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotification("Attachment dialog opened.")}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 font-semibold text-slate-700 hover:bg-slate-100 text-left px-3 flex items-center gap-2 transition"
+                    >
+                      <span>📎</span>
+                      <span>Add Attachment</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCloseTicket}
+                      className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2 font-bold text-rose-600 hover:bg-rose-100 text-center block transition cursor-pointer"
+                    >
+                      ✕ Close Ticket
+                    </button>
                   </div>
                 </div>
               </div>

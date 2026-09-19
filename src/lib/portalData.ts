@@ -460,6 +460,8 @@ export async function updateTicketInSupabase(
     techNotes?: string;
     assignedBench?: string;
     assignedTech?: string;
+    priority?: string;
+    urgency?: string;
   }
 ) {
   try {
@@ -467,7 +469,10 @@ export async function updateTicketInSupabase(
       const res = await fetch(`/api/tickets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          ...updates,
+          urgency: updates.urgency || updates.priority,
+        }),
       });
       if (res.ok) return;
     }
@@ -483,6 +488,7 @@ export async function updateTicketInSupabase(
     if (updates.techNotes !== undefined) payload.tech_notes = updates.techNotes;
     if (updates.assignedBench !== undefined) payload.assigned_bench = updates.assignedBench;
     if (updates.assignedTech !== undefined) payload.assigned_tech = updates.assignedTech;
+    if (updates.urgency || updates.priority) payload.urgency = updates.urgency || updates.priority;
 
     await supabase.from("tickets").update(payload).eq("id", id);
   } catch (err) {

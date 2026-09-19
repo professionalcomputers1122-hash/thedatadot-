@@ -107,9 +107,17 @@ export async function fetchTicketAttachments(ticketId: string): Promise<TicketAt
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json?.attachments)) {
-          const list: TicketAttachment[] = json.attachments;
-          saveTicketAttachments(cleanId, list, false, false);
-          return list;
+          const serverList: TicketAttachment[] = json.attachments;
+          const currentLocal = getTicketAttachments(cleanId);
+          // Keep local attachments that aren't yet reflected on the server
+          const pending = currentLocal.filter((localAtt) => {
+            return !serverList.some(
+              (s) => s.id === localAtt.id || s.name === localAtt.name
+            );
+          });
+          const merged = [...serverList, ...pending];
+          saveTicketAttachments(cleanId, merged, false, false);
+          return merged;
         }
       }
     }
@@ -154,6 +162,9 @@ export async function uploadTicketAttachment(
         saveTicketAttachments(cleanId, updated, true, true);
         return json.attachment;
       }
+    } else {
+      const errText = await res.text().catch(() => "");
+      console.warn(`[portalData] Attachment upload responded with status ${res.status}:`, errText);
     }
   } catch (err) {
     console.error(`[portalData] Failed to upload attachment for ${cleanId}:`, err);

@@ -317,7 +317,7 @@ export default function TechnicianTicketDetailPage({
 
     const currentLocal = getTicketAttachments(cleanId);
     const combinedOptimistic = [...currentLocal, ...optimisticAtts];
-    saveTicketAttachments(cleanId, combinedOptimistic, true, true);
+    saveTicketAttachments(cleanId, combinedOptimistic, true, false);
     setAttachments(combinedOptimistic);
 
     if (fileInputRef.current) {

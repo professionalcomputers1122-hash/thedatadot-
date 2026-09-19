@@ -794,11 +794,13 @@ export default function TechnicianWorkbenchPage() {
           }));
         }
         fetchTicketAttachments(activeId).then((serverAtts) => {
-          setAttachments((prev) => ({
-            ...prev,
-            [activeId]: serverAtts,
-            [activeId.toLowerCase()]: serverAtts,
-          }));
+          if (Array.isArray(serverAtts) && serverAtts.length > 0) {
+            setAttachments((prev) => ({
+              ...prev,
+              [activeId]: serverAtts,
+              [activeId.toLowerCase()]: serverAtts,
+            }));
+          }
         });
       }
     };
@@ -820,11 +822,13 @@ export default function TechnicianWorkbenchPage() {
               }));
             }
             fetchTicketAttachments(tId).then((serverAtts) => {
-              setAttachments((prev) => ({
-                ...prev,
-                [tId]: serverAtts,
-                [tId.toLowerCase()]: serverAtts,
-              }));
+              if (Array.isArray(serverAtts) && serverAtts.length > 0) {
+                setAttachments((prev) => ({
+                  ...prev,
+                  [tId]: serverAtts,
+                  [tId.toLowerCase()]: serverAtts,
+                }));
+              }
             });
           } else if (ev.data?.type === "TICKET_UPDATED" || ev.data?.type === "TICKET_CREATED") {
             loadSupabaseData();
@@ -1026,14 +1030,18 @@ export default function TechnicianWorkbenchPage() {
     const id = activeCase.id.trim();
     const upper = id.toUpperCase();
     const lower = id.toLowerCase();
-    const list =
-      attachments[id] ||
-      attachments[upper] ||
-      attachments[lower] ||
-      getTicketAttachments(id) ||
-      getTicketAttachments(upper) ||
-      [];
-    return Array.isArray(list) ? list : [];
+
+    const stateList = attachments[id] || attachments[upper] || attachments[lower];
+    if (Array.isArray(stateList) && stateList.length > 0) {
+      return stateList;
+    }
+
+    const localList = getTicketAttachments(id) || getTicketAttachments(upper) || getTicketAttachments(lower);
+    if (Array.isArray(localList) && localList.length > 0) {
+      return localList;
+    }
+
+    return Array.isArray(stateList) ? stateList : [];
   }, [attachments, activeCase?.id]);
 
   // Open Advanced Diagnostic Report Generator Modal (100% separate client report)
@@ -1159,10 +1167,14 @@ export default function TechnicianWorkbenchPage() {
             }));
           }
           fetchTicketAttachments(activeCase.id).then((serverAtts) => {
-            setAttachments((prev) => ({
-              ...prev,
-              [activeCase.id]: serverAtts,
-            }));
+            if (Array.isArray(serverAtts) && serverAtts.length > 0) {
+              setAttachments((prev) => ({
+                ...prev,
+                [activeCase.id]: serverAtts,
+                [activeCase.id.toLowerCase()]: serverAtts,
+                [activeCase.id.toUpperCase()]: serverAtts,
+              }));
+            }
           });
         } catch (e) {
           console.warn("Could not load stored attachments:", e);
@@ -1683,7 +1695,7 @@ export default function TechnicianWorkbenchPage() {
 
     const currentLocal = getTicketAttachments(targetId);
     const combinedOptimistic = [...currentLocal, ...optimisticAtts];
-    saveTicketAttachments(targetId, combinedOptimistic, true, true);
+    saveTicketAttachments(targetId, combinedOptimistic, true, false);
 
     setAttachments((prev) => ({
       ...prev,

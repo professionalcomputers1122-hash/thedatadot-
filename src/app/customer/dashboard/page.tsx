@@ -224,7 +224,11 @@ export default function CustomerDashboardPage() {
       try {
         const serverAtts = await fetchTicketAttachments(cleanId);
         if (isMounted) {
-          setAttachments(serverAtts);
+          if (Array.isArray(serverAtts) && serverAtts.length > 0) {
+            setAttachments(serverAtts);
+          } else if (!local || local.length === 0) {
+            setAttachments([]);
+          }
         }
       } catch (err) {
         console.warn("Could not sync server attachments:", err);

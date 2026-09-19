@@ -489,6 +489,8 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
               (t: Ticket) =>
                 !deletedIds.has(t.id.trim().toUpperCase()) &&
                 !t.id.toUpperCase().startsWith("INQ-") &&
+                !t.id.toUpperCase().startsWith("DR-") &&
+                !t.id.toUpperCase().startsWith("RPT-") &&
                 !inquiryStatuses.has(t.status)
             )
             .map(applyTicketOverrides);
@@ -505,6 +507,8 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
                     (t: Ticket) =>
                       !deletedIds.has(t.id.trim().toUpperCase()) &&
                       !t.id.toUpperCase().startsWith("INQ-") &&
+                      !t.id.toUpperCase().startsWith("DR-") &&
+                      !t.id.toUpperCase().startsWith("RPT-") &&
                       !inquiryStatuses.has(t.status)
                   )
                   .map(applyTicketOverrides);
@@ -556,6 +560,8 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
         (t: Ticket) =>
           !deletedIds.has(t.id.trim().toUpperCase()) &&
           !t.id.toUpperCase().startsWith("INQ-") &&
+          !t.id.toUpperCase().startsWith("DR-") &&
+          !t.id.toUpperCase().startsWith("RPT-") &&
           !inquiryStatuses.has(t.status)
       )
       .map(applyTicketOverrides);

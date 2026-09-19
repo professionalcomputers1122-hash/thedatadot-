@@ -789,28 +789,12 @@ export default function TechnicianWorkbenchPage() {
     );
   }, [viewFilteredCases, workbenchFilteredCases, cases, selectedCaseId]);
 
-  // Open Advanced Diagnostic Report Generator Modal
-  const handleOpenReportModal = (targetItem?: CaseItem | DiagnosisReport) => {
-    if (targetItem && "brand" in targetItem) {
-      // Already a full DiagnosisReport
-      setReportModalInitialData(targetItem);
-    } else if (targetItem && "device" in targetItem) {
-      // CaseItem
-      const cleanNum = targetItem.id?.replace(/[^0-9]/g, "") || `${2000 + diagnosisReports.length + 1}`;
-      const isSsd = targetItem.mediaType === "SSD" || targetItem.device?.toLowerCase().includes("ssd");
-      const isNvme = targetItem.device?.toLowerCase().includes("nvme") || targetItem.device?.toLowerCase().includes("m.2");
-      const isFlash = targetItem.mediaType === "FLASH" || targetItem.device?.toLowerCase().includes("flash") || targetItem.device?.toLowerCase().includes("usb");
-      const devType: "HDD" | "SSD" | "NVMe" | "FLASH" = isNvme ? "NVMe" : isSsd ? "SSD" : isFlash ? "FLASH" : "HDD";
-
-      setReportModalInitialData({
-        jobId: cleanNum,
-        clientName: targetItem.customerName || targetItem.client || "Client",
-        serialNumber: targetItem.serial || "ABC123456",
-        deviceType: devType,
-        symptoms: targetItem.symptoms || targetItem.notes || "Clicking sound, drive not detecting",
-      });
+  // Open Advanced Diagnostic Report Generator Modal (100% separate client report)
+  const handleOpenReportModal = (targetReport?: DiagnosisReport) => {
+    if (targetReport) {
+      setReportModalInitialData(targetReport);
     } else {
-      // New fresh report
+      // New fresh report for client
       const nextId = `${2000 + diagnosisReports.length + 1}`;
       setReportModalInitialData({
         jobId: nextId,
@@ -2895,15 +2879,6 @@ export default function TechnicianWorkbenchPage() {
                   ← Back to My Tickets
                 </button>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenReportModal(activeCase)}
-                    className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                    title="Generate Advanced Diagnostic Report PDF for this ticket"
-                  >
-                    <span>📄</span>
-                    <span>Diagnosis Report</span>
-                  </button>
                   <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
                     <span>Created: {activeCase.createdAt || "4 Aug 2025, 10:24 AM"}</span>
                     <span>•</span>

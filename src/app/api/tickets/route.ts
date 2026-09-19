@@ -69,6 +69,8 @@ export async function GET(req: Request) {
       (t) =>
         !deletedTicketIds.has((t.id || "").trim().toUpperCase()) &&
         !t.id.toUpperCase().startsWith("INQ-") &&
+        !t.id.toUpperCase().startsWith("DR-") &&
+        !t.id.toUpperCase().startsWith("RPT-") &&
         !inquiryStatuses.has(t.status)
     );
 

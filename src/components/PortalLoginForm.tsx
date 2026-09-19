@@ -182,7 +182,7 @@ export default function PortalLoginForm() {
       {/* Sign-up link */}
       <div className="mt-5 text-center text-xs text-slate-400">
         New client organization?{" "}
-        <Link href="/customer/register" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
+        <Link href="/onboarding" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
           Request Client Onboarding →
         </Link>
       </div>

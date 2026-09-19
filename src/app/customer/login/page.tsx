@@ -144,7 +144,7 @@ export default function CustomerLoginPage() {
 
           <div className="mt-6 border-t border-slate-100 pt-5 text-center text-xs text-slate-600">
             New client organization?{" "}
-            <Link href="/customer/register" className="font-bold text-blue-600 hover:underline">
+            <Link href="/onboarding" className="font-bold text-blue-600 hover:underline">
               Request Client Onboarding →
             </Link>
           </div>

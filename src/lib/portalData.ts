@@ -836,6 +836,7 @@ export interface Inquiry {
   service: string;
   urgency: string;
   message: string;
+  source?: string;
   coordinationNotes?: string;
   status: "New Request" | "In Coordination" | "Contacted" | "Converted" | string;
   createdAt: string;

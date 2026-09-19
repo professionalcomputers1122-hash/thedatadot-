@@ -112,6 +112,13 @@ export default function Header({ theme = "light" }: { theme?: "light" | "dark" }
                     </div>
                     <div className="flex items-center gap-3">
                       <Link
+                        href="/onboarding"
+                        onClick={() => setServicesMegaOpen(false)}
+                        className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
+                      >
+                        Client Onboarding Intake →
+                      </Link>
+                      <Link
                         href="/services"
                         onClick={() => setServicesMegaOpen(false)}
                         className="text-blue-400 font-bold hover:underline"
@@ -888,6 +895,14 @@ export default function Header({ theme = "light" }: { theme?: "light" | "dark" }
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
                 <span>Client Login</span>
+              </Link>
+
+              <Link
+                href="/onboarding"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center rounded-lg border border-blue-500/40 bg-blue-500/10 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 transition hover:bg-blue-500/20"
+              >
+                Client Onboarding &amp; SLA →
               </Link>
 
               <Link

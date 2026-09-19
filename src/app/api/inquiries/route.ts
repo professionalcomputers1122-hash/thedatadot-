@@ -80,6 +80,7 @@ export async function GET(req: Request) {
           service: row.device_or_subject,
           urgency: row.urgency || "Standard",
           message: parsedSymptoms.message || row.symptoms || "",
+          source: (parsedSymptoms as any).source || (row.id.startsWith("INQ-ONB") ? "Client Onboarding Portal" : "Website Contact Form"),
           coordinationNotes: row.tech_notes || "",
           status: row.status || "New Request",
           createdAt: row.created_at,
@@ -111,18 +112,33 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       name,
-      customerName = name,
+      contactName,
+      customerName = name || contactName,
       email,
       customerEmail = email,
       company,
       companyName = company || "Direct Client Inquiry",
       phone = "",
       teamSize = "11 - 50 employees",
-      service = "General Consultation & SLA",
-      urgency = "Standard",
-      message = "",
+      service,
+      serviceNeeded,
+      urgency,
+      sla,
+      slaTier,
+      message,
+      requirements,
+      source = "Website Consultation / SLA Form",
       id,
     } = body;
+
+    const finalService = service || serviceNeeded || "General Consultation & SLA";
+    const rawUrgency = urgency || sla || slaTier || "Standard";
+    const finalUrgency = rawUrgency.toLowerCase().includes("15-min") || rawUrgency.toLowerCase().includes("critical")
+      ? "Critical"
+      : rawUrgency.toLowerCase().includes("4-hour") || rawUrgency.toLowerCase().includes("high")
+      ? "High"
+      : "Standard";
+    const finalMessage = message || requirements || "No additional message provided.";
 
     if (!customerName || !customerEmail) {
       return NextResponse.json(
@@ -136,25 +152,23 @@ export async function POST(req: Request) {
     const structuredSymptoms = JSON.stringify({
       phone: phone || "N/A",
       teamSize: teamSize || "11 - 50 employees",
-      message: message || "No additional message provided.",
-      source: "Website Consultation / SLA Form",
+      message: finalMessage,
+      source: source || "Website Consultation / SLA Form",
     });
-
-    const cleanUrgency = urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase();
 
     const record = {
       id: inquiryId,
       company_name: companyName,
       customer_name: customerName,
       customer_email: customerEmail,
-      device_or_subject: service,
+      device_or_subject: finalService,
       media_type: "GENERAL",
       serial_number: phone || "N/A",
       status: "New Request",
       cloned_percent: 0,
-      urgency: cleanUrgency,
+      urgency: finalUrgency,
       symptoms: structuredSymptoms,
-      tech_notes: "Initial website inquiry logged. Awaiting team coordination.",
+      tech_notes: `Initial inquiry logged from ${source}. Awaiting team coordination.`,
       assigned_bench: "Client Coordination Desk",
       assigned_tech: "Unassigned",
       created_at: new Date().toISOString(),
@@ -204,9 +218,10 @@ export async function POST(req: Request) {
         companyName,
         phone,
         teamSize,
-        service,
-        urgency: cleanUrgency,
-        message,
+        service: finalService,
+        urgency: finalUrgency,
+        message: finalMessage,
+        source: source || "Website Consultation / SLA Form",
         status: "New Request",
         createdAt: record.created_at,
       },

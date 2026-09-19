@@ -174,6 +174,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/onboarding" className="text-emerald-400 font-semibold transition hover:text-emerald-300">
+                  Client Onboarding &amp; SLA
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="transition hover:text-white">
                   Contact Support
                 </Link>

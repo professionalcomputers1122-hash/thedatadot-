@@ -6,6 +6,7 @@ import Link from "next/link";
 export default function CustomerRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [refNumber, setRefNumber] = useState("");
   const [formData, setFormData] = useState({
     companyName: "",
     contactName: "",
@@ -21,26 +22,47 @@ export default function CustomerRegisterPage() {
     if (!formData.email || !formData.companyName || !formData.contactName) return;
 
     setLoading(true);
+    const generatedRef = `INQ-ONB-${Math.floor(100000 + Math.random() * 900000)}`;
+    const cleanUrgency = formData.slaTier?.toLowerCase().includes("15-min") ? "Critical" : "Standard";
 
     try {
-      // Dispatch onboarding notification via email/audit endpoint
+      // 1. Save onboarding lead into Admin Inquiries system
+      await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: generatedRef,
+          customerName: formData.contactName,
+          customerEmail: formData.email,
+          companyName: formData.companyName,
+          phone: formData.phone,
+          service: formData.serviceNeeded,
+          urgency: cleanUrgency,
+          message: formData.requirements || "Enterprise client onboarding request submitted via customer portal registration.",
+          source: "Client Portal Onboarding Form",
+        }),
+      });
+
+      // 2. Dispatch Dual Emails (Admin alert + Client receipt)
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "enterprise_lead",
-          name: formData.contactName,
-          email: formData.email,
+          type: "inquiry",
+          inquiryId: generatedRef,
+          customerName: formData.contactName,
+          customerEmail: formData.email,
+          companyName: formData.companyName,
           phone: formData.phone,
-          company: formData.companyName,
           service: formData.serviceNeeded,
-          sla: formData.slaTier,
-          message: formData.requirements || "Enterprise client onboarding request submitted via customer portal.",
+          urgency: cleanUrgency,
+          message: formData.requirements || "Enterprise client onboarding request submitted via customer portal registration.",
         }),
       });
     } catch (err) {
       console.warn("Onboarding notification dispatch note:", err);
     } finally {
+      setRefNumber(generatedRef);
       setLoading(false);
       setSubmitted(true);
     }
@@ -79,6 +101,10 @@ export default function CustomerRegisterPage() {
             </p>
 
             <div className="my-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left text-xs space-y-2 text-slate-700">
+              <div className="flex justify-between border-b border-slate-200/80 pb-2">
+                <span className="text-slate-500">Tracking Reference:</span>
+                <span className="font-mono font-bold text-blue-600">#{refNumber}</span>
+              </div>
               <div className="flex justify-between border-b border-slate-200/80 pb-2">
                 <span className="text-slate-500">Target Organization:</span>
                 <span className="font-semibold text-slate-900">{formData.companyName}</span>

@@ -16,6 +16,7 @@ export default function AdminInquiriesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL");
   const [notification, setNotification] = useState("");
 
   // Coordinate Modal State
@@ -279,6 +280,14 @@ export default function AdminInquiriesPage() {
       (filter === "Contacted" && inq.status === "Contacted") ||
       (filter === "Converted" && inq.status === "Converted");
 
+    const matchesSource =
+      sourceFilter === "ALL" ||
+      (sourceFilter === "ONBOARDING" &&
+        (inq.source?.toLowerCase().includes("onboard") || inq.id.startsWith("INQ-ONB"))) ||
+      (sourceFilter === "CONTACT" &&
+        !inq.source?.toLowerCase().includes("onboard") &&
+        !inq.id.startsWith("INQ-ONB"));
+
     const matchesSearch =
       inq.id.toLowerCase().includes(search.toLowerCase()) ||
       inq.customerName.toLowerCase().includes(search.toLowerCase()) ||
@@ -287,7 +296,7 @@ export default function AdminInquiriesPage() {
       (inq.phone && inq.phone.toLowerCase().includes(search.toLowerCase())) ||
       (inq.service && inq.service.toLowerCase().includes(search.toLowerCase()));
 
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesSource && matchesSearch;
   });
 
   // KPI Metrics
@@ -356,6 +365,35 @@ export default function AdminInquiriesPage() {
     return (
       <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[11px] font-bold text-blue-400 uppercase">
         🟢 Standard SLA
+      </span>
+    );
+  };
+
+  const getSourceBadge = (source?: string, id?: string) => {
+    const isSpecialOnboarding =
+      source?.toLowerCase().includes("onboarding") || id?.startsWith("INQ-ONB");
+    const isRegister = source?.toLowerCase().includes("register");
+
+    if (isSpecialOnboarding) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[11px] font-bold text-purple-300">
+          <span>🚀</span>
+          <span>Onboarding Intake</span>
+        </span>
+      );
+    }
+    if (isRegister) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+          <span>🔐</span>
+          <span>Portal Registration</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[11px] font-bold text-blue-300">
+        <span>🌐</span>
+        <span>Contact Form</span>
       </span>
     );
   };
@@ -451,18 +489,41 @@ export default function AdminInquiriesPage() {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div className="relative w-full sm:w-72">
-          <input
-            type="text"
-            placeholder="Search leads, name, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-800 bg-[#0f172a] px-3.5 py-2 pl-9 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
-          />
-          <svg className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+        {/* Source Filter Tabs & Search */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-[#0f172a] p-1 text-xs font-semibold">
+            {[
+              { id: "ALL", label: "All Channels" },
+              { id: "ONBOARDING", label: "🚀 Onboarding Leads" },
+              { id: "CONTACT", label: "🌐 Contact Forms" },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={() => setSourceFilter(st.id)}
+                className={`rounded-lg px-2.5 py-1 transition ${
+                  sourceFilter === st.id
+                    ? "bg-slate-700 text-white shadow-xs font-bold"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search leads, name, phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-slate-800 bg-[#0f172a] px-3.5 py-2 pl-9 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+            />
+            <svg className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -481,7 +542,7 @@ export default function AdminInquiriesPage() {
           </div>
           <h3 className="text-base font-bold text-white">No Inquiries Found</h3>
           <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
-            {search ? `No results matching "${search}".` : "No website consultation requests in this status category."}
+            {search ? `No results matching "${search}".` : "No client onboarding or consultation requests match the selected criteria."}
           </p>
         </div>
       ) : (
@@ -507,6 +568,7 @@ export default function AdminInquiriesPage() {
                     </span>
                     {getStatusBadge(inq.status)}
                     {getUrgencyBadge(inq.urgency)}
+                    {getSourceBadge(inq.source, inq.id)}
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-slate-400">

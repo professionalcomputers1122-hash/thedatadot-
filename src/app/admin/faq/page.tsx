@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
-import { fetchFaqsFromSupabase, createOrUpdateFaqInSupabase } from "@/lib/portalData";
+import {
+  fetchFaqsFromSupabase,
+  createOrUpdateFaqInSupabase,
+  deleteFaqFromSupabase,
+} from "@/lib/portalData";
 
 export type FAQCategoryName =
   | "General FAQ"
@@ -226,11 +230,17 @@ export default function AdminFAQPage() {
 
   const [deleteModalFaq, setDeleteModalFaq] = useState<FAQItem | null>(null);
 
-  const handleConfirmDeleteFaq = () => {
+  const handleConfirmDeleteFaq = async () => {
     if (!deleteModalFaq) return;
-    setFaqs((prev) => prev.filter((item) => item.id !== deleteModalFaq.id));
-    setNotification("FAQ item deleted.");
+    const targetFaq = deleteModalFaq;
+    setFaqs((prev) => prev.filter((item) => item.id !== targetFaq.id));
+    setNotification("FAQ item permanently deleted.");
     setDeleteModalFaq(null);
+    try {
+      await deleteFaqFromSupabase(targetFaq.id);
+    } catch (err) {
+      console.error("Error deleting FAQ from database:", err);
+    }
     setTimeout(() => setNotification(""), 4000);
   };
 

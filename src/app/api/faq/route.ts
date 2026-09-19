@@ -90,3 +90,51 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    let id: string | null = null;
+    try {
+      const body = await req.json();
+      if (body && body.id) id = body.id;
+    } catch {
+      // not a json payload, fallback to query param
+    }
+
+    if (!id) {
+      const { searchParams } = new URL(req.url);
+      id = searchParams.get("id");
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing required query or body parameter: id" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("faqs").delete().eq("id", id);
+
+    if (error) {
+      console.error("[API /api/faq DELETE error]:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedId: id,
+      message: `FAQ ${id} successfully deleted from database`,
+    });
+  } catch (err: any) {
+    console.error("[API /api/faq DELETE exception]:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+

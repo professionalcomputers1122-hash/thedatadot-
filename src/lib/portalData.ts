@@ -1164,13 +1164,27 @@ export interface SupabaseFaq {
   created_at?: string;
 }
 
+export function getDeletedFaqIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("tdd_deleted_faqs");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchFaqsFromSupabase(): Promise<SupabaseFaq[]> {
+  const deletedIds = new Set(getDeletedFaqIds());
+
   try {
     if (typeof window !== "undefined") {
       const res = await fetch("/api/faq");
       if (res.ok) {
         const json = await res.json();
-        if (json.faqs) return json.faqs;
+        if (json.faqs && Array.isArray(json.faqs)) {
+          return json.faqs.filter((f: any) => !deletedIds.has(f.id));
+        }
       }
     }
   } catch (apiErr) {
@@ -1185,7 +1199,7 @@ export async function fetchFaqsFromSupabase(): Promise<SupabaseFaq[]> {
       .order("display_order", { ascending: true });
 
     if (error || !data) return [];
-    return data;
+    return data.filter((f: any) => !deletedIds.has(f.id));
   } catch (err) {
     console.error("Failed to fetch faqs from Supabase:", err);
     return [];
@@ -1193,6 +1207,16 @@ export async function fetchFaqsFromSupabase(): Promise<SupabaseFaq[]> {
 }
 
 export async function createOrUpdateFaqInSupabase(faq: SupabaseFaq) {
+  // If previously marked as deleted, unmark it
+  if (typeof window !== "undefined") {
+    try {
+      const deleted = getDeletedFaqIds().filter((id) => id !== faq.id);
+      localStorage.setItem("tdd_deleted_faqs", JSON.stringify(deleted));
+    } catch (e) {
+      console.warn("Error unmarking deleted faq:", e);
+    }
+  }
+
   try {
     if (typeof window !== "undefined") {
       const res = await fetch("/api/faq", {
@@ -1212,6 +1236,49 @@ export async function createOrUpdateFaqInSupabase(faq: SupabaseFaq) {
   } catch (err) {
     console.error("Failed to upsert faq in Supabase:", err);
   }
+}
+
+export async function deleteFaqFromSupabase(id: string): Promise<boolean> {
+  const cleanId = (id || "").trim();
+  if (!cleanId) return false;
+
+  // 1. Instantly record in local storage so any refresh or re-fetch immediately excludes it
+  if (typeof window !== "undefined") {
+    try {
+      const current = getDeletedFaqIds();
+      if (!current.includes(cleanId)) {
+        current.push(cleanId);
+        localStorage.setItem("tdd_deleted_faqs", JSON.stringify(current));
+      }
+      window.dispatchEvent(new Event("faqs-updated"));
+    } catch (e) {
+      console.warn("FAQ local storage delete error:", e);
+    }
+  }
+
+  // 2. Call backend API DELETE /api/faq
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/faq?id=${encodeURIComponent(cleanId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) return true;
+    }
+  } catch (apiErr) {
+    console.warn("API faq delete error:", apiErr);
+  }
+
+  // 3. Direct Supabase delete if configured
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from("faqs").delete().eq("id", cleanId);
+      return true;
+    } catch (err) {
+      console.error("Direct Supabase faq delete error:", err);
+    }
+  }
+
+  return true;
 }
 
 // ================= CLIENT INQUIRIES & LEADS =================

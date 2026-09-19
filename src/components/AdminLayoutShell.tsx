@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useState, useEffect } from "react";
+import { getAdminSession, clearAdminSession, AdminSession } from "@/lib/adminAuth";
 
 interface AdminLayoutShellProps {
   children: ReactNode;
@@ -18,6 +19,35 @@ export default function AdminLayoutShell({
   actions,
 }: AdminLayoutShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [adminSession, setAdminSession] = useState<AdminSession | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const session = getAdminSession();
+    if (!session) {
+      router.push("/admin/login");
+    } else {
+      setAdminSession(session);
+      setAuthChecking(false);
+    }
+
+    const handleSessionChange = (e: any) => {
+      if (!e.detail) {
+        router.push("/admin/login");
+      } else {
+        setAdminSession(e.detail);
+      }
+    };
+
+    window.addEventListener("tdd_admin_session_changed", handleSessionChange);
+    return () => window.removeEventListener("tdd_admin_session_changed", handleSessionChange);
+  }, [router]);
+
+  const handleSignOut = () => {
+    clearAdminSession();
+    router.push("/admin/login");
+  };
 
   const navGroups = [
     {
@@ -151,6 +181,17 @@ export default function AdminLayoutShell({
     },
   ];
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#0b1324] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-slate-400 text-xs font-mono">
+          <div className="h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent animate-spin" />
+          <span>Verifying Executive Security Credentials...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0b1324] text-slate-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white">
       {/* SIDEBAR */}
@@ -208,20 +249,26 @@ export default function AdminLayoutShell({
         <div className="p-4 border-t border-slate-800 bg-slate-950/40 text-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-xs border border-blue-500/30">
-                SA
+              <div className="h-8 w-8 rounded-full bg-red-600/20 text-red-400 font-bold flex items-center justify-center text-xs border border-red-500/30">
+                EB
               </div>
               <div className="truncate max-w-[120px]">
-                <p className="font-bold text-white text-xs truncate">Super Admin</p>
-                <p className="text-[10px] text-slate-400 truncate font-mono">admin@thedatadot.com</p>
+                <p className="font-bold text-white text-xs truncate">
+                  {adminSession?.name || "Ebinezer"}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate font-mono">
+                  {adminSession?.email || "ebinezer@thedatadot.com"}
+                </p>
               </div>
             </div>
-            <Link
-              href="/admin/login"
-              className="text-[10px] font-semibold text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition"
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="text-[10px] font-semibold text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+              title="End Secure Admin Session"
             >
               Sign Out
-            </Link>
+            </button>
           </div>
 
           <Link

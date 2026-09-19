@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
+import { getAdminCredentials, saveAdminCredentials } from "@/lib/adminAuth";
 
 export default function AdminSettingsPage() {
   const [notification, setNotification] = useState("");
@@ -49,6 +50,49 @@ export default function AdminSettingsPage() {
     }
     setNotification("Global website appearance, public live updates & contact settings saved successfully!");
     setTimeout(() => setNotification(""), 4000);
+  };
+
+  // Section 4: Security & Master Key state
+  const [adminEmail, setAdminEmail] = useState("ebinezer@thedatadot.com");
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [secNotice, setSecNotice] = useState("");
+  const [secError, setSecError] = useState("");
+
+  useEffect(() => {
+    const creds = getAdminCredentials();
+    setAdminEmail(creds.email);
+  }, []);
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecNotice("");
+    setSecError("");
+
+    const creds = getAdminCredentials();
+
+    if (currentPw !== creds.password) {
+      setSecError("Current Master Security Key is incorrect.");
+      return;
+    }
+
+    if (newPw.length < 8) {
+      setSecError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    if (newPw !== confirmPw) {
+      setSecError("New password and confirm password do not match.");
+      return;
+    }
+
+    saveAdminCredentials({ password: newPw });
+    setCurrentPw("");
+    setNewPw("");
+    setConfirmPw("");
+    setSecNotice("✓ Executive Admin Master Key updated successfully.");
+    setTimeout(() => setSecNotice(""), 5000);
   };
 
   return (
@@ -257,6 +301,110 @@ export default function AdminSettingsPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* SECTION 4: EXECUTIVE SECURITY & MASTER ADMIN PASSWORD */}
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-red-400 flex items-center gap-2">
+                <span>🔐</span>
+                <span>Executive Administrator Security &amp; Access Keys</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Manage master credentials for the Super Admin Command Console.
+              </p>
+            </div>
+            <span className="rounded-full bg-red-500/10 border border-red-500/30 px-3 py-1 text-[11px] font-mono font-bold text-red-400">
+              Tier-1 Security
+            </span>
+          </div>
+
+          {secNotice && (
+            <div className="mb-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300">
+              {secNotice}
+            </div>
+          )}
+
+          {secError && (
+            <div className="mb-5 rounded-2xl border border-rose-500/30 bg-rose-950/60 p-4 text-xs font-bold text-rose-300">
+              {secError}
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Registered Executive Administrator
+                </span>
+                <p className="text-sm font-bold text-white mt-0.5">{adminEmail}</p>
+              </div>
+              <span className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-300 self-start sm:self-auto">
+                Super Admin Role
+              </span>
+            </div>
+
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Update Master Security Key
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPw}
+                    onChange={(e) => setCurrentPw(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">
+                    New Master Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                    placeholder="Repeat new password"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="rounded-xl bg-red-600 px-6 py-2.5 font-bold text-white hover:bg-red-500 shadow-md shadow-red-600/30 transition flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Update Master Security Key</span>
+                  <span>🔐</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </AdminLayoutShell>

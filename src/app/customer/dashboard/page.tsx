@@ -30,6 +30,7 @@ export default function CustomerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -192,7 +193,9 @@ export default function CustomerDashboardPage() {
 
   const activeTicket =
     tickets.length > 0
-      ? tickets.find((t) => t.status !== "Resolved" && t.status !== "Closed") || tickets[0]
+      ? (selectedTicketId ? tickets.find((t) => t.id.toLowerCase() === selectedTicketId.toLowerCase()) : null) ||
+        tickets.find((t) => t.status !== "Resolved" && t.status !== "Closed") ||
+        tickets[0]
       : null;
   const activeCount = tickets.filter(
     (t) => t.status !== "Resolved" && t.status !== "Closed"
@@ -210,15 +213,16 @@ export default function CustomerDashboardPage() {
     }
 
     const ticketId = activeTicket.id;
+    const cleanId = ticketId.trim().toUpperCase();
     let isMounted = true;
 
     const refreshAttachments = async () => {
-      const local = getTicketAttachments(ticketId);
+      const local = getTicketAttachments(cleanId);
       if (isMounted && local.length > 0) {
         setAttachments(local);
       }
       try {
-        const serverAtts = await fetchTicketAttachments(ticketId);
+        const serverAtts = await fetchTicketAttachments(cleanId);
         if (isMounted) {
           setAttachments(serverAtts);
         }
@@ -723,6 +727,20 @@ export default function CustomerDashboardPage() {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTicketId(t.id);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                              activeTicket?.id?.toUpperCase() === t.id.toUpperCase()
+                                ? "bg-blue-600 text-white font-bold"
+                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            }`}
+                          >
+                            {activeTicket?.id?.toUpperCase() === t.id.toUpperCase() ? "Active Case ✓" : "View Case"}
+                          </button>
                           <Link
                             href={`/customer/tickets/${t.id}`}
                             className="font-bold text-blue-600 hover:underline"

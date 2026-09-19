@@ -1002,6 +1002,21 @@ export default function TechnicianWorkbenchPage() {
     );
   }, [viewFilteredCases, workbenchFilteredCases, cases, selectedCaseId]);
 
+  const currentCaseAttachments: TicketAttachment[] = useMemo(() => {
+    if (!activeCase?.id) return [];
+    const id = activeCase.id.trim();
+    const upper = id.toUpperCase();
+    const lower = id.toLowerCase();
+    const list =
+      attachments[id] ||
+      attachments[upper] ||
+      attachments[lower] ||
+      getTicketAttachments(id) ||
+      getTicketAttachments(upper) ||
+      [];
+    return Array.isArray(list) ? list : [];
+  }, [attachments, activeCase?.id]);
+
   // Open Advanced Diagnostic Report Generator Modal (100% separate client report)
   const handleOpenReportModal = (targetReport?: DiagnosisReport) => {
     if (targetReport) {
@@ -1614,7 +1629,8 @@ export default function TechnicianWorkbenchPage() {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeCase) return;
 
-    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
+    const targetId = (activeCase.id || selectedCaseId || selectedCaseIdRef.current).trim().toUpperCase();
+    const activeId = activeCase.id.trim();
     const fileList = Array.from(files);
 
     setNotification(`Uploading ${fileList.length} file(s) to Case #${targetId}...`);
@@ -1628,6 +1644,10 @@ export default function TechnicianWorkbenchPage() {
       setAttachments((prev) => ({
         ...prev,
         [targetId]: updated,
+        [targetId.toLowerCase()]: updated,
+        [activeId]: updated,
+        [activeId.toLowerCase()]: updated,
+        [activeId.toUpperCase()]: updated,
       }));
       setNotification(`${fileList.length} file(s) attached and synced to Case #${targetId}!`);
     } catch (uploadErr) {
@@ -1652,13 +1672,18 @@ export default function TechnicianWorkbenchPage() {
   };
 
   const handleDeleteAttachment = async (ticketId: string, attId: string) => {
-    const cleanId = ticketId.trim().toUpperCase();
+    const cleanId = (ticketId || activeCase?.id || "").trim().toUpperCase();
+    const activeId = (activeCase?.id || cleanId).trim();
     try {
       await deleteTicketAttachment(cleanId, attId);
       const updated = await fetchTicketAttachments(cleanId);
       setAttachments((prev) => ({
         ...prev,
         [cleanId]: updated,
+        [cleanId.toLowerCase()]: updated,
+        [activeId]: updated,
+        [activeId.toLowerCase()]: updated,
+        [activeId.toUpperCase()]: updated,
       }));
       setNotification("Attachment removed.");
     } catch (err) {
@@ -3524,7 +3549,7 @@ export default function TechnicianWorkbenchPage() {
                         <span>📎</span>
                         <span>Attachments</span>
                         <span className="rounded-full bg-emerald-100 text-emerald-800 px-1.5 py-0.5 text-[10px]">
-                          {(attachments[activeCase.id] || []).length}
+                          {currentCaseAttachments.length}
                         </span>
                       </button>
 
@@ -3706,7 +3731,7 @@ export default function TechnicianWorkbenchPage() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-800">
-                            Attached Files &amp; Laboratory Logs ({((attachments[activeCase.id]) || []).length})
+                            Attached Files &amp; Laboratory Logs ({currentCaseAttachments.length})
                           </span>
                           <button
                             type="button"
@@ -3720,7 +3745,7 @@ export default function TechnicianWorkbenchPage() {
 
                         {/* FILE LIST */}
                         <div className="space-y-2.5">
-                          {((attachments[activeCase.id]) || []).length === 0 ? (
+                          {currentCaseAttachments.length === 0 ? (
                             <div className="p-10 text-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
                               <span className="text-3xl block mb-2">📁</span>
                               <p className="font-semibold text-slate-700">No attachments uploaded yet</p>
@@ -3739,7 +3764,7 @@ export default function TechnicianWorkbenchPage() {
                               </div>
                             </div>
                           ) : (
-                            ((attachments[activeCase.id]) || []).map((file) => (
+                            currentCaseAttachments.map((file) => (
                               <div
                                 key={file.id}
                                 className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition"
@@ -4017,7 +4042,7 @@ export default function TechnicianWorkbenchPage() {
                         <span>Add Attachment</span>
                       </div>
                       <span className="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-mono font-bold">
-                        {(attachments[activeCase.id] || []).length} attached
+                        {currentCaseAttachments.length} attached
                       </span>
                     </button>
 

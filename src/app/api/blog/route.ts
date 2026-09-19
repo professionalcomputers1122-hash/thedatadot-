@@ -42,14 +42,22 @@ export async function GET(req: Request) {
       );
     }
 
-    const filtered = (data || []).filter((p: any) => !deletedIds.has(p.id));
+    // Active rows in blog_posts are authoritative.
+    const posts = data || [];
 
-    return NextResponse.json({
-      success: true,
-      count: filtered.length,
-      posts: filtered,
-      deletedIds: Array.from(deletedIds),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        count: posts.length,
+        posts,
+        deletedIds: Array.from(deletedIds),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[API /api/blog GET exception]:", err);
     return NextResponse.json(
@@ -71,8 +79,9 @@ export async function POST(req: Request) {
       );
     }
 
+    const rawId = (body.id && typeof body.id === "string") ? body.id.trim() : "";
     const postId =
-      body.id ||
+      rawId ||
       title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -91,6 +100,19 @@ export async function POST(req: Request) {
     };
 
     const supabase = createAdminClient();
+
+    // 1. If this article was previously logged as deleted in audit_logs, clear it so it can be re-published cleanly
+    try {
+      await supabase
+        .from("audit_logs")
+        .delete()
+        .eq("action", "DELETE_BLOG_POST")
+        .eq("target", postId);
+    } catch (cleanErr) {
+      console.warn("Notice: could not clear old delete audit log:", cleanErr);
+    }
+
+    // 2. Upsert into blog_posts table
     const { data, error } = await supabase
       .from("blog_posts")
       .upsert([postRecord])
@@ -105,10 +127,17 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      post: data || postRecord,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        post: data || postRecord,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[API /api/blog POST exception]:", err);
     return NextResponse.json(

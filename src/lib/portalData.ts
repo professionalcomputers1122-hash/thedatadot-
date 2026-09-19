@@ -718,7 +718,10 @@ export async function deleteBlogPostFromSupabase(id: string, title?: string): Pr
 export async function fetchBlogPostsFromSupabase(): Promise<SupabaseBlogPost[]> {
   try {
     if (typeof window !== "undefined") {
-      const res = await fetch("/api/blog");
+      const res = await fetch(`/api/blog?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.posts) return json.posts;
@@ -743,7 +746,23 @@ export async function fetchBlogPostsFromSupabase(): Promise<SupabaseBlogPost[]> 
   }
 }
 
-export async function createOrUpdateBlogPostInSupabase(post: SupabaseBlogPost) {
+export async function createOrUpdateBlogPostInSupabase(
+  post: SupabaseBlogPost
+): Promise<{ success: boolean; error?: string; post?: any }> {
+  // 1. Un-blacklist the post ID from local deleted IDs if it was previously marked deleted
+  if (typeof window !== "undefined") {
+    try {
+      const current = getDeletedBlogIds();
+      if (current.has(post.id)) {
+        current.delete(post.id);
+        localStorage.setItem("tdd_deleted_blog_ids", JSON.stringify(Array.from(current)));
+      }
+    } catch (e) {
+      console.warn("Local storage update warning:", e);
+    }
+  }
+
+  // 2. Primary call to backend API /api/blog (uses server-side admin client)
   try {
     if (typeof window !== "undefined") {
       const res = await fetch("/api/blog", {
@@ -751,17 +770,46 @@ export async function createOrUpdateBlogPostInSupabase(post: SupabaseBlogPost) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(post),
       });
-      if (res.ok) return;
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("blog-updated"));
+        }
+        return { success: true, post: json.post || post };
+      }
+      if (!res.ok && json.error) {
+        console.warn("API returned error on blog post:", json.error);
+        // If API fails, try direct Supabase fallback below
+      }
     }
-  } catch (apiErr) {
+  } catch (apiErr: any) {
     console.warn("Fallback to direct Supabase blog upsert:", apiErr);
   }
 
-  if (!isSupabaseConfigured) return;
+  // 3. Fallback direct Supabase client upsert
+  if (!isSupabaseConfigured) {
+    return { success: false, error: "Database client is not configured" };
+  }
+
   try {
-    await supabase.from("blog_posts").upsert([post]);
-  } catch (err) {
-    console.error("Failed to upsert blog post in Supabase:", err);
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .upsert([post])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Failed to upsert blog post in Supabase:", error);
+      return { success: false, error: error.message };
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("blog-updated"));
+    }
+    return { success: true, post: data || post };
+  } catch (err: any) {
+    console.error("Exception upserting blog post in Supabase:", err);
+    return { success: false, error: err.message || "Failed to save blog post" };
   }
 }
 

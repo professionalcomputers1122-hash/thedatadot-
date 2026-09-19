@@ -79,6 +79,8 @@ export default function AdminBlogPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notification, setNotification] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Editor form state
   const [title, setTitle] = useState("");
@@ -91,43 +93,51 @@ export default function AdminBlogPage() {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
 
-  // Sync live blog posts from Supabase on mount
-  useEffect(() => {
-    async function loadLivePosts() {
-      const deletedIds = getDeletedBlogIds();
-      try {
-        const livePosts = await fetchBlogPostsFromSupabase();
-        if (livePosts && livePosts.length > 0) {
-          const visible = livePosts.filter((p) => !deletedIds.has(p.id));
-          setArticles(
-            visible.map((p) => ({
-              id: p.id,
-              title: p.title,
-              category: p.category,
-              date: p.created_at
-                ? new Date(p.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "Live",
-              readTime: p.read_time || "5 min read",
-              status: p.status,
-              coverImage: p.cover_image || "/images/blog/cybersecurity-tips.jpg",
-              excerpt: p.excerpt,
-              content: p.content,
-            }))
-          );
-        } else {
-          // Fallback to defaults excluding deleted
-          setArticles(DEFAULT_ARTICLES.filter((a) => !deletedIds.has(a.id)));
-        }
-      } catch (err) {
-        console.error("Failed to load blog posts from Supabase:", err);
-        setArticles(DEFAULT_ARTICLES.filter((a) => !deletedIds.has(a.id)));
-      }
+  const loadLivePosts = async () => {
+    const deletedIds = getDeletedBlogIds();
+    try {
+      const livePosts = await fetchBlogPostsFromSupabase();
+      const liveMapped: BlogPost[] = (livePosts || []).map((p) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category,
+        date: p.created_at
+          ? new Date(p.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Live",
+        readTime: p.read_time || "5 min read",
+        status: p.status,
+        coverImage: p.cover_image || "/images/blog/cybersecurity-tips.jpg",
+        excerpt: p.excerpt,
+        content: p.content,
+      }));
+
+      const liveIds = new Set(liveMapped.map((l) => l.id));
+      const fallbackArticles = DEFAULT_ARTICLES.filter(
+        (d) => !liveIds.has(d.id) && !deletedIds.has(d.id)
+      );
+
+      const combined = [
+        ...liveMapped.filter((p) => !deletedIds.has(p.id)),
+        ...fallbackArticles,
+      ];
+      setArticles(combined);
+    } catch (err) {
+      console.error("Failed to load blog posts from Supabase:", err);
+      setArticles(DEFAULT_ARTICLES.filter((a) => !deletedIds.has(a.id)));
     }
+  };
+
+  // Sync live blog posts from Supabase on mount & listen to window updates
+  useEffect(() => {
     loadLivePosts();
+
+    const handleUpdate = () => loadLivePosts();
+    window.addEventListener("blog-updated", handleUpdate);
+    return () => window.removeEventListener("blog-updated", handleUpdate);
   }, []);
 
   const filtered = articles.filter((a) => {
@@ -141,6 +151,7 @@ export default function AdminBlogPage() {
 
   const handleOpenCreate = () => {
     setEditingId(null);
+    setErrorMessage("");
     setTitle("");
     setCategory("Cybersecurity");
     setReadTime("5 min read");
@@ -154,6 +165,7 @@ export default function AdminBlogPage() {
 
   const handleOpenEdit = (post: BlogPost) => {
     setEditingId(post.id);
+    setErrorMessage("");
     setTitle(post.title);
     setCategory(post.category);
     setReadTime(post.readTime);
@@ -165,40 +177,60 @@ export default function AdminBlogPage() {
     setShowModal(true);
   };
 
-  // Security-hardened file upload handler (Blocks SVG, XSS, scripts & oversized payloads)
+  // Canvas-optimized file upload handler (Compresses large photos to ~100KB, preventing 413 payload errors)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. File Size Validation (Max 5MB)
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_FILE_SIZE) {
-      alert("Security Alert: File exceeds maximum allowed size (5MB). Upload rejected.");
-      e.target.value = "";
-      return;
-    }
-
-    // 2. Strict Extension & MIME Validation (Reject SVG, HTML, PHP, Executables)
+    // 1. Strict Extension & MIME Validation
     const fileName = file.name.toLowerCase();
     const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp"];
     const hasValidExtension = allowedExtensions.some((ext) => fileName.endsWith(ext));
     const allowedMimeTypes = ["image/png", "image/jpeg", "image/webp"];
 
     if (!hasValidExtension || !allowedMimeTypes.includes(file.type)) {
-      alert(
-        "Security Alert: Dangerous file type detected. Only sanitized raster images (.PNG, .JPG, .WebP) are permitted. Vector formats (.SVG) and executable files are strictly prohibited."
-      );
+      alert("Please upload a standard raster image (.PNG, .JPG, or .WebP).");
       e.target.value = "";
       return;
     }
 
+    // 2. High-performance canvas downscaling (max 1280px dimension)
     const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        setCoverImage(reader.result);
-        setNotification(`Image "${file.name}" verified and loaded safely.`);
-        setTimeout(() => setNotification(""), 3500);
-      }
+    reader.onload = (loadEvt) => {
+      const srcUrl = loadEvt.target?.result;
+      if (typeof srcUrl !== "string") return;
+
+      const img = document.createElement("img");
+      img.onload = () => {
+        const MAX_DIM = 1280;
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) {
+            h = Math.round((h * MAX_DIM) / w);
+            w = MAX_DIM;
+          } else {
+            w = Math.round((w * MAX_DIM) / h);
+            h = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          setCoverImage(compressed);
+          setNotification(`✓ Image "${file.name}" optimized & loaded.`);
+          setTimeout(() => setNotification(""), 3500);
+        } else {
+          setCoverImage(srcUrl);
+        }
+      };
+      img.src = srcUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -206,59 +238,83 @@ export default function AdminBlogPage() {
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!excerpt.trim()) {
+      setErrorMessage("Please provide a short excerpt (SEO summary).");
+      return;
+    }
 
-    const postId = editingId || title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    setIsSaving(true);
+    setErrorMessage("");
+
+    const rawId =
+      editingId ||
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
     const payload = {
-      id: postId,
-      title,
+      id: rawId,
+      title: title.trim(),
       category,
       read_time: readTime,
       status,
       cover_image: coverImage,
-      excerpt,
-      content,
+      excerpt: excerpt.trim(),
+      content: (content || excerpt).trim(),
     };
 
-    if (editingId) {
-      // Update existing
-      setArticles((prev) =>
-        prev.map((a) =>
-          a.id === editingId
-            ? {
-                ...a,
-                title,
-                category,
-                readTime,
-                status,
-                coverImage,
-                excerpt,
-                content,
-                date: a.date === "Draft" && status === "Published" ? "Today" : a.date,
-              }
-            : a
-        )
-      );
-      setNotification(`Article "${title}" updated & saved to Supabase.`);
-    } else {
-      // Create new
-      const newPost: BlogPost = {
-        id: postId,
-        title,
-        category,
-        date: status === "Published" ? "Just now" : "Draft",
-        readTime,
-        status,
-        coverImage,
-        excerpt,
-        content,
-      };
-      setArticles([newPost, ...articles]);
-      setNotification(`Article "${title}" published & saved to Supabase!`);
-    }
+    const result = await createOrUpdateBlogPostInSupabase(payload as any);
 
-    await createOrUpdateBlogPostInSupabase(payload);
-    setShowModal(false);
-    setTimeout(() => setNotification(""), 4000);
+    if (result.success) {
+      // Un-delete from local deleted blacklist
+      const currentDeleted = getDeletedBlogIds();
+      if (currentDeleted.has(rawId)) {
+        currentDeleted.delete(rawId);
+        localStorage.setItem("tdd_deleted_blog_ids", JSON.stringify(Array.from(currentDeleted)));
+      }
+
+      setArticles((prev) => {
+        const exists = prev.some((a) => a.id === rawId);
+        if (exists) {
+          return prev.map((a) =>
+            a.id === rawId
+              ? {
+                  ...a,
+                  title: payload.title,
+                  category: payload.category,
+                  readTime: payload.read_time,
+                  status: payload.status as any,
+                  coverImage: payload.cover_image,
+                  excerpt: payload.excerpt,
+                  content: payload.content,
+                  date: a.date === "Draft" && payload.status === "Published" ? "Today" : a.date,
+                }
+              : a
+          );
+        } else {
+          const newPost: BlogPost = {
+            id: rawId,
+            title: payload.title,
+            category: payload.category,
+            date: payload.status === "Published" ? "Just now" : "Draft",
+            readTime: payload.read_time,
+            status: payload.status as any,
+            coverImage: payload.cover_image,
+            excerpt: payload.excerpt,
+            content: payload.content,
+          };
+          return [newPost, ...prev];
+        }
+      });
+
+      setNotification(`✓ Article "${payload.title}" published & saved live to website!`);
+      setShowModal(false);
+      setTimeout(() => setNotification(""), 5000);
+    } else {
+      setErrorMessage(result.error || "Failed to save article to database.");
+    }
+    setIsSaving(false);
   };
 
   const [deleteModalPost, setDeleteModalPost] = useState<BlogPost | null>(null);
@@ -505,6 +561,13 @@ export default function AdminBlogPage() {
               </div>
 
               <form onSubmit={handleSaveArticle} className="space-y-4">
+                {errorMessage && (
+                  <div className="rounded-xl border border-red-500/30 bg-red-950/60 p-3 font-semibold text-red-300 flex items-center justify-between">
+                    <span>⚠ {errorMessage}</span>
+                    <button type="button" onClick={() => setErrorMessage("")} className="text-red-400">✕</button>
+                  </div>
+                )}
+
                 <div>
                   <label className="block font-semibold text-slate-300 mb-1">Article Headline</label>
                   <input
@@ -779,16 +842,27 @@ export default function AdminBlogPage() {
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                   <button
                     type="button"
+                    disabled={isSaving}
                     onClick={() => setShowModal(false)}
-                    className="rounded-xl px-4 py-2.5 text-slate-400 hover:text-white transition"
+                    className="rounded-xl px-4 py-2.5 text-slate-400 hover:text-white transition disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-lg shadow-blue-600/30"
+                    disabled={isSaving}
+                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-lg shadow-blue-600/30 disabled:opacity-50 flex items-center gap-2"
                   >
-                    {editingId ? "Save Article Changes →" : "Publish Live to Website →"}
+                    {isSaving && (
+                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    )}
+                    <span>
+                      {isSaving
+                        ? "Publishing to Website..."
+                        : editingId
+                        ? "Save Article Changes →"
+                        : "Publish Live to Website →"}
+                    </span>
                   </button>
                 </div>
               </form>

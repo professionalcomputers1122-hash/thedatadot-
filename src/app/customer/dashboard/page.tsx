@@ -801,7 +801,7 @@ export default function CustomerDashboardPage() {
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {t.status} {t.clonedPercent ? `(${t.clonedPercent}%)` : ""}
+                          {t.status}
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-right">

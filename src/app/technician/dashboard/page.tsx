@@ -1150,7 +1150,7 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}" (${autoProgress}%).`);
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}".`);
     setTimeout(() => setNotification(""), 4000);
 
     const broadcastMsg = `Ticket lifecycle stage updated to "${stageValue}".`;

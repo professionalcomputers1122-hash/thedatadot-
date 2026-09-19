@@ -312,11 +312,6 @@ export default function CustomerTicketsPage() {
                             >
                               {t.status}
                             </span>
-                            {Number(t.clonedPercent) > 0 && (
-                              <span className="text-[10px] font-semibold text-emerald-600">
-                                {getProgressLabel(t)}
-                              </span>
-                            )}
                           </div>
                         </td>
                         <td className="px-5 py-4">

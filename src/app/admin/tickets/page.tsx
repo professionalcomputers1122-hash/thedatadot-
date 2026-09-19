@@ -378,7 +378,7 @@ export default function AdminTicketsPage() {
                       </td>
                       <td className="px-5 py-4">
                         <span className="rounded-md bg-slate-950/70 px-2 py-0.5 text-[11px] font-medium text-slate-300 border border-slate-800">
-                          {t.status} {t.clonedPercent ? `(${t.clonedPercent}%)` : ""}
+                          {t.status}
                         </span>
                       </td>
                       <td className="px-5 py-4">

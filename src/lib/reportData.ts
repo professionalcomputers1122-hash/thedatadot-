@@ -60,26 +60,28 @@ export const defaultSampleReport: DiagnosisReport = {
 };
 
 export function getLocalStoredReports(): DiagnosisReport[] {
-  if (typeof window === "undefined") return [defaultSampleReport];
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(REPORTS_STORAGE_KEY);
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {
     console.warn("Error reading local reports:", e);
   }
-  return [defaultSampleReport];
+  return [];
 }
 
-export function saveLocalStoredReports(reports: DiagnosisReport[]): void {
+export function saveLocalStoredReports(reports: DiagnosisReport[], emitEvent = false): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
-    window.dispatchEvent(new Event("reports-updated"));
+    if (emitEvent) {
+      window.dispatchEvent(new Event("reports-updated"));
+    }
   } catch (e) {
     console.warn("Error writing local reports:", e);
   }
@@ -91,8 +93,8 @@ export async function fetchReportsFromSupabase(): Promise<DiagnosisReport[]> {
       const res = await fetch("/api/reports");
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json.reports) && json.reports.length > 0) {
-          saveLocalStoredReports(json.reports);
+        if (Array.isArray(json.reports)) {
+          saveLocalStoredReports(json.reports, false);
           return json.reports;
         }
       }
@@ -106,11 +108,12 @@ export async function fetchReportsFromSupabase(): Promise<DiagnosisReport[]> {
 export async function saveReportToSupabase(
   reportData: Partial<DiagnosisReport>
 ): Promise<DiagnosisReport> {
+  const rawJob = reportData.jobId || `${Math.floor(1000 + Math.random() * 9000)}`;
   let savedReport: DiagnosisReport = {
     ...defaultSampleReport,
     ...reportData,
-    jobId: reportData.jobId || `${Math.floor(1000 + Math.random() * 9000)}`,
-    id: reportData.id || `DR-${reportData.jobId || Math.floor(1000 + Math.random() * 9000)}`,
+    jobId: rawJob,
+    id: reportData.id || `DR-${rawJob}`,
     updatedAt: new Date().toISOString(),
   };
 
@@ -133,20 +136,23 @@ export async function saveReportToSupabase(
   // Update localStorage cache
   const local = getLocalStoredReports();
   const existingIdx = local.findIndex(
-    (r) => r.id === savedReport.id || r.jobId === savedReport.jobId
+    (r) => r.id === savedReport.id || r.jobId === savedReport.jobId || `DR-${r.jobId}` === savedReport.id
   );
   if (existingIdx >= 0) {
     local[existingIdx] = savedReport;
   } else {
     local.unshift(savedReport);
   }
-  saveLocalStoredReports(local);
+  saveLocalStoredReports(local, false);
 
   return savedReport;
 }
 
 export async function deleteReportFromSupabase(reportId: string): Promise<boolean> {
   const cleanId = reportId.trim();
+  const rawId = cleanId.replace(/^DR-/i, "").replace(/^RPT-/i, "");
+  const drId = `DR-${rawId}`;
+
   try {
     await fetch(`/api/reports/${encodeURIComponent(cleanId)}`, {
       method: "DELETE",
@@ -155,10 +161,18 @@ export async function deleteReportFromSupabase(reportId: string): Promise<boolea
     console.warn("API delete report fallback:", apiErr);
   }
 
-  // Remove from localStorage cache
-  const local = getLocalStoredReports().filter(
-    (r) => r.id.toLowerCase() !== cleanId.toLowerCase() && `dr-${r.jobId}`.toLowerCase() !== cleanId.toLowerCase()
-  );
-  saveLocalStoredReports(local);
+  // Remove all variants from localStorage cache
+  const local = getLocalStoredReports().filter((r) => {
+    const rId = (r.id || "").toLowerCase();
+    const rJob = (r.jobId || "").toLowerCase();
+    return (
+      rId !== cleanId.toLowerCase() &&
+      rId !== rawId.toLowerCase() &&
+      rId !== drId.toLowerCase() &&
+      rJob !== cleanId.toLowerCase() &&
+      rJob !== rawId.toLowerCase()
+    );
+  });
+  saveLocalStoredReports(local, false);
   return true;
 }

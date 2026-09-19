@@ -175,7 +175,39 @@ export default function AdvancedDataRecoveryReportModal({
     }
   };
 
-  // Foolproof isolated iframe printing: guarantees 100% full rendering of all sections on 1 A4 page with ZERO clipping
+  // Automatically mount print portal on beforeprint (handles both button click and Ctrl+P)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const setupPrintPortal = () => {
+      const reportElement = document.getElementById("printableReportModalArea");
+      if (!reportElement) return;
+      let portal = document.getElementById("tdd-print-portal");
+      if (!portal) {
+        portal = document.createElement("div");
+        portal.id = "tdd-print-portal";
+        document.body.appendChild(portal);
+      }
+      portal.innerHTML = reportElement.innerHTML;
+    };
+
+    const cleanupPrintPortal = () => {
+      const portal = document.getElementById("tdd-print-portal");
+      if (portal) portal.remove();
+    };
+
+    window.addEventListener("beforeprint", setupPrintPortal);
+    window.addEventListener("afterprint", cleanupPrintPortal);
+
+    return () => {
+      window.removeEventListener("beforeprint", setupPrintPortal);
+      window.removeEventListener("afterprint", cleanupPrintPortal);
+      cleanupPrintPortal();
+    };
+  }, [isOpen]);
+
+  // Robust root print portal trigger: copies printable report directly to body root,
+  // completely bypassing modal overflow/flex wrappers for 100% full 1-page A4 print (no blank paper)
   const handlePrint = () => {
     if (typeof window === "undefined") return;
     const reportElement = document.getElementById("printableReportModalArea");
@@ -184,82 +216,25 @@ export default function AdvancedDataRecoveryReportModal({
       return;
     }
 
-    const existingFrame = document.getElementById("tdd-print-iframe");
-    if (existingFrame) existingFrame.remove();
+    const existing = document.getElementById("tdd-print-portal");
+    if (existing) existing.remove();
 
-    const iframe = document.createElement("iframe");
-    iframe.id = "tdd-print-iframe";
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    iframe.style.visibility = "hidden";
-    document.body.appendChild(iframe);
+    const portal = document.createElement("div");
+    portal.id = "tdd-print-portal";
+    portal.innerHTML = reportElement.innerHTML;
+    document.body.appendChild(portal);
 
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
-      window.print();
-      return;
-    }
-
-    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-      .map((s) => s.outerHTML)
-      .join("\n");
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <title>Advanced Data Recovery Report - Job #${jobId}</title>
-          ${styles}
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 4mm 6mm;
-            }
-            html, body {
-              background: #ffffff !important;
-              background-color: #ffffff !important;
-              color: #0f172a !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              width: 100% !important;
-              height: auto !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            }
-            .a4-print-sheet {
-              width: 100% !important;
-              max-width: 780px !important;
-              margin: 0 auto !important;
-              padding: 2mm 3mm !important;
-              background: #ffffff !important;
-              box-sizing: border-box !important;
-            }
-          </style>
-        </head>
-        <body class="bg-white text-slate-900">
-          <div class="a4-print-sheet">
-            ${reportElement.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
+    const cleanup = () => {
+      const p = document.getElementById("tdd-print-portal");
+      if (p) p.remove();
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
 
     setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        iframe.remove();
-      }, 2000);
-    }, 450);
+      window.print();
+      setTimeout(cleanup, 2500);
+    }, 60);
   };
 
   if (!isOpen) return null;
@@ -267,12 +242,21 @@ export default function AdvancedDataRecoveryReportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       
-      {/* STRICT 1-PAGE A4 PRINT STYLESHEET (FALLBACK FOR CTRL+P) */}
+      {/* 1-PAGE A4 PRINT ISOLATION ENGINE */}
       <style jsx global>{`
+        @media screen {
+          #tdd-print-portal {
+            display: none !important;
+          }
+        }
         @media print {
           @page {
             size: A4 portrait;
-            margin: 4mm 6mm;
+            margin: 4mm 6mm !important;
+          }
+          /* Hide all top-level application containers except our print portal */
+          body > *:not(#tdd-print-portal) {
+            display: none !important;
           }
           html, body {
             background-color: #ffffff !important;
@@ -282,46 +266,34 @@ export default function AdvancedDataRecoveryReportModal({
             padding: 0 !important;
             width: 100% !important;
             height: auto !important;
+            min-height: auto !important;
             overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* Neutralize modal constraints so print engine never clips */
-          .fixed, [class*="fixed"], [class*="overflow-"], [class*="max-h-"] {
-            position: static !important;
-            overflow: visible !important;
-            max-height: none !important;
-            height: auto !important;
+          #tdd-print-portal {
             display: block !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          #printableReportModalArea, #printableReportModalArea * {
             visibility: visible !important;
-          }
-          #printableReportModalArea {
-            position: absolute !important;
-            left: 0 !important;
-            right: 0 !important;
-            top: 0 !important;
+            position: static !important;
             width: 100% !important;
             max-width: 780px !important;
-            height: auto !important;
             margin: 0 auto !important;
-            padding: 2mm 4mm !important;
+            padding: 2mm 3mm !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            box-sizing: border-box !important;
             border: none !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            background: #ffffff !important;
             overflow: visible !important;
           }
-          .no-print, header, nav, footer, aside, .modal-backdrop {
+          #tdd-print-portal * {
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
             display: none !important;
           }
         }

@@ -18,11 +18,15 @@ export async function DELETE(
 
     const supabase = createAdminClient();
 
-    // 1. Delete record from Supabase
+    const rawId = cleanId.replace(/^DR-/i, "").replace(/^RPT-/i, "");
+    const drId = `DR-${rawId}`;
+    const rptId = `RPT-${rawId}`;
+
+    // 1. Delete all variants of the ID from tickets in Supabase
     const { error } = await supabase
       .from("tickets")
       .delete()
-      .eq("id", cleanId);
+      .or(`id.eq.${cleanId},id.eq.${rawId},id.eq.${drId},id.eq.${rptId}`);
 
     if (error) {
       console.error("[API /api/reports/[id] DELETE error]:", error);
@@ -34,13 +38,28 @@ export async function DELETE(
 
     // 2. Audit log entry to prevent restore
     try {
+      const now = new Date().toISOString();
       await supabase.from("audit_logs").insert([
         {
-          id: `LOG-DEL-REP-${Date.now().toString(36).toUpperCase()}`,
+          id: `LOG-DEL-REP-${Date.now().toString(36).toUpperCase()}-1`,
           actor: "Technician Desk",
           action: "DELETE_REPORT",
           target: `Report #${cleanId}`,
-          created_at: new Date().toISOString(),
+          created_at: now,
+        },
+        {
+          id: `LOG-DEL-REP-${Date.now().toString(36).toUpperCase()}-2`,
+          actor: "Technician Desk",
+          action: "DELETE_REPORT",
+          target: `Report #${drId}`,
+          created_at: now,
+        },
+        {
+          id: `LOG-DEL-REP-${Date.now().toString(36).toUpperCase()}-3`,
+          actor: "Technician Desk",
+          action: "DELETE_REPORT",
+          target: `Report #${rawId}`,
+          created_at: now,
         },
       ]);
     } catch (auditErr) {

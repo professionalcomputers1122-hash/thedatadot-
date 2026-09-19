@@ -636,8 +636,22 @@ export default function TechnicianWorkbenchPage() {
   const handleDeleteReport = async (reportId: string) => {
     setIsDeletingReport(true);
     try {
-      await deleteReportFromSupabase(reportId);
-      setDiagnosisReports((prev) => prev.filter((r) => r.id !== reportId && r.jobId !== reportId));
+      const cleanId = reportId.trim();
+      const rawId = cleanId.replace(/^DR-/i, "").replace(/^RPT-/i, "");
+      await deleteReportFromSupabase(cleanId);
+      setDiagnosisReports((prev) =>
+        prev.filter((r) => {
+          const rId = (r.id || "").toLowerCase();
+          const rJob = (r.jobId || "").toLowerCase();
+          return (
+            rId !== cleanId.toLowerCase() &&
+            rId !== rawId.toLowerCase() &&
+            rId !== `dr-${rawId}`.toLowerCase() &&
+            rJob !== cleanId.toLowerCase() &&
+            rJob !== rawId.toLowerCase()
+          );
+        })
+      );
       setNotification("Diagnosis report deleted permanently from Supabase.");
       setTimeout(() => setNotification(""), 3500);
       setReportToDelete(null);

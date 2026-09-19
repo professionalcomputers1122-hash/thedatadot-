@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getStoredTechnicians, initialTechnicians, TechnicianRecord } from "@/lib/portalData";
 import { getAdminSession } from "@/lib/adminAuth";
 
@@ -112,11 +113,18 @@ export default function TechnicianLoginPage() {
               <span>← Back to Website</span>
             </Link>
 
-            <div className="flex items-center gap-3 pt-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-extrabold text-white text-lg shadow-md shadow-blue-600/30">
-                •
+            <div className="pt-4">
+              <div className="bg-white rounded-xl px-4 py-2 inline-flex items-center justify-center shadow-md">
+                <Image
+                  src="/logo.png"
+                  alt="The Data Dot"
+                  width={150}
+                  height={26}
+                  priority
+                  style={{ height: "auto" }}
+                  className="w-[140px]"
+                />
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">The Data Dot</span>
             </div>
 
             <div className="pt-8">

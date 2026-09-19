@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   fetchTicketsFromSupabase,
@@ -2188,21 +2189,27 @@ export default function TechnicianWorkbenchPage() {
       >
         <div className="flex flex-col h-full">
           {/* BRAND LOGO HEADER */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-[#172740]">
-            <Link href="/technician/dashboard" className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-md shadow-blue-500/20 text-white font-black text-sm">
-                •
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#172740]">
+            <Link href="/technician/dashboard" className="block group">
+              <div className="bg-white rounded-xl px-3.5 py-1.5 inline-flex items-center justify-center shadow-xs border border-white/20 group-hover:shadow-md transition">
+                <Image
+                  src="/logo.png"
+                  alt="The Data Dot"
+                  width={140}
+                  height={25}
+                  priority
+                  style={{ height: "auto" }}
+                  className="w-[125px]"
+                />
               </div>
-              <div>
-                <span className="text-base font-bold tracking-tight text-white block">
-                  The Data Dot
-                </span>
-              </div>
+              <span className="block text-[9.5px] text-slate-400 font-medium tracking-tight mt-1.5 leading-tight">
+                Forensic Cleanroom Lab • <span className="text-emerald-400 font-semibold">Technician Workbench</span>
+              </span>
             </Link>
 
             <button
               onClick={() => setSidebarOpen(false)}
-              className="text-slate-400 hover:text-white lg:hidden text-lg"
+              className="text-slate-400 hover:text-white lg:hidden text-lg p-1.5 rounded-lg hover:bg-slate-800"
             >
               ✕
             </button>
@@ -2302,7 +2309,7 @@ export default function TechnicianWorkbenchPage() {
       {/* ------------------------------------------------------------- */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* TOP HEADER BAR (Pure White Matching Mockups) */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-8 shadow-sm">
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 sm:px-8 shadow-2xs">
           <div className="flex items-center gap-4 flex-1 max-w-xl">
             {/* Mobile Hamburger */}
             <button
@@ -2311,6 +2318,19 @@ export default function TechnicianWorkbenchPage() {
             >
               ☰
             </button>
+
+            {/* Header Official Logo */}
+            <Link href="/technician/dashboard" className="flex items-center shrink-0" title="The Data Dot Workbench">
+              <Image
+                src="/logo.png"
+                alt="The Data Dot"
+                width={130}
+                height={23}
+                priority
+                style={{ height: "auto" }}
+                className="w-[115px] sm:w-[125px]"
+              />
+            </Link>
 
             {/* Global Search */}
             <div className="relative w-full">

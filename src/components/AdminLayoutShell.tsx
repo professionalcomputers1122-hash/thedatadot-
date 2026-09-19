@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useState, useEffect } from "react";
 import { getAdminSession, clearAdminSession, AdminSession } from "@/lib/adminAuth";
@@ -206,15 +207,23 @@ export default function AdminLayoutShell({
       <aside className="w-full md:w-64 shrink-0 bg-[#0c1424] border-r border-slate-800 flex flex-col justify-between z-40 text-slate-300">
         <div>
           {/* LOGO & BRAND */}
-          <div className="p-5 border-b border-slate-800/80">
-            <Link href="/admin/dashboard" className="block">
-              <span className="text-lg font-black tracking-tight text-white block">
-                THE DATA DOT<span className="text-blue-500">.</span>
-              </span>
-              <span className="block text-[9px] text-slate-400 font-medium tracking-tight mt-0.5 leading-tight">
+          <div className="p-4 border-b border-slate-800/80">
+            <Link href="/admin/dashboard" className="block group">
+              <div className="bg-white rounded-xl px-3.5 py-2 inline-flex items-center justify-center shadow-xs border border-white/20 group-hover:shadow-md transition">
+                <Image
+                  src="/logo.png"
+                  alt="The Data Dot"
+                  width={145}
+                  height={26}
+                  priority
+                  style={{ height: "auto" }}
+                  className="w-[130px]"
+                />
+              </div>
+              <span className="block text-[9.5px] text-slate-400 font-medium tracking-tight mt-2 leading-tight">
                 Data Recovery | IT Support | Cyber Security
                 <br />
-                Digital Solutions
+                <span className="text-blue-400 font-bold uppercase tracking-wider text-[8.5px]">Admin Command Console</span>
               </span>
             </Link>
           </div>
@@ -272,20 +281,35 @@ export default function AdminLayoutShell({
       <div className="flex-1 flex flex-col min-w-0 bg-[#f4f7fb]">
         {/* TOP STATUS & SEARCH HEADER (EXACT WHITE BAR FROM SCREENSHOT) */}
         <header className="h-16 border-b border-slate-200 bg-white px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-2xs">
-          {/* SEARCH BAR */}
-          <div className="relative w-full max-w-md">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Search by Job ID, Client Name, Serial Number, etc..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none transition focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
+          <div className="flex items-center gap-4 w-full max-w-lg">
+            {/* Header Official Logo */}
+            <Link href="/admin/dashboard" className="flex items-center shrink-0" title="The Data Dot Dashboard">
+              <Image
+                src="/logo.png"
+                alt="The Data Dot"
+                width={135}
+                height={24}
+                priority
+                style={{ height: "auto" }}
+                className="w-[115px] sm:w-[130px]"
+              />
+            </Link>
+
+            {/* SEARCH BAR */}
+            <div className="relative flex-1">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Search by Job ID, Client Name, Serial Number, etc..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400 outline-none transition focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
           {/* RIGHT ACTIONS: NOTIFICATIONS, SETTINGS & PROFILE PILL */}

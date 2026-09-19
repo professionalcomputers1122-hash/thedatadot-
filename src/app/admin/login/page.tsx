@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { verifyAdminLogin, setAdminSession } from "@/lib/adminAuth";
 
 export default function AdminLoginPage() {
@@ -60,10 +61,16 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* BRAND HEADER */}
         <div className="text-center mb-8">
-          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-black text-2xl shadow-xl shadow-red-600/25 mb-4 border border-red-500/30">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
+          <div className="bg-white rounded-2xl px-5 py-2.5 inline-flex items-center justify-center shadow-xl shadow-red-600/10 mb-4 border border-white/20">
+            <Image
+              src="/logo.png"
+              alt="The Data Dot"
+              width={160}
+              height={28}
+              priority
+              style={{ height: "auto" }}
+              className="w-[145px]"
+            />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Admin Command Console

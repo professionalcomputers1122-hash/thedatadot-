@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
+import DiagnosticReportModal from "@/components/DiagnosticReportModal";
 import {
   getCustomerSession,
   CustomerUser,
@@ -409,6 +410,7 @@ export default function CustomerDashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
@@ -538,7 +540,10 @@ export default function CustomerDashboardPage() {
 
     const refreshAttachments = () => {
       const atts = getTicketAttachments(activeTicket.id);
-      setAttachments(atts);
+      const filtered = Array.isArray(atts)
+        ? atts.filter((a) => !a.name.includes("_diagnostic_telemetry.pdf"))
+        : [];
+      setAttachments(filtered);
     };
 
     refreshAttachments();
@@ -859,7 +864,23 @@ export default function CustomerDashboardPage() {
                             </button>
                           )}
 
-                          {file.url ? (
+                          {file.name.toLowerCase().includes("diagnostic_report") || file.name.toLowerCase().includes("cleanroom_diagnostic") ? (
+                            <button
+                              type="button"
+                              onClick={() => setShowReportModal(true)}
+                              className="rounded-lg px-2.5 py-1.5 text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                              title="View Official Cleanroom Diagnostic Report"
+                            >
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                                <path d="M10 9H8" />
+                                <path d="M16 13H8" />
+                                <path d="M16 17H8" />
+                              </svg>
+                              <span>View Official Report</span>
+                            </button>
+                          ) : file.url ? (
                             <a
                               href={file.url}
                               download={file.name}
@@ -1098,6 +1119,33 @@ export default function CustomerDashboardPage() {
           confirmButtonText="Permanently Delete Ticket"
           isDeleting={!!deletingId}
         />
+
+        {/* OFFICIAL CLEANROOM DIAGNOSTIC REPORT MODAL */}
+        {activeTicket && (
+          <DiagnosticReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            reportData={{
+              ticketId: activeTicket.id,
+              clientName: customer?.name || activeTicket.customerName || "Authorized Client",
+              companyName: customer?.company || activeTicket.companyName || "The Data Dot Client",
+              deviceOrSubject: activeTicket.deviceOrSubject || "Storage Drive / Hardware Unit",
+              serialNumber: activeTicket.serialNumber || `TDD-SN-${activeTicket.id}`,
+              category: activeTicket.category || "Data Recovery",
+              priority: activeTicket.priority,
+              status: activeTicket.status || "In Progress",
+              clonedPercent: activeTicket.clonedPercent || 0,
+              assignedTech: activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned" ? activeTicket.assignedTech : "K. Vignesh (Cleanroom Lead)",
+              assignedBench: activeTicket.assignedBench || "ISO Class-5 Bench #1",
+              symptoms: (activeTicket as any).symptoms || activeTicket.deviceOrSubject || "Cleanroom diagnostic examination required",
+              headsHealth: (activeTicket as any).headsHealth || "100% Functional",
+              badSectorsRemapped: (activeTicket as any).badSectorsRemapped || 0,
+              temp: (activeTicket as any).temp || "28.4°C",
+              notes: activeTicket.techNotes,
+              createdAt: activeTicket.createdAt,
+            }}
+          />
+        )}
       </main>
 
       <Footer />

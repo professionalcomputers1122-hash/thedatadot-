@@ -912,7 +912,14 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    setNotification(`Internal workbench notes & station updated for #${targetId}.`);
+    const targetStatus = overrideStatus || editStatus || activeCase.status;
+    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, targetStatus, clientProgress || editProgress);
+
+    if (reportAutoAttached) {
+      setNotification(`Diagnosis updated & Cleanroom Diagnostic Report automatically generated & attached!`);
+    } else {
+      setNotification(`Internal workbench notes & station updated for #${targetId}.`);
+    }
 
     setActivityFeed((prev) => [
       {
@@ -1032,8 +1039,14 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
+    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, newStatus, autoProgress);
+
     setClientUpdateText("");
-    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}".`);
+    if (reportAutoAttached) {
+      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}" & Diagnostic Report automatically attached.`);
+    } else {
+      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}".`);
+    }
 
     setActivityFeed((prev) => [
       {
@@ -1158,10 +1171,19 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}".`);
-    setTimeout(() => setNotification(""), 4000);
+    // Automatically provide diagnosis report once technician changes diagnosis to next update
+    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, stageValue, autoProgress);
 
-    const broadcastMsg = `Ticket lifecycle stage updated to "${stageValue}".`;
+    if (reportAutoAttached) {
+      setNotification(`✅ Diagnosis advanced to "${stageValue}" → Official Cleanroom Diagnostic Report automatically generated & attached.`);
+    } else {
+      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}".`);
+    }
+    setTimeout(() => setNotification(""), 4500);
+
+    const broadcastMsg = reportAutoAttached
+      ? `Ticket lifecycle stage updated to "${stageValue}". Technical diagnosis completed — official Cleanroom Diagnostic Report has been automatically generated and attached to your case files.`
+      : `Ticket lifecycle stage updated to "${stageValue}".`;
     setChatMessages((prev) => ({
       ...prev,
       [targetId]: [
@@ -1399,6 +1421,97 @@ export default function TechnicianWorkbenchPage() {
       ...prev.slice(0, 4),
     ]);
     setTimeout(() => setNotification(""), 4500);
+  };
+
+  // Automatically provide diagnosis report once technician changes diagnosis to next update
+  const autoAttachReportIfDiagnosisAdvanced = (
+    targetId: string,
+    newStatus: string,
+    progressVal?: number
+  ): boolean => {
+    const norm = (newStatus || "").toLowerCase();
+    // Check if stage is moving to next update beyond initial intake/diagnosis
+    // (e.g. Stage 3: PC-3000 Imaging / Resolution & Rollout / Containment / Deployment, or Stage 4, or progress >= 50%)
+    const isAdvancedPastDiagnosis =
+      norm.includes("pc-3000") ||
+      norm.includes("imaging") ||
+      norm.includes("resolution") ||
+      norm.includes("rollout") ||
+      norm.includes("containment") ||
+      norm.includes("remediation") ||
+      norm.includes("deployment") ||
+      norm.includes("migration") ||
+      norm.includes("verification") ||
+      norm.includes("return") ||
+      norm.includes("hardening") ||
+      norm.includes("handover") ||
+      norm.includes("audit") ||
+      norm.includes("resolved") ||
+      norm.includes("closed") ||
+      norm.includes("completed") ||
+      (progressVal !== undefined && progressVal >= 50);
+
+    if (!isAdvancedPastDiagnosis) return false;
+
+    let currentList: TicketAttachment[] = [];
+    try {
+      const stored = localStorage.getItem(`tdd_attachments_${targetId}`);
+      if (stored) {
+        currentList = JSON.parse(stored);
+      } else {
+        currentList = attachments[targetId] || [];
+      }
+    } catch {
+      currentList = attachments[targetId] || [];
+    }
+
+    const alreadyHasReport = currentList.some(
+      (a) =>
+        a.name.toLowerCase().includes("diagnostic_report") ||
+        a.name.toLowerCase().includes("cleanroom_diagnostic")
+    );
+
+    if (!alreadyHasReport) {
+      const newReportAtt: TicketAttachment = {
+        id: `att-rep-${targetId}-${Date.now()}`,
+        name: `Cleanroom_Diagnostic_Report_${targetId}.pdf`,
+        size: "1.2 MB",
+        type: "pdf",
+        uploadedAt: "Just now (Auto-Generated)",
+        uploadedBy: activeCase?.leadTech && activeCase.leadTech !== "Unassigned" ? activeCase.leadTech : techUser.name,
+      };
+
+      const updated = [...currentList, newReportAtt];
+      setAttachments((prev) => ({
+        ...prev,
+        [targetId]: updated,
+      }));
+
+      try {
+        const json = JSON.stringify(updated);
+        localStorage.setItem(`tdd_attachments_${targetId}`, json);
+        localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
+        localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
+        window.dispatchEvent(new Event("attachments-updated"));
+        window.dispatchEvent(new Event("storage"));
+      } catch (err) {
+        console.warn("Could not save auto-generated report attachment:", err);
+      }
+
+      setActivityFeed((prev) => [
+        {
+          id: Date.now(),
+          text: `Diagnostic report automatically attached on #${targetId} (${newStatus})`,
+          time: "Just now",
+          dotColor: "bg-emerald-500",
+        },
+        ...prev.slice(0, 4),
+      ]);
+
+      return true;
+    }
+
+    return false;
   };
 
   const handleAddInternalNote = (e: React.FormEvent) => {

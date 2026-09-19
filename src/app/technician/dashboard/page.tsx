@@ -432,6 +432,7 @@ export default function TechnicianWorkbenchPage() {
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({});
   const [replyText, setReplyText] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [dashboardDrawerTab, setDashboardDrawerTab] = useState<"internal" | "client">("internal");
 
   const [attachments, setAttachments] = useState<Record<string, TicketAttachment[]>>({});
   const [internalNotes, setInternalNotes] = useState<Record<string, InternalNote[]>>({});
@@ -491,6 +492,16 @@ export default function TechnicianWorkbenchPage() {
       const tickets = await fetchTicketsFromSupabase();
       if (!tickets) return;
 
+      let localOverrides: Record<string, any> = {};
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("tdd_ticket_overrides");
+          if (raw) localOverrides = JSON.parse(raw);
+        } catch (e) {
+          console.warn("Could not parse local ticket overrides:", e);
+        }
+      }
+
       const mapped: CaseItem[] = tickets.map((t: any) => {
         let mediaType: CaseItem["mediaType"] = "GENERAL";
         const devLower = (t.deviceOrSubject || "").toLowerCase();
@@ -501,6 +512,8 @@ export default function TechnicianWorkbenchPage() {
         else if (devLower.includes("network") || devLower.includes("switch") || devLower.includes("cisco")) mediaType = "NETWORK";
         else if (devLower.includes("server") || devLower.includes("dell poweredge")) mediaType = "SERVER";
 
+        const override = localOverrides[t.id];
+
         return {
           id: t.id,
           client: t.companyName || t.customerName || "ABC Construction Ltd",
@@ -508,22 +521,22 @@ export default function TechnicianWorkbenchPage() {
           serial: t.serialNumber || `SN-${t.id}-TDD`,
           mediaType,
           category: t.category || "Managed IT",
-          status: t.status || "Open",
-          progress: Number(t.clonedPercent) || 0,
-          priority: t.priority === "CRITICAL" ? "CRITICAL" : t.priority === "HIGH" ? "HIGH" : "STANDARD",
-          notes: t.techNotes || "",
-          bench: t.assignedBench || "Enterprise Fleet Support Bench 01",
+          status: override?.status || t.status || "Open",
+          progress: override?.progress !== undefined ? override.progress : (Number(t.clonedPercent) || 0),
+          priority: override?.priority || (t.priority === "CRITICAL" ? "CRITICAL" : t.priority === "HIGH" ? "HIGH" : "STANDARD"),
+          notes: override?.notes !== undefined ? override.notes : (t.techNotes || ""),
+          bench: override?.bench || t.assignedBench || "Enterprise Fleet Support Bench 01",
           headsHealth: "100% OK",
           badSectorsRemapped: 0,
           temp: "28.4°C",
           leadTech: t.assignedTech || "Unassigned",
-          updatedAt: t.updatedAt || "2 hours ago",
+          updatedAt: override?.updatedAt || t.updatedAt || "2 hours ago",
           createdAt: t.createdAt || "Today",
         };
       });
 
       const targetId = selectedCaseIdRef.current;
-      const isRecentlyUpdated = Date.now() - lastManualUpdateRef.current < 15000;
+      const isRecentlyUpdated = Date.now() - lastManualUpdateRef.current < 30000;
 
       setCases((prev) => {
         return mapped.map((m) => {
@@ -852,6 +865,25 @@ export default function TechnicianWorkbenchPage() {
           : c
       )
     );
+
+    // Save persistent local override so background polling never reverts
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("tdd_ticket_overrides");
+        const overrides = raw ? JSON.parse(raw) : {};
+        overrides[targetId] = {
+          status: newStatus,
+          priority: newPriority,
+          bench: newBench,
+          progress: newProgress,
+          notes: newNotes,
+          updatedAt: "Just now",
+        };
+        localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+      } catch (e) {
+        console.warn("Could not save persistent ticket override:", e);
+      }
+    }
 
     setNotification(`Case #${targetId} status updated to "${newStatus}".`);
 
@@ -1806,120 +1838,253 @@ export default function TechnicianWorkbenchPage() {
                   {activeCase && (
                     <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div>
+                        <div className="min-w-0 pr-2">
                           <span className="text-[10px] font-mono text-blue-600 font-bold block">
                             Active Case #{activeCase.id}
                           </span>
-                          <h4 className="font-bold text-slate-900 text-xs truncate max-w-[220px]">
+                          <h4 className="font-bold text-slate-900 text-xs truncate max-w-[200px]">
                             {activeCase.device}
                           </h4>
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleOpenDetails(activeCase)}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-500 shadow-sm"
+                          className="rounded-xl bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 text-xs font-bold hover:bg-blue-600 hover:text-white transition shrink-0 cursor-pointer"
                         >
-                          Full Details →
+                          Workspace →
                         </button>
                       </div>
 
-                      {/* QUICK STATUS SELECT & WORKBENCH UPDATE */}
-                      <div className="space-y-3 text-xs">
-                        <div>
-                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                            Quick Stage Update:
-                          </label>
-                          <select
-                            value={editStatus || activeCase.status}
-                            onChange={(e) => setEditStatus(e.target.value)}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                          >
-                            <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                              {availableStages.core.map((st) => (
-                                <option key={st.value} value={st.value}>
-                                  {st.label}
-                                </option>
-                              ))}
-                            </optgroup>
-                            {availableStages.extras.length > 0 && (
-                              <optgroup label={`${activeCase.category} Execution Stages`}>
-                                {availableStages.extras.map((st) => (
+                      {/* 2-UPDATE SELECTOR TABS: INTERNAL VS CLIENT */}
+                      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setDashboardDrawerTab("internal")}
+                          className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${
+                            dashboardDrawerTab === "internal"
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <span>⚙️</span>
+                          <span>Internal Update</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDashboardDrawerTab("client")}
+                          className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${
+                            dashboardDrawerTab === "client"
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <span>📢</span>
+                          <span>Client Update</span>
+                        </button>
+                      </div>
+
+                      {/* MODULE 1: INTERNAL WORKBENCH UPDATE */}
+                      {dashboardDrawerTab === "internal" && (
+                        <div className="space-y-3 text-xs">
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Lifecycle Stage:
+                            </label>
+                            <select
+                              value={editStatus || activeCase.status}
+                              onChange={(e) => setEditStatus(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
+                            >
+                              <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                                {availableStages.core.map((st) => (
                                   <option key={st.value} value={st.value}>
                                     {st.label}
                                   </option>
                                 ))}
                               </optgroup>
+                              {availableStages.extras.length > 0 && (
+                                <optgroup label={`${activeCase.category} Execution Stages`}>
+                                  {availableStages.extras.map((st) => (
+                                    <option key={st.value} value={st.value}>
+                                      {st.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                                Priority:
+                              </label>
+                              <select
+                                value={editPriority || activeCase.priority}
+                                onChange={(e) => setEditPriority(e.target.value as any)}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
+                              >
+                                <option value="CRITICAL">High</option>
+                                <option value="HIGH">Medium</option>
+                                <option value="STANDARD">Low</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                                Station:
+                              </label>
+                              <select
+                                value={editBench || activeCase.bench}
+                                onChange={(e) => setEditBench(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate"
+                              >
+                                {currentConfig?.benchOptions.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between text-[11px] mb-1">
+                              <span className="font-semibold text-slate-700">Completion Progress:</span>
+                              <span className="font-mono font-bold text-blue-600">
+                                {editProgress !== undefined ? editProgress : activeCase.progress}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={editProgress !== undefined ? editProgress : activeCase.progress}
+                              onChange={(e) => setEditProgress(Number(e.target.value))}
+                              className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Internal Tech Notes:
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={editNotes}
+                              onChange={(e) => setEditNotes(e.target.value)}
+                              placeholder="Technical observations, lab log, firmware revision..."
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSaveWorkbenchStatus()}
+                            disabled={isUpdatingStatus}
+                            className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                          >
+                            {isUpdatingStatus ? (
+                              <>
+                                <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Saving Internal Update...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>💾</span>
+                                <span>Save Internal Update</span>
+                              </>
                             )}
-                          </select>
+                          </button>
                         </div>
+                      )}
 
-                        <div className="grid grid-cols-2 gap-2">
+                      {/* MODULE 2: CLIENT PORTAL UPDATE */}
+                      {dashboardDrawerTab === "client" && (
+                        <div className="space-y-3 text-xs">
                           <div>
-                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Priority:
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Quick Presets:
                             </label>
-                            <select
-                              value={editPriority || activeCase.priority}
-                              onChange={(e) => setEditPriority(e.target.value as any)}
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white"
-                            >
-                              <option value="CRITICAL">High</option>
-                              <option value="HIGH">Medium</option>
-                              <option value="STANDARD">Low</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Station:
-                            </label>
-                            <select
-                              value={editBench || activeCase.bench}
-                              onChange={(e) => setEditBench(e.target.value)}
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate"
-                            >
-                              {currentConfig?.benchOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
+                            <div className="flex flex-col gap-1">
+                              {[
+                                "Diagnostics completed, bench operations underway.",
+                                "Recovery 100% verified, preparing files for handover.",
+                                "Awaiting customer authorization for next phase.",
+                              ].map((tmpl, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => setClientUpdateText(tmpl)}
+                                  className="rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 px-2 py-1 text-[11px] text-slate-700 text-left truncate transition cursor-pointer"
+                                >
+                                  + {tmpl}
+                                </button>
                               ))}
-                            </select>
+                            </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="font-semibold text-slate-700">Progress:</span>
-                            <span className="font-mono font-bold text-blue-600">
-                              {editProgress !== undefined ? editProgress : activeCase.progress}%
-                            </span>
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Customer Message / Dispatch:
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={clientUpdateText}
+                              onChange={(e) => setClientUpdateText(e.target.value)}
+                              placeholder={`Update message for ${activeCase.client}...`}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
+                            />
                           </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={editProgress !== undefined ? editProgress : activeCase.progress}
-                            onChange={(e) => setEditProgress(Number(e.target.value))}
-                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                          />
-                        </div>
 
+                          <label className="flex items-center gap-2 text-[11px] font-medium text-slate-600 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={notifyClientWithTelemetry}
+                              onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>Include stage &amp; progress stamp</span>
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={handleSendClientUpdate}
+                            disabled={isSendingClientUpdate || !clientUpdateText.trim()}
+                            className="w-full rounded-xl bg-slate-900 py-2.5 font-bold text-white hover:bg-slate-800 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSendingClientUpdate ? (
+                              <>
+                                <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Broadcasting to Portal...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>✉️</span>
+                                <span>Send Client Update</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* QUICK ATTACHMENT & WORKSPACE ACTIONS */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                         <button
                           type="button"
-                          onClick={() => handleSaveWorkbenchStatus()}
-                          disabled={isUpdatingStatus}
-                          className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50/50 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
-                          {isUpdatingStatus ? (
-                            <>
-                              <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Saving Status...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>💾</span>
-                              <span>Update Ticket Status</span>
-                            </>
-                          )}
+                          <span>📎</span>
+                          <span>Add Attachment</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetails(activeCase)}
+                          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-1 transition cursor-pointer"
+                        >
+                          <span>Full Workspace</span>
+                          <span>→</span>
                         </button>
                       </div>
                     </div>
@@ -2236,7 +2401,7 @@ export default function TechnicianWorkbenchPage() {
                       Workflow Lifecycle Progression
                     </span>
                     <span className="text-[11px] text-slate-400">
-                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Update Ticket Status</strong> to save
+                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Save Internal Update</strong> to save
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">

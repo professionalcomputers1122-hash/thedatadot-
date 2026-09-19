@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import TechnicianNav from "@/components/TechnicianNav";
 import Footer from "@/components/Footer";
+import DiagnosticReportModal from "@/components/DiagnosticReportModal";
 import {
   initialTickets,
   fetchTicketsFromSupabase,
@@ -41,6 +42,7 @@ export default function TechnicianTicketDetailPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [showReportModal, setShowReportModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -158,25 +160,18 @@ export default function TechnicianTicketDetailPage({
             setMessages(initialThread);
           }
 
-          // Load attachments for this ticket
+          // Load attachments for this ticket (empty by default - no automatic dummy reports)
           if (typeof window !== "undefined") {
             try {
               const storedAtts = getTicketAttachments(ticketId);
               if (storedAtts && storedAtts.length > 0) {
-                setAttachments(storedAtts);
+                const filtered = storedAtts.filter((a) => !a.name.includes("_diagnostic_telemetry.pdf"));
+                if (filtered.length !== storedAtts.length) {
+                  saveTicketAttachments(ticketId, filtered);
+                }
+                setAttachments(filtered);
               } else {
-                const defaultAtt = [
-                  {
-                    id: `att-${ticketId}-1`,
-                    name: `${(found.category || "Service").toLowerCase().replace(/\s+/g, "_")}_diagnostic_telemetry.pdf`,
-                    size: "2.1 MB",
-                    type: "pdf",
-                    uploadedAt: found.createdAt || "Today",
-                    uploadedBy: found.assignedTech && found.assignedTech !== "Unassigned" ? found.assignedTech : "Bench Intake Desk",
-                  },
-                ];
-                setAttachments(defaultAtt);
-                saveTicketAttachments(ticketId, defaultAtt);
+                setAttachments([]);
               }
             } catch (attErr) {
               console.warn("Could not load stored attachments:", attErr);
@@ -319,6 +314,14 @@ export default function TechnicianTicketDetailPage({
     setTimeout(() => setNotification(""), 3000);
   };
 
+  const handleAttachGeneratedReport = (reportAtt: TicketAttachment) => {
+    const updated = [...attachments, reportAtt];
+    setAttachments(updated);
+    saveTicketAttachments(ticketId, updated);
+    setNotification("📄 Cleanroom Diagnostic Report attached to case and synchronized with client portal.");
+    setTimeout(() => setNotification(""), 4000);
+  };
+
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !ticket) return;
@@ -418,10 +421,26 @@ export default function TechnicianTicketDetailPage({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs text-slate-400">
               Client: <strong className="text-white">{ticket.companyName}</strong> ({ticket.customerName})
             </span>
+
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/40 bg-blue-600/20 px-3.5 py-1.5 text-xs font-bold text-blue-300 hover:bg-blue-600/30 hover:border-blue-400 transition shadow-xs cursor-pointer"
+              title="Generate Cleanroom Forensic Diagnostic Report with Company Logo"
+            >
+              <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <path d="M10 9H8" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+              </svg>
+              <span>Generate Diagnosis Report</span>
+            </button>
           </div>
         </div>
 
@@ -639,22 +658,58 @@ export default function TechnicianTicketDetailPage({
                   </h2>
                   <span className="text-[11px] text-slate-400">Forensic images, diagnostics, and test results</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="rounded-xl bg-blue-600 px-3.5 py-1.5 font-semibold text-white hover:bg-blue-500 transition text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span>📎</span>
-                  <span>Upload File</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(true)}
+                    className="rounded-xl border border-blue-500/30 bg-blue-600/20 px-3.5 py-1.5 font-semibold text-blue-300 hover:bg-blue-600/30 hover:border-blue-400 transition text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Generate Cleanroom Forensic Diagnostic Report with Company Logo"
+                  >
+                    <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                      <path d="M10 9H8" />
+                      <path d="M16 13H8" />
+                      <path d="M16 17H8" />
+                    </svg>
+                    <span>Generate Diagnosis Report</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="rounded-xl bg-blue-600 px-3.5 py-1.5 font-semibold text-white hover:bg-blue-500 transition text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>📎</span>
+                    <span>Upload File</span>
+                  </button>
+                </div>
               </div>
 
               {attachments.length === 0 ? (
-                <div className="p-6 text-center text-slate-500 bg-slate-900/60 rounded-xl border border-dashed border-slate-800">
+                <div className="p-8 text-center text-slate-500 bg-slate-900/60 rounded-xl border border-dashed border-slate-800">
+                  <span className="text-3xl block mb-2">📁</span>
                   <p className="font-semibold text-slate-400">No attachments uploaded yet</p>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Click the button above to upload firmware dumps, photos, or logs.
+                  <p className="mt-1 text-[11px] text-slate-500 mb-4">
+                    Attach firmware dumps, photos, logs, or generate an official diagnostic report.
                   </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowReportModal(true)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500/40 bg-blue-600/20 px-3.5 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-600/30 hover:border-blue-400 transition cursor-pointer"
+                    >
+                      <span>📄</span>
+                      <span>Generate Diagnosis Report</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-blue-500 bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition cursor-pointer"
+                    >
+                      <span>📎</span>
+                      <span>Upload File</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -814,6 +869,34 @@ export default function TechnicianTicketDetailPage({
           </div>
         </div>
       </main>
+
+      {/* Diagnostic Report Generator Modal with Official Company Logo */}
+      {ticket && (
+        <DiagnosticReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportData={{
+            ticketId: ticket.id,
+            clientName: ticket.customerName || "Authorized Client",
+            companyName: ticket.companyName || "The Data Dot Client",
+            deviceOrSubject: ticket.deviceOrSubject || ticket.subject || "Storage Media / Forensic Unit",
+            serialNumber: ticket.serialNumber || `SN-${ticket.id}-TDD`,
+            category: ticket.category || "Data Recovery",
+            priority: ticket.priority,
+            status: status,
+            clonedPercent: progress,
+            assignedTech: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Cleanroom Recovery Lead",
+            assignedBench: ticket.assignedBench || "ISO Class-5 Cleanroom Station 01",
+            symptoms: ticket.symptoms || ticket.subject || "Cleanroom diagnostic assessment required",
+            headsHealth: ticket.headsHealth || "100% Functional",
+            badSectorsRemapped: ticket.badSectorsRemapped || 0,
+            temp: ticket.temp || "28.4°C",
+            notes: notes || ticket.techNotes,
+            createdAt: ticket.createdAt,
+          }}
+          onAttachReport={handleAttachGeneratedReport}
+        />
+      )}
 
       {/* Hidden Native File Input for Attachments */}
       <input

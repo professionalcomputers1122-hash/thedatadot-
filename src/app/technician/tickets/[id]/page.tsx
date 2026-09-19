@@ -465,39 +465,30 @@ export default function TechnicianTicketDetailPage({
                       const stages =
                         ticket.category === "Cybersecurity"
                           ? [
-                              "Intake & Diagnostics",
-                              "Threat Intake & Triage",
+                              "Threat Intake",
                               "Security Forensics",
                               "Containment & Remediation",
                               "Policy Hardening",
-                              "Resolved",
                             ]
                           : ticket.category === "Cloud Solutions"
                           ? [
-                              "Intake & Diagnostics",
-                              "Scope Intake & Discovery",
+                              "Scope Intake",
                               "Cloud Architecture",
                               "Deployment & Migration",
                               "Handover & Audit",
-                              "Resolved",
                             ]
                           : ticket.category === "Managed IT"
                           ? [
-                              "Intake & Diagnostics",
-                              "Service Intake & Triage",
+                              "Ticket Intake",
                               "Technical Assessment",
                               "Resolution & Rollout",
                               "Quality Verification",
-                              "Resolved",
                             ]
                           : [
-                              "Intake & Diagnostics",
-                              "Media Received",
-                              "Cleanroom Diagnosis",
-                              "PC-3000 Raw Platter Mirrored Extraction",
-                              "Firmware Virtual Translator Rebuild",
-                              "File System Verification & File Tree Extracted",
-                              "Resolved",
+                              "Media Intake",
+                              "Cleanroom Diagnostics",
+                              "PC-3000 Imaging",
+                              "Verification & Return",
                             ];
 
                       if (status && !stages.includes(status)) {

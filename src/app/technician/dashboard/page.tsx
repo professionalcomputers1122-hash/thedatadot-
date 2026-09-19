@@ -135,11 +135,10 @@ export function getCategoryConfig(
         { label: "Threat Level", value: "P1 Active Breach Mitigation", color: "text-amber-600" },
       ],
       stages: [
-        { value: "Threat Intake & Triage", label: "1. Threat Intake & Perimeter Quarantine" },
-        { value: "Security Forensics", label: "2. Security Forensics & Memory Analysis" },
-        { value: "Containment & Remediation", label: "3. Containment & Vector Neutralization" },
-        { value: "Policy Hardening", label: "4. Policy Hardening & Compliance Audit" },
-        { value: "Resolved", label: "5. Threat Fully Mitigated (Resolved)" },
+        { value: "Threat Intake", label: "1. Threat Intake (Perimeter Isolation)" },
+        { value: "Security Forensics", label: "2. Security Forensics (Vector Analysis)" },
+        { value: "Containment & Remediation", label: "3. Containment & Remediation" },
+        { value: "Policy Hardening", label: "4. Policy Hardening (Mitigated / Resolved)" },
       ],
       stepper,
       benchOptions: [
@@ -187,11 +186,10 @@ export function getCategoryConfig(
         { label: "Uptime SLA Target", value: "99.99% Operational", color: "text-emerald-600" },
       ],
       stages: [
-        { value: "Scope Intake & Discovery", label: "1. Scope Intake & Tenant Discovery" },
-        { value: "Cloud Architecture", label: "2. Cloud Architecture & Network Planning" },
+        { value: "Scope Intake", label: "1. Scope Intake (Tenant Specifications)" },
+        { value: "Cloud Architecture", label: "2. Cloud Architecture (IAM & Network Planning)" },
         { value: "Deployment & Migration", label: "3. Deployment & Cloud Asset Migration" },
-        { value: "Handover & Audit", label: "4. Uptime Verification & Client Handover" },
-        { value: "Resolved", label: "5. Cloud Deployment Active (Resolved)" },
+        { value: "Handover & Audit", label: "4. Handover & Audit (Active / Resolved)" },
       ],
       stepper,
       benchOptions: [
@@ -239,11 +237,10 @@ export function getCategoryConfig(
         { label: "SLA Response", value: "< 15-Min Guaranteed", color: "text-emerald-600" },
       ],
       stages: [
-        { value: "Service Intake & Triage", label: "1. Service Intake & Ticket Triage" },
-        { value: "Technical Assessment", label: "2. Technical Assessment & Bench Diagnostics" },
-        { value: "Resolution & Rollout", label: "3. System Resolution, Patching & Rollout" },
-        { value: "Quality Verification", label: "4. Quality Verification & Client Handover" },
-        { value: "Resolved", label: "5. Ticket Resolved & System Operational" },
+        { value: "Ticket Intake", label: "1. Ticket Intake (Equipment Issue Registered)" },
+        { value: "Technical Assessment", label: "2. Technical Assessment (Diagnostics)" },
+        { value: "Resolution & Rollout", label: "3. Resolution & Rollout (System Patching)" },
+        { value: "Quality Verification", label: "4. Quality Verification (Operational / Resolved)" },
       ],
       stepper,
       benchOptions: [
@@ -266,10 +263,10 @@ export function getCategoryConfig(
   const s4State: "done" | "active" | "pending" = isResolved ? "done" : isStage4 ? "active" : "pending";
 
   const stepper: TimelineStage[] = [
-    { title: "Media Received", description: "Cleanroom Barcode Intake", state: s1State },
+    { title: "Media Intake", description: "Cleanroom Barcode Intake", state: s1State },
     { title: "Cleanroom Diagnostics", description: "ISO Class-5 Inspection", state: s2State },
-    { title: "PC-3000 Raw Extraction", description: progress > 0 ? `${progress}% Cloned` : "Platter Mirror Queued", state: s3State },
-    { title: "Integrity Verification", description: isResolved ? "Data Recovered" : "File Tree Audit", state: s4State },
+    { title: "PC-3000 Imaging", description: "Raw Platter Sector Mirror", state: s3State },
+    { title: "Verification & Return", description: isResolved ? "Data Recovered" : "File Tree Audit & Delivery", state: s4State },
   ];
 
   return {
@@ -291,12 +288,10 @@ export function getCategoryConfig(
       { label: "Write-Block Protection", value: "Hardware 256-Bit Active", color: "text-emerald-600" },
     ],
     stages: [
-      { value: "Media Received", label: "1. Media Received (Cleanroom Intake)" },
-      { value: "Cleanroom Diagnosis", label: "2. Cleanroom Diagnosis (ISO Class-5)" },
-      { value: "PC-3000 Raw Platter Mirrored Extraction", label: "3. PC-3000 Raw Platter Mirrored Extraction" },
-      { value: "Firmware Virtual Translator Rebuild", label: "4. Firmware Virtual Translator Rebuild" },
-      { value: "File System Verification & File Tree Extracted", label: "5. File System Verification & File Tree Extracted" },
-      { value: "Resolved", label: "6. Completed & Recovered (Resolved)" },
+      { value: "Media Intake", label: "1. Media Intake (Cleanroom Barcode Intake)" },
+      { value: "Cleanroom Diagnostics", label: "2. Cleanroom Diagnostics (ISO Class-5 Inspection)" },
+      { value: "PC-3000 Imaging", label: "3. PC-3000 Imaging (Raw Platter Sector Mirror)" },
+      { value: "Verification & Return", label: "4. Verification & Return (Data Recovered / Handover)" },
     ],
     stepper,
     benchOptions: [
@@ -955,13 +950,25 @@ export default function TechnicianWorkbenchPage() {
     lastManualUpdateRef.current = Date.now();
 
     const newStatus = clientStatus || activeCase.status;
-    const newProgress = clientProgress !== undefined ? clientProgress : activeCase.progress;
     const currentStation = editBench || activeCase.bench;
 
+    // Automatic progress calculation based on the 4 stages for DB compatibility
+    let autoProgress = 25;
+    const norm = newStatus.toLowerCase();
+    if (norm.includes("resolved") || norm.includes("return") || norm.includes("verification") || norm.includes("hardening") || norm.includes("audit") || norm.includes("handover") || norm.includes("closed")) {
+      autoProgress = 100;
+    } else if (norm.includes("pc-3000") || norm.includes("imaging") || norm.includes("containment") || norm.includes("remediation") || norm.includes("deployment") || norm.includes("migration") || norm.includes("rollout") || norm.includes("repair")) {
+      autoProgress = 75;
+    } else if (norm.includes("cleanroom") || norm.includes("diagnos") || norm.includes("forensic") || norm.includes("architecture") || norm.includes("assessment")) {
+      autoProgress = 50;
+    } else {
+      autoProgress = 25;
+    }
+
     const rawMsg = clientUpdateText.trim();
-    let broadcastMessage = rawMsg || `Ticket lifecycle stage updated to "${newStatus}" (${newProgress}% completed).`;
-    if (notifyClientWithTelemetry && !broadcastMessage.includes("[Status:")) {
-      broadcastMessage += `\n\n[Status: ${newStatus} • Progress: ${newProgress}% • Station: ${currentStation}]`;
+    let broadcastMessage = rawMsg || `Ticket lifecycle stage updated to "${newStatus}".`;
+    if (notifyClientWithTelemetry && !broadcastMessage.includes("[Stage:")) {
+      broadcastMessage += `\n\n[Stage: ${newStatus} • Station: ${currentStation}]`;
     }
 
     const newMsg: ChatMessage = {
@@ -983,7 +990,7 @@ export default function TechnicianWorkbenchPage() {
           ? {
               ...c,
               status: newStatus,
-              progress: newProgress,
+              progress: autoProgress,
               priority: editPriority || activeCase.priority,
               bench: currentStation,
               updatedAt: "Just now",
@@ -1000,7 +1007,7 @@ export default function TechnicianWorkbenchPage() {
         const overrideData = {
           ...(overrides[targetId] || {}),
           status: newStatus,
-          progress: newProgress,
+          progress: autoProgress,
           priority: editPriority || activeCase.priority,
           bench: currentStation,
           updatedAt: "Just now",
@@ -1016,12 +1023,12 @@ export default function TechnicianWorkbenchPage() {
     }
 
     setClientUpdateText("");
-    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}" (${newProgress}%).`);
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}".`);
 
     setActivityFeed((prev) => [
       {
         id: Date.now(),
-        text: `You broadcast an update to customer on #${targetId} (${newStatus} - ${newProgress}%)`,
+        text: `You broadcast an update to customer on #${targetId} (${newStatus})`,
         time: "Just now",
         dotColor: "bg-emerald-500",
       },
@@ -1032,7 +1039,7 @@ export default function TechnicianWorkbenchPage() {
       await Promise.all([
         updateTicketInSupabase(targetId, {
           status: newStatus,
-          clonedPercent: newProgress,
+          clonedPercent: autoProgress,
           priority: editPriority || activeCase.priority,
           assignedBench: currentStation,
         }),
@@ -1317,23 +1324,18 @@ export default function TechnicianWorkbenchPage() {
       )
     : null;
 
-  // Category Execution Stages for the Active Ticket (e.g. Data Recovery, Managed IT, Cybersecurity, Cloud)
+  // 4-Stage Category Execution Pipeline (Direct 1:1 match with Customer Portal)
   const ticketStages = useMemo(() => {
     let stages = currentConfig?.stages && currentConfig.stages.length > 0
       ? [...currentConfig.stages]
       : [
-          { value: "Intake & Diagnostics", label: "1. Intake & Diagnostics" },
-          { value: "In Progress", label: "2. In Progress / Active Execution" },
-          { value: "Verification", label: "3. Quality Verification" },
-          { value: "Resolved", label: "4. Completed (Resolved)" },
-          { value: "Closed", label: "5. Closed / Handover" },
+          { value: "Media Intake", label: "1. Media Intake" },
+          { value: "Cleanroom Diagnostics", label: "2. Cleanroom Diagnostics" },
+          { value: "PC-3000 Imaging", label: "3. PC-3000 Imaging" },
+          { value: "Verification & Return", label: "4. Verification & Return (Resolved)" },
         ];
 
-    if (!stages.some((s) => s.value.toLowerCase() === "closed")) {
-      stages.push({ value: "Closed", label: `${stages.length + 1}. Closed / Handover` });
-    }
-
-    // Keep current status selectable if it was an older legacy state
+    // Keep current status selectable if it was an older legacy state (e.g. Open / Closed)
     const curStatus = clientStatus || activeCase?.status;
     if (curStatus && !stages.some((s) => s.value.toLowerCase() === curStatus.toLowerCase())) {
       stages = [{ value: curStatus, label: `Current: ${curStatus}` }, ...stages];
@@ -2018,39 +2020,6 @@ export default function TechnicianWorkbenchPage() {
                           </select>
                         </div>
 
-                        {/* Client Progress Slider */}
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="font-semibold text-slate-700">Client Completion Progress:</span>
-                            <span className="font-mono font-bold text-blue-600">
-                              {clientProgress !== undefined ? clientProgress : activeCase.progress}%
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={clientProgress !== undefined ? clientProgress : activeCase.progress}
-                            onChange={(e) => setClientProgress(Number(e.target.value))}
-                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                          />
-                          <div className="flex items-center gap-1.5 pt-1.5">
-                            {[25, 50, 75, 100].map((pct) => (
-                              <button
-                                key={pct}
-                                type="button"
-                                onClick={() => setClientProgress(pct)}
-                                className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
-                                  (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
-                                    ? "bg-blue-600 text-white border-blue-600"
-                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"
-                                }`}
-                              >
-                                {pct}%
-                              </button>
-                            ))}
-                          </div>
-                        </div>
 
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
@@ -2454,22 +2423,23 @@ export default function TechnicianWorkbenchPage() {
                   </div>
                 </div>
 
-                {/* WORKFLOW STEPPER (Interactive Category Execution Stages) */}
+                {/* WORKFLOW STEPPER (Interactive 4-Stage Category Pipeline Matching Client Portal) */}
                 <div className="pt-4 border-t border-slate-100 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                      {activeCase.category || "Data Recovery"} Execution Stages
+                      {activeCase.category || "Data Recovery"} 4-Stage Workflow (Client Portal Synced)
                     </span>
                     <span className="text-[11px] text-slate-400">
                       Click stage to select • Click <strong className="text-blue-600 font-semibold">Sync &amp; Send Client Update</strong> below to apply
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {ticketStages.map((st, i) => {
                       const currentStatus = (clientStatus || editStatus || activeCase.status || "").toLowerCase();
                       const isSelected =
                         currentStatus === st.value.toLowerCase() ||
-                        currentStatus === st.label.toLowerCase();
+                        currentStatus === st.label.toLowerCase() ||
+                        (st.value.toLowerCase() === "verification & return" && (currentStatus.includes("resolved") || currentStatus.includes("return")));
                       return (
                         <button
                           key={st.value}
@@ -2479,7 +2449,7 @@ export default function TechnicianWorkbenchPage() {
                             setEditStatus(st.value);
                           }}
                           title={`Select Stage ${i + 1}: ${st.label}`}
-                          className={`text-left p-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
+                          className={`text-left p-3 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
                             isSelected
                               ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-500/25"
                               : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
@@ -2492,7 +2462,7 @@ export default function TechnicianWorkbenchPage() {
                           >
                             Stage {i + 1}
                           </span>
-                          <span className="truncate block mt-0.5 font-bold">{st.value}</span>
+                          <span className="truncate block mt-0.5 font-bold text-[13px]">{st.value}</span>
                         </button>
                       );
                     })}
@@ -2946,39 +2916,6 @@ export default function TechnicianWorkbenchPage() {
                       </select>
                     </div>
 
-                    {/* Client Progress Slider */}
-                    <div className="space-y-1 pt-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-slate-700">Client Completion Progress:</span>
-                        <span className="font-mono font-bold text-blue-600">
-                          {clientProgress !== undefined ? clientProgress : activeCase.progress}%
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={clientProgress !== undefined ? clientProgress : activeCase.progress}
-                        onChange={(e) => setClientProgress(Number(e.target.value))}
-                        className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                      />
-                      <div className="flex items-center gap-1.5 pt-1">
-                        {[25, 50, 75, 100].map((pct) => (
-                          <button
-                            key={pct}
-                            type="button"
-                            onClick={() => setClientProgress(pct)}
-                            className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
-                              (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"
-                            }`}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
-                    </div>
 
                     {/* Preset Status Quick Chips */}
                     <div className="space-y-1.5">
@@ -3026,7 +2963,7 @@ export default function TechnicianWorkbenchPage() {
                         onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span>Include stage ({clientStatus || activeCase.status}) &amp; progress ({clientProgress !== undefined ? clientProgress : activeCase.progress}%) stamp</span>
+                      <span>Include stage stamp ({clientStatus || activeCase.status}) in client message</span>
                     </label>
 
                     {/* Send Client Update Button */}

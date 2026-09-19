@@ -112,7 +112,7 @@ function getTimelineStages(
           s3State === "done"
             ? "Compromised vectors neutralized."
             : s3State === "active"
-            ? `${clonedPercent || 0}% Threat Remediation`
+            ? "Containment protocol & vector neutralization in progress."
             : "Remediation protocol queued.",
         state: isResolved ? "done" : s3State,
       },
@@ -187,7 +187,7 @@ function getTimelineStages(
           s3State === "done"
             ? "Cloud assets deployed & synced."
             : s3State === "active"
-            ? `${clonedPercent || 0}% Migration / Deployment`
+            ? "Cloud assets migration and workload provisioning active."
             : "Tenant migration queued.",
         state: isResolved ? "done" : s3State,
       },
@@ -257,7 +257,7 @@ function getTimelineStages(
           s3State === "done"
             ? "Configuration / repair completed."
             : s3State === "active"
-            ? `${clonedPercent || 0}% Resolution Progress`
+            ? "System configuration, patching and rollout underway."
             : "Rollout pending.",
         state: isResolved ? "done" : s3State,
       },
@@ -279,9 +279,9 @@ function getTimelineStages(
   let s3: "done" | "active" | "pending" = "pending";
   let s4: "done" | "active" | "pending" = "pending";
 
-  const isDiag = norm.includes("diagnosis") || norm.includes("diagnostic");
-  const isImaging = norm.includes("imaging") || norm.includes("clon");
-  const isVerif = norm.includes("verification") || norm.includes("return");
+  const isDiag = norm.includes("diagnosis") || norm.includes("diagnostic") || norm.includes("cleanroom");
+  const isImaging = norm.includes("imaging") || norm.includes("clon") || norm.includes("pc-3000") || norm.includes("mirror");
+  const isVerif = norm.includes("verification") || norm.includes("return") || norm.includes("resolved") || norm.includes("closed") || norm.includes("complete");
 
   if (isResolved) {
     s1 = "done";
@@ -316,7 +316,7 @@ function getTimelineStages(
       description:
         s1 === "done"
           ? "Barcoded & logged in secure vault."
-          : "Logged in secure queue & awaiting triage.",
+          : "Logged in secure queue & awaiting cleanroom triage.",
       state: s1,
     },
     {
@@ -325,7 +325,7 @@ function getTimelineStages(
         s2 === "done"
           ? "ISO Class-5 clean bench calibrated."
           : s2 === "active"
-          ? "Donor head & platter micro-inspection."
+          ? "Donor head & platter micro-inspection in progress."
           : "Cleanroom bench queued.",
       state: s2,
     },
@@ -335,7 +335,7 @@ function getTimelineStages(
         s3 === "done"
           ? "Raw platter sector mirror complete."
           : s3 === "active"
-          ? `${clonedPercent || 0}% Raw Platter Mirror Cloned`
+          ? "Raw platter sector mirror extraction in progress."
           : "Mirror cloning queued.",
       state: s3,
     },
@@ -396,8 +396,13 @@ export default function CustomerDashboardPage() {
     }
 
     loadTickets();
-    const interval = setInterval(loadTickets, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadTickets, 8000);
+    const handleUpdate = () => loadTickets();
+    window.addEventListener("tickets-updated", handleUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tickets-updated", handleUpdate);
+    };
   }, [router]);
 
   const [deleteModalTicket, setDeleteModalTicket] = useState<Ticket | null>(null);
@@ -475,14 +480,8 @@ export default function CustomerDashboardPage() {
                 {activeCount} {activeCount === 1 ? "Case" : "Cases"}
               </span>
               {activeTicket && (
-                <span className="text-[11px] font-semibold text-emerald-600">
-                  {activeTicket.clonedPercent && activeTicket.clonedPercent > 0
-                    ? activeTicket.category === "Cybersecurity"
-                      ? `${activeTicket.clonedPercent}% Remediated`
-                      : activeTicket.category === "Data Recovery"
-                      ? `${activeTicket.clonedPercent}% Cloned`
-                      : `${activeTicket.clonedPercent}% Deployed`
-                    : activeTicket.status || "Intake Stage"}
+                <span className="text-[11px] font-semibold text-emerald-600 truncate max-w-[150px]" title={activeTicket.status}>
+                  {activeTicket.status || "Media Intake"}
                 </span>
               )}
             </div>

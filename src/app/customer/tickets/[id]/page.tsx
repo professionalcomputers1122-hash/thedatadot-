@@ -165,9 +165,14 @@ export default function CustomerTicketDetailPage({
 
     loadData();
 
-    // Auto-poll live ticket telemetry from technician every 8 seconds
+    // Auto-poll live ticket telemetry from technician every 8 seconds & instant event sync
     const interval = setInterval(() => loadData(true), 8000);
-    return () => clearInterval(interval);
+    const handleSync = () => loadData(true);
+    window.addEventListener("tickets-updated", handleSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tickets-updated", handleSync);
+    };
   }, [ticketId, router]);
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -323,7 +328,7 @@ export default function CustomerTicketDetailPage({
                     : "bg-blue-100 text-blue-800"
                 }`}
               >
-                {ticket.status} {ticket.clonedPercent && ticket.clonedPercent > 0 ? `(${ticket.clonedPercent}%)` : ""}
+                {ticket.status}
               </span>
               <span className="rounded-full bg-red-100 text-red-800 px-2.5 py-0.5 text-[10px] font-bold">
                 {ticket.priority} SLA
@@ -420,23 +425,9 @@ export default function CustomerTicketDetailPage({
                 </div>
 
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
-                  <span className="text-slate-500 font-medium">
-                    {ticket.category === "Cybersecurity"
-                      ? "Threat Remediation Progress:"
-                      : ticket.category === "Cloud Solutions"
-                      ? "Deployment Progress:"
-                      : ticket.category === "Managed IT"
-                      ? "Resolution Progress:"
-                      : "Extracted Data Volume:"}
-                  </span>
+                  <span className="text-slate-500 font-medium">Current Execution Stage:</span>
                   <span className="font-bold text-emerald-600">
-                    {ticket.clonedPercent && ticket.clonedPercent > 0
-                      ? ticket.category === "Cybersecurity"
-                        ? `${ticket.clonedPercent}% Remediated`
-                        : ticket.category === "Data Recovery"
-                        ? `${ticket.clonedPercent}% Cloned`
-                        : `${ticket.clonedPercent}% Deployed`
-                      : "Awaiting Bench Diagnostics (Intake Phase)"}
+                    {ticket.status || "Media Intake"}
                   </span>
                 </div>
 

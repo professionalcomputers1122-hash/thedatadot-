@@ -254,7 +254,7 @@ export default function AdminTechniciansPage() {
                 }
               }
             }}
-            className="rounded-xl border border-blue-500/40 bg-blue-600/15 text-blue-400 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
           >
             <span>⚡ Open Technician Bench (No Login)</span>
             <span>↗</span>
@@ -268,7 +268,7 @@ export default function AdminTechniciansPage() {
               }));
               setShowAddModal(true);
             }}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <span>+</span> Add Laboratory Technician
           </button>
@@ -277,29 +277,29 @@ export default function AdminTechniciansPage() {
     >
       <div className="space-y-6 text-xs">
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between shadow-lg">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span>{notification}</span>
-            <button onClick={() => setNotification("")} className="text-emerald-400 hover:text-white ml-4">
+            <button onClick={() => setNotification("")} className="text-emerald-700 hover:text-emerald-950 ml-4">
               ✕
             </button>
           </div>
         )}
 
         {/* DIRECT WORKBENCH ACCESS / INSTANT LOGIN ROSTER */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span>⚡ Instant Technician Workbench Login (No PIN Required)</span>
-                <span className="rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono">
+                <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold">
                   Direct Access Active
                 </span>
               </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 mt-0.5">
                 Select any technician below to instantly log into their dedicated hardware workbench without typing a PIN or password.
               </p>
             </div>
-            <span className="text-[11px] text-slate-500 font-mono">
+            <span className="text-[11px] text-slate-400 font-mono">
               {technicians.length} Dedicated Benches
             </span>
           </div>
@@ -308,29 +308,29 @@ export default function AdminTechniciansPage() {
             {technicians.map((tech) => (
               <div
                 key={tech.id + tech.email}
-                className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4 hover:border-blue-500/50 hover:bg-slate-950 transition flex flex-col justify-between gap-3 group"
+                className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 hover:border-blue-300 hover:bg-white transition flex flex-col justify-between gap-3 group shadow-2xs"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] font-bold text-indigo-400">
+                    <span className="font-mono text-[10px] font-bold text-blue-600">
                       {tech.id}
                     </span>
-                    <span className="rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold">
+                    <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold">
                       {tech.status}
                     </span>
                   </div>
-                  <h3 className="font-bold text-white text-sm mt-1.5 group-hover:text-blue-400 transition">
+                  <h3 className="font-bold text-slate-900 text-sm mt-1.5 group-hover:text-blue-600 transition">
                     {tech.name}
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
                     {tech.role}
                   </p>
-                  <p className="text-[10px] text-indigo-300 font-mono mt-1">
+                  <p className="text-[10px] text-blue-700 font-mono mt-1 font-semibold">
                     📍 {tech.station}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800/60 flex items-center gap-2">
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -339,7 +339,7 @@ export default function AdminTechniciansPage() {
                         window.location.href = "/technician/dashboard";
                       }
                     }}
-                    className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 text-xs shadow-md shadow-blue-600/30 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>⚡ Login as {tech.name.split(" ")[0]}</span>
                     <span>→</span>
@@ -353,7 +353,7 @@ export default function AdminTechniciansPage() {
                         window.open("/technician/dashboard", "_blank");
                       }
                     }}
-                    className="rounded-xl border border-slate-700 hover:border-slate-500 bg-slate-800/80 hover:bg-slate-800 text-slate-300 p-2 text-xs transition cursor-pointer"
+                    className="rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 p-2 text-xs transition cursor-pointer shadow-2xs"
                     title="Open in new tab"
                   >
                     <span>↗</span>
@@ -364,10 +364,10 @@ export default function AdminTechniciansPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase text-slate-400">
+            <table className="w-full text-left text-slate-700">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[10px] font-bold uppercase text-slate-500">
                 <tr>
                   <th className="px-5 py-3.5">Staff ID</th>
                   <th className="px-5 py-3.5">Technician Name</th>
@@ -379,31 +379,31 @@ export default function AdminTechniciansPage() {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {technicians.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-5 py-4 font-mono font-bold text-indigo-400">{t.id}</td>
+                  <tr key={t.id} className="hover:bg-slate-50/70 transition">
+                    <td className="px-5 py-4 font-mono font-bold text-blue-600">{t.id}</td>
                     <td className="px-5 py-4">
-                      <p className="font-bold text-white">{t.name}</p>
-                      <span className="text-[11px] text-slate-400 font-mono">{t.email}</span>
+                      <p className="font-bold text-slate-900">{t.name}</p>
+                      <span className="text-[11px] text-slate-500 font-mono">{t.email}</span>
                     </td>
-                    <td className="px-5 py-4 text-slate-300 font-medium">{t.role}</td>
-                    <td className="px-5 py-4 text-indigo-300 font-semibold">{t.station}</td>
+                    <td className="px-5 py-4 text-slate-600 font-medium">{t.role}</td>
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{t.station}</td>
                     <td className="px-5 py-4">
-                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-[11px] font-mono">
-                        <span className="text-slate-400 font-sans text-[10px]">PIN:</span>
-                        <span className="font-bold text-emerald-400">{t.pin || "8942"}</span>
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-mono">
+                        <span className="text-slate-500 font-sans text-[10px]">PIN:</span>
+                        <span className="font-bold text-emerald-700">{t.pin || "8942"}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4 font-bold text-emerald-400">
+                    <td className="px-5 py-4 font-bold text-slate-900">
                       {t.activeCases} Devices
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                           t.status === "On Bench"
-                            ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         }`}
                       >
                         {t.status}
@@ -418,28 +418,28 @@ export default function AdminTechniciansPage() {
                               window.open("/technician/dashboard", "_blank");
                             }
                           }}
-                          className="rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                          className="rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
                           title={`Open ${t.name}'s hardware bench directly without login`}
                         >
                           <span>⚡</span> Open Bench
                         </button>
                         <button
                           onClick={() => copyCredentials(t)}
-                          className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition"
+                          className="rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition shadow-2xs"
                           title="Copy technician login credentials"
                         >
                           📋 Copy Info
                         </button>
                         <button
                           onClick={() => openPasswordModal(t)}
-                          className="rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1"
+                          className="rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1"
                           title="Reset PIN / Password for this technician"
                         >
                           <span>🔑</span> Reset PIN / PW
                         </button>
                         <button
                           onClick={() => setDeleteModalTech(t)}
-                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
+                          className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
                           title="Remove technician from roster"
                         >
                           🗑️ Remove
@@ -455,27 +455,27 @@ export default function AdminTechniciansPage() {
 
         {/* RESET PASSWORD / PIN MODAL */}
         {passwordModalTech && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
-            <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>🔑</span> Reset Technician Credentials
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     Update workbench access PIN and portal password for {passwordModalTech.name}
                   </p>
                 </div>
                 <button
                   onClick={() => setPasswordModalTech(null)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-slate-400 hover:text-slate-700"
                 >
                   ✕
                 </button>
               </div>
 
               <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-slate-300 space-y-1">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700 space-y-1">
                   <p><strong>Staff Member:</strong> {passwordModalTech.name} ({passwordModalTech.id})</p>
                   <p><strong>Workbench Station:</strong> {passwordModalTech.station}</p>
                   <p className="font-mono text-[11px]"><strong>Corporate Email:</strong> {passwordModalTech.email}</p>
@@ -484,13 +484,13 @@ export default function AdminTechniciansPage() {
                 {/* PIN FIELD */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-semibold text-slate-300">
+                    <label className="font-bold text-slate-600">
                       Workbench Access PIN (4-Digit)
                     </label>
                     <button
                       type="button"
                       onClick={() => setNewPinValue(generateRandomPin())}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-bold"
                     >
                       ⚡ Generate Random PIN
                     </button>
@@ -502,7 +502,7 @@ export default function AdminTechniciansPage() {
                     placeholder="e.g. 8942"
                     value={newPinValue}
                     onChange={(e) => setNewPinValue(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white font-mono text-sm tracking-widest outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 font-mono text-sm tracking-widest outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                   <p className="mt-1 text-[10px] text-slate-500">
                     Used by the technician to unlock their cleanroom PC-3000 bench on login.
@@ -512,13 +512,13 @@ export default function AdminTechniciansPage() {
                 {/* PASSWORD FIELD */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-semibold text-slate-300">
+                    <label className="font-bold text-slate-600">
                       Portal Password
                     </label>
                     <button
                       type="button"
                       onClick={() => setNewPasswordValue(generateRandomPassword())}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-bold"
                     >
                       ⚡ Generate Secure PW
                     </button>
@@ -530,30 +530,30 @@ export default function AdminTechniciansPage() {
                       placeholder="Enter new technician password"
                       value={newPasswordValue}
                       onChange={(e) => setNewPasswordValue(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-12 text-white font-mono outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-12 text-slate-900 font-mono outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs"
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 text-xs font-semibold"
                     >
                       {showPassword ? "Hide" : "Show"}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setPasswordModalTech(null)}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs transition disabled:opacity-50"
                   >
                     {savingPassword ? "Updating Credentials..." : "Save & Update Credentials"}
                   </button>
@@ -565,44 +565,44 @@ export default function AdminTechniciansPage() {
 
         {/* ADD TECHNICIAN MODAL */}
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
-            <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
-                <h3 className="text-base font-bold text-white">Add Laboratory Technician</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white">✕</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 className="text-base font-bold text-slate-900">Add Laboratory Technician</h3>
+                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
               </div>
 
               <form onSubmit={handleAdd} className="space-y-3.5">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Technician Full Name</label>
+                  <label className="block font-bold text-slate-600 mb-1">Technician Full Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. S. Karthikeyan"
                     value={newTech.name}
                     onChange={(e) => setNewTech({ ...newTech, name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Internal Corporate Email</label>
+                  <label className="block font-bold text-slate-600 mb-1">Internal Corporate Email</label>
                   <input
                     type="email"
                     required
                     placeholder="karthik.tech@thedatadot.com"
                     value={newTech.email}
                     onChange={(e) => setNewTech({ ...newTech, email: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Engineering Specialization</label>
+                  <label className="block font-bold text-slate-600 mb-1">Engineering Specialization</label>
                   <select
                     value={newTech.role}
                     onChange={(e) => setNewTech({ ...newTech, role: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option>Forensic Cleanroom Technician</option>
                     <option>Solid State Forensic Analyst</option>
@@ -612,11 +612,11 @@ export default function AdminTechniciansPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Hardware Workstation / Bench</label>
+                  <label className="block font-bold text-slate-600 mb-1">Hardware Workstation / Bench</label>
                   <select
                     value={newTech.station}
                     onChange={(e) => setNewTech({ ...newTech, station: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option>PC-3000 Bench 01 (Class-5 Hood)</option>
                     <option>PC-3000 Bench 02</option>
@@ -628,11 +628,11 @@ export default function AdminTechniciansPage() {
                 {/* INITIAL PIN FIELD */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block font-semibold text-slate-300">Workbench Access PIN</label>
+                    <label className="block font-bold text-slate-600">Workbench Access PIN</label>
                     <button
                       type="button"
                       onClick={() => setNewTech({ ...newTech, pin: generateRandomPin() })}
-                      className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[10px] text-blue-600 hover:text-blue-700 font-bold"
                     >
                       ⚡ Generate PIN
                     </button>
@@ -643,21 +643,21 @@ export default function AdminTechniciansPage() {
                     placeholder="e.g. 8942"
                     value={newTech.pin}
                     onChange={(e) => setNewTech({ ...newTech, pin: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white font-mono outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 font-mono outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs transition cursor-pointer"
                   >
                     Register Technician
                   </button>

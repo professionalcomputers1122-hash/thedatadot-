@@ -102,80 +102,80 @@ export default function AdminSettingsPage() {
     >
       <div className="space-y-6 text-xs max-w-4xl animate-in fade-in">
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 font-bold text-emerald-300 flex items-center justify-between shadow-lg">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
               <span>✓ {notification}</span>
             </span>
-            <button onClick={() => setNotification("")} className="text-emerald-400 hover:text-white">✕</button>
+            <button onClick={() => setNotification("")} className="text-emerald-600 hover:text-emerald-900">✕</button>
           </div>
         )}
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-xl">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-2xs text-slate-900">
           <form onSubmit={handleSave} className="space-y-8">
             {/* SECTION 1: CONTACT DETAILS */}
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-600 mb-4 flex items-center gap-2">
                 <span>1. Official Corporate Contact Details</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Company Name</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Company Name</label>
                   <input
                     type="text"
                     value={settings.companyName}
                     onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Primary Support Email</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Primary Support Email</label>
                   <input
                     type="email"
                     value={settings.supportEmail}
                     onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 font-medium"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">24/7 Lab Dispatch Hotline</label>
+                  <label className="block font-semibold text-slate-700 mb-1">24/7 Lab Dispatch Hotline</label>
                   <input
                     type="tel"
                     value={settings.hotline}
                     onChange={(e) => setSettings({ ...settings, hotline: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 font-bold text-emerald-400"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 outline-none focus:bg-white focus:border-blue-500 font-bold text-emerald-700"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Guaranteed Policy</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Guaranteed Policy</label>
                   <input
                     type="text"
                     value={settings.recoveryGuarantee}
                     onChange={(e) => setSettings({ ...settings, recoveryGuarantee: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block font-semibold text-slate-300 mb-1">
+                <label className="block font-semibold text-slate-700 mb-1">
                   Cleanroom Media Receiving &amp; Courier Facility
                 </label>
                 <textarea
                   rows={2}
                   value={settings.cleanroomAddress}
                   onChange={(e) => setSettings({ ...settings, cleanroomAddress: e.target.value })}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                 />
               </div>
             </div>
 
             {/* SECTION 2: SLA & ALLOCATION */}
-            <div className="border-t border-slate-800 pt-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4">
+            <div className="border-t border-slate-100 pt-6">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-600 mb-4">
                 2. SLA &amp; Automated Allocation
               </h2>
               <div className="space-y-3">
@@ -186,8 +186,8 @@ export default function AdminSettingsPage() {
                     onChange={(e) => setSettings({ ...settings, autoAssignBenches: e.target.checked })}
                     className="accent-blue-600 h-4 w-4"
                   />
-                  <span className="text-slate-200">
-                    <strong className="text-white">Smart Bench Routing:</strong> Automatically route incoming mechanical drives to PC-3000 Bench 01 and SSDs to Flash Station.
+                  <span className="text-slate-600">
+                    <strong className="text-slate-900">Smart Bench Routing:</strong> Automatically route incoming mechanical drives to PC-3000 Bench 01 and SSDs to Flash Station.
                   </span>
                 </label>
 
@@ -198,26 +198,26 @@ export default function AdminSettingsPage() {
                     onChange={(e) => setSettings({ ...settings, smsAlertsEnabled: e.target.checked })}
                     className="accent-blue-600 h-4 w-4"
                   />
-                  <span className="text-slate-200">
-                    <strong className="text-white">Automated SMS Webhooks:</strong> Dispatch SMS alerts via Twilio/Gupshup when drive cloning exceeds 99%.
+                  <span className="text-slate-600">
+                    <strong className="text-slate-900">Automated SMS Webhooks:</strong> Dispatch SMS alerts via Twilio/Gupshup when drive cloning exceeds 99%.
                   </span>
                 </label>
               </div>
             </div>
 
             {/* SECTION 3: WEBSITE APPEARANCE & PUBLIC LIVE BANNER */}
-            <div className="border-t border-slate-800 pt-6">
+            <div className="border-t border-slate-100 pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-blue-400">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-blue-600">
                   3. Website Appearance &amp; Home Page Live Updates
                 </h2>
-                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                   Live Sync
                 </span>
               </div>
 
               <div className="space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                <label className="flex items-center gap-3 cursor-pointer p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80">
                   <input
                     type="checkbox"
                     checked={settings.showAnnouncementBanner}
@@ -225,30 +225,30 @@ export default function AdminSettingsPage() {
                     className="accent-blue-600 h-4 w-4 cursor-pointer"
                   />
                   <div>
-                    <strong className="text-white block">Enable Public Emergency / Announcement Top Bar</strong>
-                    <span className="text-[11px] text-slate-400">Shows a live dismissible alert banner at the top of the homepage</span>
+                    <strong className="text-slate-900 block">Enable Public Emergency / Announcement Top Bar</strong>
+                    <span className="text-[11px] text-slate-500">Shows a live dismissible alert banner at the top of the homepage</span>
                   </div>
                 </label>
 
                 {settings.showAnnouncementBanner && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pl-4 border-l-2 border-blue-600">
                     <div className="sm:col-span-2">
-                      <label className="block font-semibold text-slate-300 mb-1">Announcement Banner Text</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Announcement Banner Text</label>
                       <input
                         type="text"
                         value={settings.announcementText}
                         onChange={(e) => setSettings({ ...settings, announcementText: e.target.value })}
-                        className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                         placeholder="e.g. 24/7 Lab Operational • Emergency hotline active"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Call-To-Action Link</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Call-To-Action Link</label>
                       <input
                         type="text"
                         value={settings.announcementLink}
                         onChange={(e) => setSettings({ ...settings, announcementLink: e.target.value })}
-                        className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 font-mono text-[11px]"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 font-mono text-[11px]"
                         placeholder="/contact"
                       />
                     </div>
@@ -257,22 +257,22 @@ export default function AdminSettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Cleanroom Lab Live Status Message</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Cleanroom Lab Live Status Message</label>
                     <input
                       type="text"
                       value={settings.cleanroomStatusText}
                       onChange={(e) => setSettings({ ...settings, cleanroomStatusText: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Average Response SLA (Minutes)</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Average Response SLA (Minutes)</label>
                     <input
                       type="number"
                       value={settings.avgDispatchMinutes}
                       onChange={(e) => setSettings({ ...settings, avgDispatchMinutes: Number(e.target.value) || 11 })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -284,17 +284,17 @@ export default function AdminSettingsPage() {
                     onChange={(e) => setSettings({ ...settings, enableLiveTelemetryTicker: e.target.checked })}
                     className="accent-blue-600 h-4 w-4"
                   />
-                  <span className="text-slate-200">
-                    <strong className="text-white">Live Telemetry Ticker on Home Page:</strong> Display active real-time operational status (cleanroom status, response speed, SOC 2 compliance) with live pulsing heartbeat indicator.
+                  <span className="text-slate-600">
+                    <strong className="text-slate-900">Live Telemetry Ticker on Home Page:</strong> Display active real-time operational status (cleanroom status, response speed, SOC 2 compliance) with live pulsing heartbeat indicator.
                   </span>
                 </label>
               </div>
             </div>
 
-            <div className="flex justify-end pt-6 border-t border-slate-800">
+            <div className="flex justify-end pt-6 border-t border-slate-100">
               <button
                 type="submit"
-                className="rounded-xl bg-blue-600 px-7 py-3 font-bold text-white hover:bg-blue-500 shadow-lg shadow-blue-600/30 transition flex items-center gap-2"
+                className="rounded-xl bg-blue-600 px-7 py-3 font-bold text-white hover:bg-blue-500 shadow-md shadow-blue-600/20 transition flex items-center gap-2 cursor-pointer"
               >
                 <span>Save All Settings &amp; Update Live Website</span>
                 <span>✓</span>
@@ -304,55 +304,55 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* SECTION 4: EXECUTIVE SECURITY & MASTER ADMIN PASSWORD */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-2xs text-slate-900">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-red-400 flex items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-rose-600 flex items-center gap-2">
                 <span>🔐</span>
                 <span>Executive Administrator Security &amp; Access Keys</span>
               </h2>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Manage master credentials for the Super Admin Command Console.
               </p>
             </div>
-            <span className="rounded-full bg-red-500/10 border border-red-500/30 px-3 py-1 text-[11px] font-mono font-bold text-red-400">
+            <span className="rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-[11px] font-mono font-bold text-rose-700">
               Tier-1 Security
             </span>
           </div>
 
           {secNotice && (
-            <div className="mb-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300">
+            <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800">
               {secNotice}
             </div>
           )}
 
           {secError && (
-            <div className="mb-5 rounded-2xl border border-rose-500/30 bg-rose-950/60 p-4 text-xs font-bold text-rose-300">
+            <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800">
               {secError}
             </div>
           )}
 
           <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   Registered Executive Administrator
                 </span>
-                <p className="text-sm font-bold text-white mt-0.5">{adminEmail}</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">{adminEmail}</p>
               </div>
-              <span className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-300 self-start sm:self-auto">
+              <span className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-700 self-start sm:self-auto shadow-2xs">
                 Super Admin Role
               </span>
             </div>
 
             <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Update Master Security Key
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 mb-1">
                     Current Password
                   </label>
                   <input
@@ -361,12 +361,12 @@ export default function AdminSettingsPage() {
                     value={currentPw}
                     onChange={(e) => setCurrentPw(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-rose-500 text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 mb-1">
                     New Master Password
                   </label>
                   <input
@@ -375,12 +375,12 @@ export default function AdminSettingsPage() {
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
                     placeholder="Minimum 8 characters"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-rose-500 text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 mb-1">
                     Confirm New Password
                   </label>
                   <input
@@ -389,7 +389,7 @@ export default function AdminSettingsPage() {
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
                     placeholder="Repeat new password"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-red-500 text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-rose-500 text-xs"
                   />
                 </div>
               </div>
@@ -397,7 +397,7 @@ export default function AdminSettingsPage() {
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-red-600 px-6 py-2.5 font-bold text-white hover:bg-red-500 shadow-md shadow-red-600/30 transition flex items-center gap-2 cursor-pointer"
+                  className="rounded-xl bg-rose-600 px-6 py-2.5 font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-600/20 transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>Update Master Security Key</span>
                   <span>🔐</span>

@@ -117,16 +117,16 @@ export default function AdminAuditLogsPage() {
     >
       <div className="space-y-6 text-xs">
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 font-bold text-emerald-300 flex items-center justify-between">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span>✓ {notification}</span>
-            <button onClick={() => setNotification("")}>✕</button>
+            <button onClick={() => setNotification("")} className="text-emerald-600 hover:text-emerald-900">✕</button>
           </div>
         )}
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden font-mono">
+        <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden font-mono text-slate-700">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <table className="w-full text-left">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3.5">Log ID</th>
                   <th className="px-5 py-3.5">Timestamp (IST)</th>
@@ -136,16 +136,16 @@ export default function AdminAuditLogsPage() {
                   <th className="px-5 py-3.5 text-right">Integrity</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {logs.map((l) => (
-                  <tr key={l.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-5 py-4 font-bold text-blue-400">{l.id}</td>
-                    <td className="px-5 py-4 text-slate-400 text-[11px]">{l.timestamp}</td>
-                    <td className="px-5 py-4 font-bold text-white">{l.actor}</td>
-                    <td className="px-5 py-4 text-slate-300 max-w-md">{l.event}</td>
-                    <td className="px-5 py-4 text-slate-400 text-[11px]">{l.ip}</td>
+                  <tr key={l.id} className="hover:bg-slate-50/70 transition">
+                    <td className="px-5 py-4 font-bold text-blue-600">{l.id}</td>
+                    <td className="px-5 py-4 text-slate-500 text-[11px]">{l.timestamp}</td>
+                    <td className="px-5 py-4 font-bold text-slate-900">{l.actor}</td>
+                    <td className="px-5 py-4 text-slate-700 max-w-md">{l.event}</td>
+                    <td className="px-5 py-4 text-slate-500 text-[11px]">{l.ip}</td>
                     <td className="px-5 py-4 text-right">
-                      <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold">
+                      <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold">
                         {l.status}
                       </span>
                     </td>
@@ -156,12 +156,12 @@ export default function AdminAuditLogsPage() {
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 text-slate-400 text-[11px] flex items-center justify-between">
+        <div className="p-5 rounded-2xl border border-slate-200/80 bg-white text-slate-600 text-[11px] flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Audit daemon running with continuous HMAC-SHA256 block verification</span>
           </div>
-          <span className="text-slate-500 font-mono">SOC 2 TYPE II • ISO 27001 CERTIFIED</span>
+          <span className="text-slate-400 font-mono font-semibold">SOC 2 TYPE II • ISO 27001 CERTIFIED</span>
         </div>
       </div>
     </AdminLayoutShell>

@@ -359,14 +359,14 @@ export default function AdminBlogPage() {
           <Link
             href="/blog"
             target="_blank"
-            className="rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:text-white transition flex items-center gap-1.5"
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 shadow-2xs"
           >
             <span>Live Blog</span>
             <span>↗</span>
           </Link>
           <button
             onClick={handleOpenCreate}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/25 flex items-center gap-1.5"
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
           >
             <span>+ Write New Article</span>
           </button>
@@ -377,69 +377,69 @@ export default function AdminBlogPage() {
         
         {/* TOAST ALERT */}
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 font-bold text-emerald-300 flex items-center justify-between">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span>✓ {notification}</span>
-            <button onClick={() => setNotification("")} className="text-emerald-400">✕</button>
+            <button onClick={() => setNotification("")} className="text-emerald-600 hover:text-emerald-900">✕</button>
           </div>
         )}
 
         {/* METRICS & QUICK STATS */}
         <div className="grid gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Published</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-white">
+              <span className="text-2xl font-black text-slate-900">
                 {articles.filter((a) => a.status === "Published").length}
               </span>
-              <span className="text-[11px] text-emerald-400 font-semibold">Live Articles</span>
+              <span className="text-[11px] text-emerald-700 font-semibold">Live Articles</span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Drafts in Progress</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-amber-400">
+              <span className="text-2xl font-black text-amber-600">
                 {articles.filter((a) => a.status === "Draft").length}
               </span>
-              <span className="text-[11px] text-slate-400">Pending Review</span>
+              <span className="text-[11px] text-slate-500">Pending Review</span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Top Category</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-blue-400">Cybersecurity</span>
+              <span className="text-2xl font-black text-blue-600">Cybersecurity</span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">SEO Organic Reach</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-emerald-400">14.8k</span>
-              <span className="text-[11px] text-slate-400">Monthly Views</span>
+              <span className="text-2xl font-black text-emerald-700">14.8k</span>
+              <span className="text-[11px] text-slate-500">Monthly Views</span>
             </div>
           </div>
         </div>
 
         {/* SEARCH & FILTERS BAR */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
           <input
             type="text"
             placeholder="Search articles by title, topic, or summary..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-96 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-white outline-none focus:border-blue-500"
+            className="w-full sm:w-96 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-slate-900 outline-none focus:bg-white focus:border-blue-500 text-xs transition"
           />
 
-          <div className="flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800">
+          <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200">
             {(["All", "Published", "Draft"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className={`rounded-lg px-3 py-1.5 font-bold transition ${
+                className={`rounded-lg px-3 py-1.5 font-bold transition text-xs cursor-pointer ${
                   filter === tab
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-white text-slate-900 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 font-medium"
                 }`}
               >
                 {tab}
@@ -449,10 +449,10 @@ export default function AdminBlogPage() {
         </div>
 
         {/* ARTICLES MASTER TABLE */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <table className="w-full text-left text-slate-700">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3.5">Article Headline</th>
                   <th className="px-5 py-3.5">Category</th>
@@ -462,13 +462,13 @@ export default function AdminBlogPage() {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {filtered.map((art) => (
-                  <tr key={art.id} className="hover:bg-slate-800/40 transition">
+                  <tr key={art.id} className="hover:bg-slate-50/70 transition">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         {art.coverImage && (
-                          <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+                          <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={art.coverImage}
@@ -479,28 +479,28 @@ export default function AdminBlogPage() {
                         )}
                         <div>
                           <p
-                            className="font-bold text-white text-sm hover:text-blue-400 transition cursor-pointer"
+                            className="font-bold text-slate-900 text-sm hover:text-blue-600 transition cursor-pointer"
                             onClick={() => handleOpenEdit(art)}
                           >
                             {art.title}
                           </p>
-                          <p className="text-[11px] text-slate-400 truncate max-w-lg mt-0.5">{art.excerpt}</p>
+                          <p className="text-[11px] text-slate-500 truncate max-w-lg mt-0.5">{art.excerpt}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-md bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-blue-300 border border-slate-700">
+                      <span className="rounded-md bg-blue-50 border border-blue-200 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
                         {art.category}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-400">{art.readTime}</td>
-                    <td className="px-5 py-4 text-slate-400">{art.date}</td>
+                    <td className="px-5 py-4 text-slate-500">{art.readTime}</td>
+                    <td className="px-5 py-4 text-slate-500">{art.date}</td>
                     <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                           art.status === "Published"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
                         }`}
                       >
                         {art.status}
@@ -511,21 +511,21 @@ export default function AdminBlogPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(art)}
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-blue-400 hover:bg-slate-700 transition"
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-white hover:border-blue-300 shadow-2xs transition cursor-pointer"
                         >
                           Edit
                         </button>
                         <Link
                           href="/blog"
                           target="_blank"
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white transition"
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-white shadow-2xs transition"
                         >
                           View Live ↗
                         </Link>
                         <button
                           type="button"
                           onClick={() => setDeleteModalPost(art)}
-                          className="rounded-lg px-2.5 py-1 text-[11px] text-red-400 hover:bg-red-950/40 transition cursor-pointer"
+                          className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
                         >
                           Delete
                         </button>
@@ -540,21 +540,21 @@ export default function AdminBlogPage() {
 
         {/* FULL PROFESSIONAL ARTICLE & IMAGE EDITOR MODAL */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md text-xs overflow-y-auto">
-            <div className="w-full max-w-3xl my-8 rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs overflow-y-auto">
+            <div className="w-full max-w-3xl my-8 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
               
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
                 <div>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-slate-900">
                     {editingId ? "Edit Blog Article" : "Write & Publish New Article"}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Syncs directly with The Data Dot public website at <code className="text-blue-400">/blog</code>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Syncs directly with The Data Dot public website at <code className="text-blue-600 font-semibold">/blog</code>
                   </p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:text-white"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -562,31 +562,31 @@ export default function AdminBlogPage() {
 
               <form onSubmit={handleSaveArticle} className="space-y-4">
                 {errorMessage && (
-                  <div className="rounded-xl border border-red-500/30 bg-red-950/60 p-3 font-semibold text-red-300 flex items-center justify-between">
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-800 flex items-center justify-between">
                     <span>⚠ {errorMessage}</span>
-                    <button type="button" onClick={() => setErrorMessage("")} className="text-red-400">✕</button>
+                    <button type="button" onClick={() => setErrorMessage("")} className="text-rose-600">✕</button>
                   </div>
                 )}
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Article Headline</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Article Headline</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 5 Warning Signs of Hard Drive Spindle & Head Degradation"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none focus:border-blue-500 text-sm font-semibold"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-900 outline-none focus:bg-white focus:border-blue-500 text-sm font-semibold"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Category</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Category</label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                     >
                       <option>Cybersecurity</option>
                       <option>Data Recovery</option>
@@ -598,22 +598,22 @@ export default function AdminBlogPage() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Reading Time</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Reading Time</label>
                     <input
                       type="text"
                       value={readTime}
                       onChange={(e) => setReadTime(e.target.value)}
                       placeholder="e.g. 5 min read"
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Publication Status</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Publication Status</label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as "Published" | "Draft")}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                     >
                       <option value="Published">Published Live</option>
                       <option value="Draft">Save as Draft</option>
@@ -622,21 +622,21 @@ export default function AdminBlogPage() {
                 </div>
 
                 {/* ================= COMPLETE IMAGE UPLOADER & PREVIEW SECTION ================= */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-slate-200">
+                    <label className="font-semibold text-slate-800">
                       Featured Cover Image
                     </label>
                     
                     {/* Switcher: Upload vs URL */}
-                    <div className="flex items-center gap-1 rounded-lg bg-slate-900 p-1 border border-slate-800">
+                    <div className="flex items-center gap-1 rounded-lg bg-slate-200/70 p-1 border border-slate-300/60">
                       <button
                         type="button"
                         onClick={() => setImageInputMode("upload")}
-                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer ${
                           imageInputMode === "upload"
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-400 hover:text-white"
+                            ? "bg-white text-slate-900 shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
                         Upload From Computer
@@ -644,10 +644,10 @@ export default function AdminBlogPage() {
                       <button
                         type="button"
                         onClick={() => setImageInputMode("url")}
-                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                        className={`rounded px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer ${
                           imageInputMode === "url"
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-400 hover:text-white"
+                            ? "bg-white text-slate-900 shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
                         Enter Image URL / Preset
@@ -657,7 +657,7 @@ export default function AdminBlogPage() {
 
                   {/* Mode 1: Real File Upload from Computer */}
                   {imageInputMode === "upload" && (
-                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-5 text-center transition hover:border-blue-500">
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center transition hover:border-blue-500">
                       <input
                         type="file"
                         id="blog-image-upload"
@@ -669,17 +669,17 @@ export default function AdminBlogPage() {
                         htmlFor="blog-image-upload"
                         className="cursor-pointer inline-flex flex-col items-center justify-center gap-2"
                       >
-                        <div className="h-10 w-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                        <div className="h-10 w-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                             <polyline points="17 8 12 3 7 8" />
                             <line x1="12" y1="3" x2="12" y2="15" />
                           </svg>
                         </div>
-                        <span className="text-xs font-bold text-white hover:text-blue-400 transition">
+                        <span className="text-xs font-bold text-slate-900 hover:text-blue-600 transition">
                           Click to Browse &amp; Upload Image from Your Device
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-500">
                           Supports PNG, JPG, WebP, SVG up to 10MB (automatically formatted for blog cards)
                         </span>
                       </label>
@@ -699,18 +699,18 @@ export default function AdminBlogPage() {
                             setCoverImage(e.target.value.trim());
                           }
                         }}
-                        className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white outline-none focus:border-blue-500"
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-blue-500 text-xs"
                       />
                       
                       <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                        <span className="text-slate-400">Or pick stock library preset:</span>
+                        <span className="text-slate-500">Or pick stock library preset:</span>
                         <button
                           type="button"
                           onClick={() => {
                             setCoverImage("/images/blog/cybersecurity-tips.jpg");
                             setCustomImageUrl("/images/blog/cybersecurity-tips.jpg");
                           }}
-                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:text-blue-600 shadow-2xs cursor-pointer"
                         >
                           Cybersecurity Shield
                         </button>
@@ -720,7 +720,7 @@ export default function AdminBlogPage() {
                             setCoverImage("/images/blog/cloud-solutions.jpg");
                             setCustomImageUrl("/images/blog/cloud-solutions.jpg");
                           }}
-                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:text-blue-600 shadow-2xs cursor-pointer"
                         >
                           Cloud Data Center
                         </button>
@@ -730,7 +730,7 @@ export default function AdminBlogPage() {
                             setCoverImage("/images/blog/it-partner.jpg");
                             setCustomImageUrl("/images/blog/it-partner.jpg");
                           }}
-                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-slate-300 hover:text-white"
+                          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:text-blue-600 shadow-2xs cursor-pointer"
                         >
                           Team IT Consultation
                         </button>
@@ -740,8 +740,8 @@ export default function AdminBlogPage() {
 
                   {/* LIVE COVER IMAGE PREVIEW */}
                   {coverImage && (
-                    <div className="mt-3 flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 p-3">
-                      <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+                    <div className="mt-3 flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+                      <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={coverImage}
@@ -750,10 +750,10 @@ export default function AdminBlogPage() {
                         />
                       </div>
                       <div className="flex-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block mb-1">
                           ✓ Active Cover Image Preview
                         </span>
-                        <p className="text-[11px] text-slate-300 truncate max-w-sm">
+                        <p className="text-[11px] text-slate-700 truncate max-w-sm font-medium">
                           {coverImage.startsWith("data:") ? "Custom Image Uploaded (Base64)" : coverImage}
                         </p>
                         <span className="text-[10px] text-slate-500 mt-1 block">
@@ -765,61 +765,61 @@ export default function AdminBlogPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Article Excerpt (SEO Summary)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Article Excerpt (SEO Summary)</label>
                   <input
                     type="text"
                     required
                     placeholder="Short 1-2 sentence hook displayed on social media previews and search cards..."
                     value={excerpt}
                     onChange={(e) => setExcerpt(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500"
                   />
                 </div>
 
                 {/* RICH FORMATTING TOOLBAR WITH IMAGE INSERTION */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-slate-300">Full Article Content</label>
+                    <label className="font-semibold text-slate-700">Full Article Content</label>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => insertFormatting("**bold text**")}
-                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white font-bold"
+                        className="rounded px-2 py-0.5 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-bold cursor-pointer"
                       >
                         B
                       </button>
                       <button
                         type="button"
                         onClick={() => insertFormatting("*italic text*")}
-                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white italic"
+                        className="rounded px-2 py-0.5 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 italic cursor-pointer"
                       >
                         I
                       </button>
                       <button
                         type="button"
                         onClick={() => insertFormatting("## Section Header")}
-                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white font-mono text-[10px]"
+                        className="rounded px-2 py-0.5 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-mono text-[10px] cursor-pointer"
                       >
                         H2
                       </button>
                       <button
                         type="button"
                         onClick={() => insertFormatting("- Key takeaway item")}
-                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white"
+                        className="rounded px-2 py-0.5 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 cursor-pointer"
                       >
                         List
                       </button>
                       <button
                         type="button"
                         onClick={() => insertFormatting("> Important cleanroom advisory notice")}
-                        className="rounded px-2 py-0.5 bg-slate-800 text-slate-300 hover:text-white"
+                        className="rounded px-2 py-0.5 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 cursor-pointer"
                       >
                         Quote
                       </button>
                       <button
                         type="button"
                         onClick={insertImageTag}
-                        className="rounded px-2.5 py-0.5 bg-blue-600/30 border border-blue-500/40 text-blue-300 hover:bg-blue-600/50 font-semibold"
+                        className="rounded px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 font-semibold cursor-pointer shadow-2xs"
                       >
                         + Add In-Article Image
                       </button>
@@ -831,7 +831,7 @@ export default function AdminBlogPage() {
                     placeholder="Compose your article markdown or paragraphs here... You can insert images anywhere using the button above."
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3.5 text-white outline-none focus:border-blue-500 leading-relaxed font-mono text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 leading-relaxed font-mono text-xs"
                   />
                   <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
                     <span>Markdown formatting supported.</span>
@@ -839,19 +839,19 @@ export default function AdminBlogPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                   <button
                     type="button"
                     disabled={isSaving}
                     onClick={() => setShowModal(false)}
-                    className="rounded-xl px-4 py-2.5 text-slate-400 hover:text-white transition disabled:opacity-50"
+                    className="rounded-xl px-4 py-2.5 text-slate-600 hover:text-slate-900 transition disabled:opacity-50 font-medium cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-lg shadow-blue-600/30 disabled:opacity-50 flex items-center gap-2"
+                    className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-500 transition shadow-md shadow-blue-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                   >
                     {isSaving && (
                       <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />

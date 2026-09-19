@@ -253,14 +253,14 @@ export default function AdminFAQPage() {
           <a
             href="/faq"
             target="_blank"
-            className="rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:text-white transition flex items-center gap-1.5"
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 shadow-2xs"
           >
             <span>Live FAQ Page</span>
             <span>↗</span>
           </a>
           <button
             onClick={handleOpenAdd}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1"
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs flex items-center gap-1 cursor-pointer"
           >
             <span>+ Add FAQ Item</span>
           </button>
@@ -271,9 +271,9 @@ export default function AdminFAQPage() {
         
         {/* TOAST ALERT */}
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 font-bold text-emerald-300 flex items-center justify-between">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span>✓ {notification}</span>
-            <button onClick={() => setNotification("")}>✕</button>
+            <button onClick={() => setNotification("")} className="text-emerald-700 hover:text-emerald-950">✕</button>
           </div>
         )}
 
@@ -288,32 +288,32 @@ export default function AdminFAQPage() {
                 onClick={() => setActiveTab(isSelected ? "All" : cat)}
                 className={`cursor-pointer rounded-2xl border p-3.5 transition flex flex-col justify-between ${
                   isSelected
-                    ? "border-blue-500 bg-blue-950/40 shadow-md shadow-blue-900/20 ring-1 ring-blue-500/50"
-                    : "border-slate-800 bg-slate-900/60 hover:bg-slate-900"
+                    ? "border-2 border-blue-600 bg-white shadow-xs"
+                    : "border border-slate-200/80 bg-white hover:border-slate-300 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {cat.split(" ")[0]}
                   </span>
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-blue-300">
+                  <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
                     {count}
                   </span>
                 </div>
-                <p className="mt-2 font-bold text-white text-xs leading-snug">{cat}</p>
+                <p className="mt-2 font-bold text-slate-900 text-xs leading-snug">{cat}</p>
               </div>
             );
           })}
         </div>
 
         {/* SEARCH & HORIZONTAL SERVICE FILTER TABS */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
           <input
             type="text"
             placeholder="Search questions, answers, or categories..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full md:w-80 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-white outline-none focus:border-blue-500"
+            className="w-full md:w-80 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
           />
 
           <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
@@ -322,7 +322,7 @@ export default function AdminFAQPage() {
               className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                 activeTab === "All"
                   ? "bg-blue-600 text-white shadow-xs"
-                  : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-2xs"
               }`}
             >
               All ({faqs.length})
@@ -335,7 +335,7 @@ export default function AdminFAQPage() {
                 className={`rounded-xl px-3 py-1.5 font-bold transition text-xs ${
                   activeTab === cat
                     ? "bg-blue-600 text-white shadow-xs"
-                    : "border border-slate-800 bg-slate-950 text-slate-400 hover:text-white"
+                    : "border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-2xs"
                 }`}
               >
                 {cat}
@@ -345,33 +345,33 @@ export default function AdminFAQPage() {
         </div>
 
         {/* FAQS MASTER LIST */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
-          <div className="divide-y divide-slate-800">
+        <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
+          <div className="divide-y divide-slate-100">
             {filtered.map((f) => (
-              <div key={f.id} className="p-6 hover:bg-slate-800/30 transition">
+              <div key={f.id} className="p-6 hover:bg-slate-50/70 transition">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="rounded-md bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold text-blue-300 border border-slate-700">
+                  <span className="rounded-md bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
                     {f.category}
                   </span>
                   
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleOpenEdit(f)}
-                      className="text-[11px] font-semibold text-blue-400 hover:underline"
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => setDeleteModalFaq(f)}
-                      className="text-[11px] text-red-400 hover:underline cursor-pointer"
+                      className="text-[11px] text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
                     >
                       Delete
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-sm font-bold text-white mb-1.5">{f.question}</h3>
-                <p className="text-slate-400 leading-relaxed text-xs">{f.answer}</p>
+                <h3 className="text-sm font-bold text-slate-900 mb-1.5">{f.question}</h3>
+                <p className="text-slate-600 leading-relaxed text-xs">{f.answer}</p>
               </div>
             ))}
           </div>
@@ -379,24 +379,24 @@ export default function AdminFAQPage() {
 
         {/* ADD / EDIT FAQ MODAL (ALL SERVICES AVAILABLE) */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
-            <div className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <h3 className="text-base font-bold text-white">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <h3 className="text-base font-bold text-slate-900">
                   {editingId ? "Edit Service FAQ Item" : "Create New Service FAQ"}
                 </h3>
-                <button onClick={() => setShowModal(false)} className="text-slate-400">✕</button>
+                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
               </div>
 
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">
+                  <label className="block font-bold text-slate-600 mb-1">
                     Select Related Service Category
                   </label>
                   <select
                     value={newCat}
                     onChange={(e: any) => setNewCat(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs"
                   >
                     {categories.map((c) => (
                       <option key={c} value={c}>
@@ -407,40 +407,40 @@ export default function AdminFAQPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Question</label>
+                  <label className="block font-bold text-slate-600 mb-1">Question</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. How do you configure Wi-Fi 6E VLAN segmentation?"
                     value={newQ}
                     onChange={(e) => setNewQ(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 text-xs"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Answer</label>
+                  <label className="block font-bold text-slate-600 mb-1">Answer</label>
                   <textarea
                     rows={5}
                     required
                     placeholder="Provide a clear, reassuring answer for your clients..."
                     value={newA}
                     onChange={(e) => setNewA(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500 text-xs leading-relaxed"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs leading-relaxed resize-none"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 shadow-md"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs cursor-pointer"
                   >
                     {editingId ? "Save Changes" : "Publish FAQ"}
                   </button>

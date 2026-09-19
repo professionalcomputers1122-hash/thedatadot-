@@ -309,29 +309,29 @@ export default function AdminInquiriesPage() {
     switch (st) {
       case "New Request":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-400 border border-blue-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 border border-blue-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
             New Request
           </span>
         );
       case "In Coordination":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400"></span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
             In Coordination
           </span>
         );
       case "Contacted":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-300 border border-amber-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
             Contacted
           </span>
         );
       case "Converted":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/20">
-            <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+            <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
             </svg>
             Converted to Customer
@@ -339,7 +339,7 @@ export default function AdminInquiriesPage() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-medium text-slate-300 border border-slate-500/20">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-200">
             {st}
           </span>
         );
@@ -350,20 +350,20 @@ export default function AdminInquiriesPage() {
     const clean = urg?.toUpperCase() || "STANDARD";
     if (clean === "CRITICAL") {
       return (
-        <span className="rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[11px] font-bold text-rose-400 uppercase">
+        <span className="rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 text-[11px] font-bold text-rose-700 uppercase">
           🔴 Critical 15m SLA
         </span>
       );
     }
     if (clean === "HIGH") {
       return (
-        <span className="rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[11px] font-bold text-amber-400 uppercase">
+        <span className="rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-700 uppercase">
           🟡 Priority &lt;4h
         </span>
       );
     }
     return (
-      <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[11px] font-bold text-blue-400 uppercase">
+      <span className="rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-bold text-blue-700 uppercase">
         🟢 Standard SLA
       </span>
     );
@@ -376,7 +376,7 @@ export default function AdminInquiriesPage() {
 
     if (isSpecialOnboarding) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[11px] font-bold text-purple-300">
+        <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 border border-purple-200 px-2 py-0.5 text-[11px] font-bold text-purple-700">
           <span>🚀</span>
           <span>Onboarding Intake</span>
         </span>
@@ -384,14 +384,14 @@ export default function AdminInquiriesPage() {
     }
     if (isRegister) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+        <span className="inline-flex items-center gap-1 rounded-md bg-cyan-50 border border-cyan-200 px-2 py-0.5 text-[11px] font-bold text-cyan-700">
           <span>🔐</span>
           <span>Portal Registration</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[11px] font-bold text-blue-300">
+      <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-bold text-blue-700">
         <span>🌐</span>
         <span>Contact Form</span>
       </span>
@@ -405,9 +405,9 @@ export default function AdminInquiriesPage() {
       actions={
         <button
           onClick={loadData}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
         >
-          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           <span>Refresh</span>
@@ -416,58 +416,58 @@ export default function AdminInquiriesPage() {
     >
       {/* Toast Notification */}
       {notification && (
-        <div className="mb-6 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200 flex items-center justify-between animate-in fade-in duration-200 shadow-lg">
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800 flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping"></span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
             <span>{notification}</span>
           </div>
-          <button onClick={() => setNotification("")} className="text-blue-400 hover:text-white text-xs">✕</button>
+          <button onClick={() => setNotification("")} className="text-emerald-700 hover:text-emerald-950 text-xs">✕</button>
         </div>
       )}
 
       {/* 4 KPI Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div className="rounded-2xl border border-slate-800 bg-[#0f172a]/70 p-5 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
             <span>TOTAL CAPTURED LEADS</span>
-            <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] text-blue-400 font-bold">ALL</span>
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600 font-bold">ALL</span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-white tracking-tight">{totalCount}</div>
+          <div className="mt-3 text-3xl font-black text-slate-900 tracking-tight">{totalCount}</div>
           <div className="mt-1 text-xs text-slate-500">Website Consultation Submissions</div>
         </div>
 
-        <div className="rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-950/20 to-slate-900/50 p-5 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-blue-300 text-xs font-semibold">
+        <div className="rounded-2xl border border-blue-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition">
+          <div className="flex items-center justify-between text-blue-700 text-xs font-semibold">
             <span>NEW REQUESTS</span>
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-blue-400 tracking-tight">{newCount}</div>
-          <div className="mt-1 text-xs text-blue-300/70">Awaiting initial call &amp; review</div>
+          <div className="mt-3 text-3xl font-black text-blue-600 tracking-tight">{newCount}</div>
+          <div className="mt-1 text-xs text-slate-500">Awaiting initial call &amp; review</div>
         </div>
 
-        <div className="rounded-2xl border border-indigo-500/20 bg-[#0f172a]/70 p-5 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-indigo-300 text-xs font-semibold">
+        <div className="rounded-2xl border border-indigo-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition">
+          <div className="flex items-center justify-between text-indigo-700 text-xs font-semibold">
             <span>IN COORDINATION</span>
-            <span className="rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] text-indigo-400 font-bold">ACTIVE</span>
+            <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700 font-bold border border-indigo-100">ACTIVE</span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-indigo-400 tracking-tight">{inCoordCount}</div>
+          <div className="mt-3 text-3xl font-black text-indigo-600 tracking-tight">{inCoordCount}</div>
           <div className="mt-1 text-xs text-slate-500">Scope, quote &amp; NDA underway</div>
         </div>
 
-        <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-slate-900/50 p-5 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-emerald-300 text-xs font-semibold">
+        <div className="rounded-2xl border border-emerald-200/80 bg-white p-5 shadow-2xs hover:shadow-xs transition">
+          <div className="flex items-center justify-between text-emerald-700 text-xs font-semibold">
             <span>CONVERTED CLIENTS</span>
-            <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-400 font-bold">100%</span>
+            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700 font-bold border border-emerald-100">100%</span>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-emerald-400 tracking-tight">{convertedCount}</div>
-          <div className="mt-1 text-xs text-emerald-300/70">Provisioned in Customer Accounts</div>
+          <div className="mt-3 text-3xl font-black text-emerald-600 tracking-tight">{convertedCount}</div>
+          <div className="mt-1 text-xs text-slate-500">Provisioned in Customer Accounts</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Status Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-800 bg-[#0f172a] p-1 text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold shadow-2xs">
           {[
             { id: "ALL", label: "All Inquiries" },
             { id: "New Request", label: "New Requests" },
@@ -480,8 +480,8 @@ export default function AdminInquiriesPage() {
               onClick={() => setFilter(tab.id)}
               className={`rounded-lg px-3 py-1.5 transition ${
                 filter === tab.id
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-blue-600 text-white shadow-xs font-bold"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
               {tab.label}
@@ -491,7 +491,7 @@ export default function AdminInquiriesPage() {
 
         {/* Source Filter Tabs & Search */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-[#0f172a] p-1 text-xs font-semibold">
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold shadow-2xs">
             {[
               { id: "ALL", label: "All Channels" },
               { id: "ONBOARDING", label: "🚀 Onboarding Leads" },
@@ -502,8 +502,8 @@ export default function AdminInquiriesPage() {
                 onClick={() => setSourceFilter(st.id)}
                 className={`rounded-lg px-2.5 py-1 transition ${
                   sourceFilter === st.id
-                    ? "bg-slate-700 text-white shadow-xs font-bold"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-slate-900 text-white shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 }`}
               >
                 {st.label}
@@ -518,9 +518,9 @@ export default function AdminInquiriesPage() {
               placeholder="Search leads, name, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-[#0f172a] px-3.5 py-2 pl-9 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pl-9 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs transition"
             />
-            <svg className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -530,18 +530,18 @@ export default function AdminInquiriesPage() {
       {/* Inquiries List */}
       {loading ? (
         <div className="py-24 text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mb-3" />
-          <p className="text-xs text-slate-400">Loading incoming prospective client requests...</p>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-3" />
+          <p className="text-xs text-slate-500 font-medium">Loading incoming prospective client requests...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-800 bg-[#0f172a]/30 p-12 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 mb-4 border border-blue-500/20">
+        <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-2xs">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-4 border border-blue-200">
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
           </div>
-          <h3 className="text-base font-bold text-white">No Inquiries Found</h3>
-          <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-slate-900">No Inquiries Found</h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
             {search ? `No results matching "${search}".` : "No client onboarding or consultation requests match the selected criteria."}
           </p>
         </div>
@@ -552,18 +552,18 @@ export default function AdminInquiriesPage() {
             return (
               <div
                 key={inq.id}
-                className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                className={`rounded-2xl transition-all duration-200 overflow-hidden bg-white ${
                   inq.status === "New Request"
-                    ? "border-blue-500/30 bg-gradient-to-r from-blue-950/20 via-[#0f172a] to-[#0f172a] shadow-lg shadow-blue-950/20"
+                    ? "border-2 border-blue-300 shadow-xs"
                     : isConverted
-                    ? "border-emerald-500/20 bg-[#0f172a]/80"
-                    : "border-slate-800 bg-[#0f172a]/70 hover:border-slate-700"
+                    ? "border border-emerald-300 shadow-2xs"
+                    : "border border-slate-200/80 shadow-2xs hover:shadow-xs"
                 }`}
               >
                 {/* Inquiry Card Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 px-6 py-4 bg-slate-900/40">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-3.5 bg-slate-50/70">
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold text-blue-400">
+                    <span className="font-mono text-xs font-bold text-blue-600">
                       #{inq.id}
                     </span>
                     {getStatusBadge(inq.status)}
@@ -571,7 +571,7 @@ export default function AdminInquiriesPage() {
                     {getSourceBadge(inq.source, inq.id)}
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
                     <span>
                       {inq.createdAt
                         ? new Date(inq.createdAt).toLocaleDateString("en-US", {
@@ -585,7 +585,7 @@ export default function AdminInquiriesPage() {
                     </span>
                     <button
                       onClick={() => setDeleteModalInquiry(inq)}
-                      className="text-slate-500 hover:text-rose-400 transition p-1"
+                      className="text-slate-400 hover:text-rose-600 transition p-1"
                       title="Delete inquiry"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -601,39 +601,39 @@ export default function AdminInquiriesPage() {
                     {/* Column 1: Client Contact Profile */}
                     <div className="space-y-3">
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PROSPECTIVE CLIENT</div>
-                        <div className="text-base font-bold text-white mt-0.5">{inq.customerName}</div>
-                        <div className="text-xs text-blue-400 font-semibold">{inq.companyName || "Organization Unspecified"}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">PROSPECTIVE CLIENT</div>
+                        <div className="text-base font-bold text-slate-900 mt-0.5">{inq.customerName}</div>
+                        <div className="text-xs text-blue-600 font-semibold">{inq.companyName || "Organization Unspecified"}</div>
                       </div>
 
                       <div className="space-y-1.5 text-xs">
                         <div className="flex items-center gap-2">
-                          <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <rect x="2" y="4" width="20" height="16" rx="2" />
                             <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                           </svg>
-                          <a href={`mailto:${inq.customerEmail}`} className="text-slate-300 hover:text-blue-400 underline underline-offset-2 truncate">
+                          <a href={`mailto:${inq.customerEmail}`} className="text-slate-600 hover:text-blue-600 underline underline-offset-2 truncate font-medium">
                             {inq.customerEmail}
                           </a>
                         </div>
 
                         {inq.phone && (
                           <div className="flex items-center gap-2">
-                            <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                             </svg>
-                            <a href={`tel:${inq.phone}`} className="text-emerald-300 hover:underline font-bold">
+                            <a href={`tel:${inq.phone}`} className="text-emerald-700 hover:underline font-bold">
                               {inq.phone}
                             </a>
                           </div>
                         )}
 
                         {inq.teamSize && (
-                          <div className="flex items-center gap-2 text-slate-400">
-                            <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="flex items-center gap-2 text-slate-500 font-medium">
+                            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
-                            <span>Team Size: <strong className="text-slate-200">{inq.teamSize}</strong></span>
+                            <span>Team Size: <strong className="text-slate-800 font-semibold">{inq.teamSize}</strong></span>
                           </div>
                         )}
                       </div>
@@ -641,13 +641,13 @@ export default function AdminInquiriesPage() {
 
                     {/* Column 2: Service & Client Requirements */}
                     <div className="space-y-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">REQUESTED SERVICE</div>
-                      <div className="text-xs font-semibold text-slate-200 bg-slate-900/60 rounded-lg p-2 border border-slate-800">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">REQUESTED SERVICE</div>
+                      <div className="text-xs font-semibold text-slate-800 bg-slate-50 rounded-xl p-2.5 border border-slate-200/80">
                         {inq.service || "Enterprise Technical Consultation"}
                       </div>
 
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2">PROJECT DESCRIPTION / SYMPTOMS</div>
-                      <div className="text-xs text-slate-300 bg-slate-900/60 rounded-xl p-3 border border-slate-800 leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-2">PROJECT DESCRIPTION / SYMPTOMS</div>
+                      <div className="text-xs text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-200/80 leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap">
                         {inq.message || "No project description provided."}
                       </div>
                     </div>
@@ -655,18 +655,18 @@ export default function AdminInquiriesPage() {
                     {/* Column 3: Internal Coordination Notes & Actions */}
                     <div className="space-y-3 flex flex-col justify-between">
                       <div>
-                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           <span>COORDINATION LOG</span>
                           <button
                             onClick={() => openCoordinateModal(inq)}
-                            className="text-blue-400 hover:text-blue-300 normal-case text-xs font-semibold"
+                            className="text-blue-600 hover:text-blue-700 normal-case text-xs font-semibold"
                           >
                             Edit Notes ✎
                           </button>
                         </div>
-                        <div className="mt-1 text-xs text-slate-400 bg-slate-900/80 rounded-xl p-3 border border-slate-800/80 leading-relaxed min-h-[64px]">
+                        <div className="mt-1 text-xs text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-200/80 leading-relaxed min-h-[64px]">
                           {inq.coordinationNotes || (
-                            <span className="italic text-slate-600">
+                            <span className="italic text-slate-400">
                               No internal coordination notes yet. Click &quot;Coordinate&quot; to log client discussions.
                             </span>
                           )}
@@ -678,7 +678,7 @@ export default function AdminInquiriesPage() {
                         {/* 1. Coordinate / Update Notes */}
                         <button
                           onClick={() => openCoordinateModal(inq)}
-                          className="flex-1 min-w-[120px] rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition text-center"
+                          className="flex-1 min-w-[120px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition text-center"
                         >
                           💬 Coordinate
                         </button>
@@ -687,14 +687,14 @@ export default function AdminInquiriesPage() {
                         {!isConverted ? (
                           <button
                             onClick={() => openConvertModal(inq)}
-                            className="flex-1 min-w-[140px] rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 transition text-center"
+                            className="flex-1 min-w-[140px] rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition text-center"
                           >
                             👤 Convert to Customer
                           </button>
                         ) : (
                           <button
                             onClick={() => openTicketModal(inq)}
-                            className="flex-1 min-w-[140px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:from-emerald-500 hover:to-teal-500 transition text-center"
+                            className="flex-1 min-w-[140px] rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition text-center"
                           >
                             🎫 Create Ticket
                           </button>
@@ -713,25 +713,25 @@ export default function AdminInquiriesPage() {
       {/* MODAL 1: Coordinate / Update Notes & Status */}
       {/* ========================================================================= */}
       {coordinateModalInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-700 bg-gradient-to-b from-[#0f172a] to-[#0b1324] p-6 text-white shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
               <div>
-                <h3 className="text-base font-bold text-white">Coordinate with #{coordinateModalInquiry.id}</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{coordinateModalInquiry.customerName} ({coordinateModalInquiry.companyName})</p>
+                <h3 className="text-base font-bold text-slate-900">Coordinate with #{coordinateModalInquiry.id}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{coordinateModalInquiry.customerName} ({coordinateModalInquiry.companyName})</p>
               </div>
-              <button onClick={() => setCoordinateModalInquiry(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setCoordinateModalInquiry(null)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <form onSubmit={handleSaveCoordination} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Coordination Lifecycle Status
                 </label>
                 <select
                   value={coordStatus}
                   onChange={(e) => setCoordStatus(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="New Request">🔵 New Request (Pending Contact)</option>
                   <option value="In Coordination">🟣 In Coordination (Calls/NDA in progress)</option>
@@ -741,7 +741,7 @@ export default function AdminInquiriesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Internal Coordination Notes / Discussion Summary
                 </label>
                 <textarea
@@ -749,7 +749,7 @@ export default function AdminInquiriesPage() {
                   value={coordNotes}
                   onChange={(e) => setCoordNotes(e.target.value)}
                   placeholder="e.g. Spoke with client via phone at 2:30 PM. Sent standard enterprise NDA. They will courier 2x SAS drives for cleanroom evaluation..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 resize-none leading-relaxed"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none leading-relaxed"
                 />
               </div>
 
@@ -757,14 +757,14 @@ export default function AdminInquiriesPage() {
                 <button
                   type="button"
                   onClick={() => setCoordinateModalInquiry(null)}
-                  className="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingCoord}
-                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50"
+                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs disabled:opacity-50"
                 >
                   {savingCoord ? "Saving..." : "Save Coordination Log"}
                 </button>
@@ -778,48 +778,48 @@ export default function AdminInquiriesPage() {
       {/* MODAL 2: 1-Click Convert to Customer Account */}
       {/* ========================================================================= */}
       {convertModalInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-blue-500/30 bg-gradient-to-b from-[#0f172a] to-[#0b1324] p-6 text-white shadow-2xl animate-in zoom-in-95 duration-200 relative">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl animate-in zoom-in-95 duration-200 relative">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-bold text-blue-400 mb-1 border border-blue-500/20">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 mb-1 border border-blue-200">
                   Provision Customer Account
                 </div>
-                <h3 className="text-base font-bold text-white">Convert Lead to Active Customer</h3>
+                <h3 className="text-base font-bold text-slate-900">Convert Lead to Active Customer</h3>
               </div>
-              <button onClick={() => setConvertModalInquiry(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setConvertModalInquiry(null)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             {conversionSuccess ? (
               <div className="space-y-4 py-2">
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mb-2">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-2">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h4 className="text-sm font-bold text-white">Account Created Successfully!</h4>
-                  <p className="text-xs text-slate-300 mt-1">
+                  <h4 className="text-sm font-bold text-slate-900">Account Created Successfully!</h4>
+                  <p className="text-xs text-slate-600 mt-1">
                     {conversionSuccess.name} from <strong>{conversionSuccess.company}</strong> is now officially provisioned in the Customer Portal.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2 text-xs">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Portal Login URL:</span>
-                    <span className="text-blue-400 font-mono">/customer/login</span>
+                    <span className="text-slate-500 font-medium">Portal Login URL:</span>
+                    <span className="text-blue-600 font-mono font-bold">/customer/login</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Corporate Email:</span>
-                    <span className="text-white font-bold">{conversionSuccess.email}</span>
+                    <span className="text-slate-500 font-medium">Corporate Email:</span>
+                    <span className="text-slate-900 font-bold">{conversionSuccess.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Assigned Password:</span>
+                    <span className="text-amber-800 font-mono font-bold bg-amber-100 px-2 py-0.5 rounded border border-amber-200">{conversionSuccess.password}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Assigned Password:</span>
-                    <span className="text-amber-300 font-mono font-bold">{conversionSuccess.password}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">SLA Retainer:</span>
-                    <span className="text-emerald-400 font-semibold">{conversionSuccess.sla}</span>
+                    <span className="text-slate-500 font-medium">SLA Retainer:</span>
+                    <span className="text-emerald-700 font-semibold">{conversionSuccess.sla}</span>
                   </div>
                 </div>
 
@@ -829,7 +829,7 @@ export default function AdminInquiriesPage() {
                       const text = `The Data Dot Customer Portal Credentials\nLogin URL: https://thedatadot.vercel.app/customer/login\nEmail: ${conversionSuccess.email}\nPassword: ${conversionSuccess.password}\nSLA Tier: ${conversionSuccess.sla}`;
                       copyText(text, "Login Credentials");
                     }}
-                    className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500"
+                    className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs"
                   >
                     📋 Copy Client Credentials
                   </button>
@@ -839,7 +839,7 @@ export default function AdminInquiriesPage() {
                       setConvertModalInquiry(null);
                       if (inq) openTicketModal(inq);
                     }}
-                    className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500"
+                    className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs"
                   >
                     🎫 Create First Ticket →
                   </button>
@@ -849,7 +849,7 @@ export default function AdminInquiriesPage() {
               <form onSubmit={handleConvertCustomer} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                       Contact Name *
                     </label>
                     <input
@@ -857,12 +857,12 @@ export default function AdminInquiriesPage() {
                       required
                       value={custName}
                       onChange={(e) => setCustName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                       Company Name *
                     </label>
                     <input
@@ -870,14 +870,14 @@ export default function AdminInquiriesPage() {
                       required
                       value={custCompany}
                       onChange={(e) => setCustCompany(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                       Corporate Email *
                     </label>
                     <input
@@ -885,31 +885,31 @@ export default function AdminInquiriesPage() {
                       required
                       value={custEmail}
                       onChange={(e) => setCustEmail(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                       Phone Contact
                     </label>
                     <input
                       type="text"
                       value={custPhone}
                       onChange={(e) => setCustPhone(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Assigned SLA Tier
                   </label>
                   <select
                     value={custSla}
                     onChange={(e) => setCustSla(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="Enterprise 15-Min 24/7 SLA">Enterprise 15-Min 24/7 SLA (Critical)</option>
                     <option value="Priority 4-Hour Rapid SLA">Priority 4-Hour Rapid SLA</option>
@@ -920,13 +920,13 @@ export default function AdminInquiriesPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                       Initial Assigned Password *
                     </label>
                     <button
                       type="button"
                       onClick={() => setCustPassword(generateRandomPassword())}
-                      className="text-[11px] text-blue-400 hover:text-blue-300"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-bold"
                     >
                       Regenerate
                     </button>
@@ -936,7 +936,7 @@ export default function AdminInquiriesPage() {
                     required
                     value={custPassword}
                     onChange={(e) => setCustPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-amber-300 font-mono font-bold outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-amber-800 font-mono font-bold outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
                     This password will be pre-provisioned for the client to log into their customer tracking portal.
@@ -947,14 +947,14 @@ export default function AdminInquiriesPage() {
                   <button
                     type="button"
                     onClick={() => setConvertModalInquiry(null)}
-                    className="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={converting}
-                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50"
+                    className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs disabled:opacity-50"
                   >
                     {converting ? "Creating Account..." : "Provision Customer Account →"}
                   </button>
@@ -969,28 +969,28 @@ export default function AdminInquiriesPage() {
       {/* MODAL 3: Create Official Ticket for Converted Customer */}
       {/* ========================================================================= */}
       {ticketModalInquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-[#0f172a] to-[#0b1324] p-6 text-white shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 mb-1 border border-emerald-500/20">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 mb-1 border border-emerald-200">
                   Lab Workbench Intake
                 </div>
-                <h3 className="text-base font-bold text-white">Create Official Ticket for {ticketModalInquiry.customerName}</h3>
+                <h3 className="text-base font-bold text-slate-900">Create Official Ticket for {ticketModalInquiry.customerName}</h3>
               </div>
-              <button onClick={() => setTicketModalInquiry(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setTicketModalInquiry(null)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
 
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Service Category
                   </label>
                   <select
                     value={ticketCategory}
                     onChange={(e) => setTicketCategory(e.target.value as any)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="Data Recovery">Cleanroom Data Recovery</option>
                     <option value="Cloud Solutions">Cloud Solutions &amp; 365</option>
@@ -1000,13 +1000,13 @@ export default function AdminInquiriesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                     Urgency Priority
                   </label>
                   <select
                     value={ticketUrgency}
                     onChange={(e) => setTicketUrgency(e.target.value as any)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="Critical">🔴 Critical (15-Min SLA)</option>
                     <option value="High">🟡 High (4-Hour SLA)</option>
@@ -1016,7 +1016,7 @@ export default function AdminInquiriesPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Device / Case Subject *
                 </label>
                 <input
@@ -1024,19 +1024,19 @@ export default function AdminInquiriesPage() {
                   required
                   value={ticketDevice}
                   onChange={(e) => setTicketDevice(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Diagnostics / Case Intake Symptoms
                 </label>
                 <textarea
                   rows={4}
                   value={ticketSymptoms}
                   onChange={(e) => setTicketSymptoms(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-xs text-white outline-none focus:border-blue-500 resize-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
                 />
               </div>
 
@@ -1044,14 +1044,14 @@ export default function AdminInquiriesPage() {
                 <button
                   type="button"
                   onClick={() => setTicketModalInquiry(null)}
-                  className="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingTicket}
-                  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs disabled:opacity-50"
                 >
                   {creatingTicket ? "Dispatching..." : "Dispatch to Workbench →"}
                 </button>

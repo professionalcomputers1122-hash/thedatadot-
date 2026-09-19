@@ -271,7 +271,7 @@ export default function AdminCustomersPage() {
       actions={
         <button
           onClick={() => setShowAddModal(true)}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
         >
           <span>+</span> Provision New Client
         </button>
@@ -279,32 +279,32 @@ export default function AdminCustomersPage() {
     >
       <div className="space-y-6">
         {notification && (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/60 p-4 text-xs font-bold text-emerald-300 flex items-center justify-between shadow-lg">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 flex items-center justify-between shadow-2xs">
             <span className="leading-relaxed">{notification}</span>
-            <button onClick={() => setNotification("")} className="text-emerald-400 hover:text-white ml-4">
+            <button onClick={() => setNotification("")} className="text-emerald-700 hover:text-emerald-950 ml-4">
               ✕
             </button>
           </div>
         )}
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs shadow-2xs">
           <input
             type="text"
             placeholder="Search by client name, organization, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-96 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2 text-white outline-none focus:border-blue-500"
+            className="w-full sm:w-96 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-2xs"
           />
-          <div className="flex items-center gap-3 text-slate-400">
-            {loading && <span className="text-[11px] text-blue-400 animate-pulse">Syncing with database...</span>}
-            <span>Total Accounts: <strong className="text-white">{customers.length}</strong></span>
+          <div className="flex items-center gap-3 text-slate-500 font-medium">
+            {loading && <span className="text-[11px] text-blue-600 animate-pulse font-bold">Syncing with database...</span>}
+            <span>Total Accounts: <strong className="text-slate-900">{customers.length}</strong></span>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden text-xs">
+        <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden text-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-950/80 text-[10px] font-bold uppercase text-slate-400">
+            <table className="w-full text-left text-slate-700">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[10px] font-bold uppercase text-slate-500">
                 <tr>
                   <th className="px-5 py-3.5">ID</th>
                   <th className="px-5 py-3.5">Contact Person</th>
@@ -315,29 +315,29 @@ export default function AdminCustomersPage() {
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-5 py-4 font-mono font-bold text-blue-400">{c.id.length > 8 ? c.id.substring(0, 8) + "..." : c.id}</td>
-                    <td className="px-5 py-4 font-bold text-white">{c.name}</td>
-                    <td className="px-5 py-4 text-slate-200">{c.company}</td>
+                  <tr key={c.id} className="hover:bg-slate-50/70 transition">
+                    <td className="px-5 py-4 font-mono font-bold text-blue-600">{c.id.length > 8 ? c.id.substring(0, 8) + "..." : c.id}</td>
+                    <td className="px-5 py-4 font-bold text-slate-900">{c.name}</td>
+                    <td className="px-5 py-4 text-slate-700">{c.company}</td>
                     <td className="px-5 py-4">
-                      <p className="text-slate-200 font-mono text-[11px]">{c.email}</p>
+                      <p className="text-slate-700 font-mono text-[11px] font-semibold">{c.email}</p>
                       <span className="text-[11px] text-slate-500">{c.phone}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold">
+                      <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 text-[10px] font-bold">
                         {c.sla}
                       </span>
                     </td>
-                    <td className="px-5 py-4 font-bold text-emerald-400">
+                    <td className="px-5 py-4 font-bold text-slate-900">
                       {c.activeTickets} Active
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => copyCredentials(c)}
-                          className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition"
+                          className="rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition shadow-2xs"
                           title="Copy login details to send to client"
                         >
                           📋 Copy Info
@@ -347,14 +347,14 @@ export default function AdminCustomersPage() {
                             setPasswordModalCustomer(c);
                             setNewPasswordValue(c.password || generateRandomPassword());
                           }}
-                          className="rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                          className="rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1 text-[11px] font-semibold transition"
                           title="Change password for this person"
                         >
                           🔑 Change PW
                         </button>
                         <button
                           onClick={() => setDeleteModalCustomer(c)}
-                          className="rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
+                          className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer shadow-2xs"
                           title="Delete customer and revoke portal access"
                         >
                           🗑️ Delete
@@ -370,25 +370,25 @@ export default function AdminCustomersPage() {
 
         {/* CHANGE PASSWORD MODAL */}
         {passwordModalCustomer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
-            <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white">Change Password</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <h3 className="text-base font-bold text-slate-900">Change Password</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     Update individual portal password for {passwordModalCustomer.name}
                   </p>
                 </div>
                 <button
                   onClick={() => setPasswordModalCustomer(null)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-slate-400 hover:text-slate-700"
                 >
                   ✕
                 </button>
               </div>
 
               <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-slate-300 space-y-1">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700 space-y-1">
                   <p><strong>Client:</strong> {passwordModalCustomer.name}</p>
                   <p><strong>Organization:</strong> {passwordModalCustomer.company}</p>
                   <p className="font-mono text-[11px]"><strong>Email:</strong> {passwordModalCustomer.email}</p>
@@ -396,11 +396,11 @@ export default function AdminCustomersPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-semibold text-slate-300">New Password</label>
+                    <label className="font-bold text-slate-600">New Password</label>
                     <button
                       type="button"
                       onClick={() => setNewPasswordValue(generateRandomPassword())}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-bold"
                     >
                       ⚡ Generate Random
                     </button>
@@ -412,12 +412,12 @@ export default function AdminCustomersPage() {
                       placeholder="Enter new individual password"
                       value={newPasswordValue}
                       onChange={(e) => setNewPasswordValue(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-12 text-white font-mono outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-12 text-slate-900 font-mono outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowChangePassword(!showChangePassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs"
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 text-xs font-semibold"
                     >
                       {showChangePassword ? "Hide" : "Show"}
                     </button>
@@ -427,18 +427,18 @@ export default function AdminCustomersPage() {
                   </p>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setPasswordModalCustomer(null)}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs transition disabled:opacity-50"
                   >
                     {savingPassword ? "Updating Password..." : "Save Password"}
                   </button>
@@ -450,76 +450,76 @@ export default function AdminCustomersPage() {
 
         {/* PROVISION CUSTOMER MODAL */}
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm text-xs">
-            <div className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs text-xs">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
                 <div>
-                  <h3 className="text-base font-bold text-white">Provision Enterprise Client Account</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <h3 className="text-base font-bold text-slate-900">Provision Enterprise Client Account</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     Create credentials and assign SLA tier for a converted business client
                   </p>
                 </div>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-700">✕</button>
               </div>
 
               <form onSubmit={handleAdd} className="space-y-3.5">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Company / Organization Name</label>
+                  <label className="block font-bold text-slate-600 mb-1">Company / Organization Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Apex Diagnostics LLP"
                     value={newCust.company}
                     onChange={(e) => setNewCust({ ...newCust, company: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Contact Person Name</label>
+                    <label className="block font-bold text-slate-600 mb-1">Contact Person Name</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Dr. Aravind S."
                       value={newCust.name}
                       onChange={(e) => setNewCust({ ...newCust, name: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Direct Phone</label>
+                    <label className="block font-bold text-slate-600 mb-1">Direct Phone</label>
                     <input
                       type="tel"
                       required
                       placeholder="+91 98402 11928"
                       value={newCust.phone}
                       onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Corporate Client Email (Login ID)</label>
+                  <label className="block font-bold text-slate-600 mb-1">Corporate Client Email (Login ID)</label>
                   <input
                     type="email"
                     required
                     placeholder="client@organization.com"
                     value={newCust.email}
                     onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-slate-300">Individual Portal Password</label>
+                    <label className="font-bold text-slate-600">Individual Portal Password</label>
                     <button
                       type="button"
                       onClick={() => setNewCust({ ...newCust, password: generateRandomPassword() })}
-                      className="text-[11px] font-semibold text-blue-400 hover:text-blue-300"
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700"
                     >
                       ⚡ Generate Random Key
                     </button>
@@ -531,12 +531,12 @@ export default function AdminCustomersPage() {
                       placeholder="Enter client password (min 4 characters)"
                       value={newCust.password}
                       onChange={(e) => setNewCust({ ...newCust, password: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 pr-10 text-white font-mono outline-none focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-10 text-slate-900 font-mono outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs"
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 text-xs font-semibold"
                     >
                       {showPassword ? "Hide" : "Show"}
                     </button>
@@ -547,11 +547,11 @@ export default function AdminCustomersPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Assigned SLA Retainer Tier</label>
+                  <label className="block font-bold text-slate-600 mb-1">Assigned SLA Retainer Tier</label>
                   <select
                     value={newCust.sla}
                     onChange={(e) => setNewCust({ ...newCust, sla: e.target.value })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2.5 text-white outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   >
                     <option>Enterprise 15-Min 24/7 SLA</option>
                     <option>Priority 4-Hour Response</option>
@@ -559,18 +559,18 @@ export default function AdminCustomersPage() {
                   </select>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 text-slate-400 hover:text-white"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs transition disabled:opacity-50 cursor-pointer"
                   >
                     {submitting ? "Provisioning Client..." : "Provision & Activate Access"}
                   </button>

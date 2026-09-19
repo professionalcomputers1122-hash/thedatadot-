@@ -245,7 +245,7 @@ export default function DataRecoveryPage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
               </span>
-              <span>Enterprise Cleanroom Recovery</span>
+              <span>Enterprise Data Recovery</span>
               <span className="text-blue-300">·</span>
               <span className="text-blue-900 font-extrabold">99.98% Success Score</span>
             </div>
@@ -257,7 +257,7 @@ export default function DataRecoveryPage() {
 
             {/* SUBTITLE */}
             <p className="mt-5 text-base sm:text-lg leading-relaxed text-slate-600 max-w-2xl">
-              Specialized cleanroom recovery for corrupted RAID arrays, failed NVMe/SSDs, clicking hard drives, locked encrypted volumes, and damaged enterprise databases with an industry-leading <strong className="font-semibold text-slate-900">99.98% success score</strong>. Guaranteed No Data, No Recovery Fee.
+              Specialized data recovery for corrupted RAID arrays, failed NVMe/SSDs, clicking hard drives, locked encrypted volumes, and damaged enterprise databases with an industry-leading <strong className="font-semibold text-slate-900">99.98% success score</strong>. Guaranteed No Data, No Recovery Fee.
             </p>
 
             {/* REPUTATION SUMMARY & UPWORK TOP RATED STRIP (NO INDIVIDUAL REVIEWS) */}

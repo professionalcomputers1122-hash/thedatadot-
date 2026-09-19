@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { loginCustomer } from "@/lib/clientAuth";
 
@@ -47,17 +46,18 @@ export default function CustomerLoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* BRAND HEADER */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center mb-4">
-            <Image
-              src="/logo.png"
-              alt="The Data Dot"
-              width={180}
-              height={32}
-              priority
-              style={{ height: "auto" }}
-              className="w-[170px]"
-            />
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition mb-3"
+          >
+            <span>← Back to Website</span>
           </Link>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 font-extrabold text-white text-sm shadow-md shadow-blue-600/20">
+              •
+            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-900">The Data Dot</span>
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-950">Client Portal Sign In</h1>
           <p className="mt-1 text-xs text-slate-500">
             Real-time forensic hardware tracking, SLA compliance, and cloud ticketing
@@ -153,7 +153,7 @@ export default function CustomerLoginPage() {
 
         {/* SECURITY FOOTNOTE */}
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          256-Bit TLS Encrypted • Protected by The Data Dot 99.98% Cleanroom SLA
+          256-Bit TLS Encrypted • Protected by The Data Dot 99.98% Data Recovery SLA
         </p>
       </div>
     </main>

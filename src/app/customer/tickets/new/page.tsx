@@ -156,22 +156,59 @@ export default function CustomerNewTicketPage() {
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { id: "Data Recovery", label: "💽 Cleanroom Recovery" },
-                  { id: "Cybersecurity", label: "🛡️ Cybersecurity & SOC" },
-                  { id: "Cloud Solutions", label: "☁️ Cloud Infrastructure" },
-                  { id: "Managed IT", label: "🖥️ Managed IT Fleet" },
+                  {
+                    id: "Data Recovery",
+                    label: "Data Recovery",
+                    icon: (
+                      <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "Cybersecurity",
+                    label: "Cybersecurity & SOC",
+                    icon: (
+                      <svg className="w-4 h-4 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "Cloud Solutions",
+                    label: "Cloud Infrastructure",
+                    icon: (
+                      <svg className="w-4 h-4 text-sky-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "Managed IT",
+                    label: "Managed IT Fleet",
+                    icon: (
+                      <svg className="w-4 h-4 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="20" height="14" x="2" y="3" rx="2" />
+                        <line x1="8" x2="16" y1="21" y2="21" />
+                        <line x1="12" x2="12" y1="17" y2="21" />
+                      </svg>
+                    ),
+                  },
                 ].map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setFormData({ ...formData, category: cat.id })}
-                    className={`rounded-2xl border p-3.5 text-center font-bold transition text-xs ${
+                    className={`rounded-2xl border p-3.5 text-center font-bold transition text-xs flex items-center justify-center gap-2 ${
                       formData.category === cat.id
                         ? "border-blue-600 bg-blue-50 text-blue-700 shadow-xs"
                         : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                     }`}
                   >
-                    {cat.label}
+                    {cat.icon}
+                    <span>{cat.label}</span>
                   </button>
                 ))}
               </div>

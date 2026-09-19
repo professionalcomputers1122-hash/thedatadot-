@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function CustomerRegisterPage() {
@@ -13,7 +12,7 @@ export default function CustomerRegisterPage() {
     contactName: "",
     email: "",
     phone: "",
-    serviceNeeded: "Emergency Cleanroom Data Recovery",
+    serviceNeeded: "Emergency Data Recovery",
     slaTier: "Enterprise 15-Min 24/7 SLA",
     requirements: "",
   });
@@ -75,22 +74,23 @@ export default function CustomerRegisterPage() {
 
       <div className="w-full max-w-lg relative z-10">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center mb-4">
-            <Image
-              src="/logo.png"
-              alt="The Data Dot"
-              width={180}
-              height={32}
-              priority
-              style={{ height: "auto" }}
-              className="w-[170px]"
-            />
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition mb-3"
+          >
+            <span>← Back to Website</span>
           </Link>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 font-extrabold text-white text-sm shadow-md shadow-blue-600/20">
+              •
+            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-900">The Data Dot</span>
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-950">
             Request Client Portal Onboarding
           </h1>
           <p className="mt-1 text-xs text-slate-500">
-            Enterprise SLA registration for cleanroom recovery and 24/7 infrastructure monitoring
+            Enterprise SLA registration for data recovery and 24/7 infrastructure monitoring
           </p>
         </div>
 
@@ -103,7 +103,7 @@ export default function CustomerRegisterPage() {
               Onboarding Request Dispatched
             </h2>
             <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-              Thank you, <strong className="text-slate-900">{formData.contactName}</strong>! Your enterprise onboarding file for <strong className="text-slate-900">{formData.companyName}</strong> has been routed to our Administration &amp; Cleanroom Intake desk.
+              Thank you, <strong className="text-slate-900">{formData.contactName}</strong>! Your enterprise onboarding file for <strong className="text-slate-900">{formData.companyName}</strong> has been routed to our Administration &amp; Data Recovery Intake desk.
             </p>
 
             <div className="my-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left text-xs space-y-2 text-slate-700">
@@ -238,7 +238,7 @@ export default function CustomerRegisterPage() {
                     onChange={(e) => setFormData({ ...formData, serviceNeeded: e.target.value })}
                     className="w-full rounded-xl border border-slate-300 p-3 text-slate-900 outline-none focus:border-blue-600 text-xs bg-white"
                   >
-                    <option>Emergency Cleanroom Data Recovery</option>
+                    <option>Emergency Data Recovery</option>
                     <option>Managed IT Services &amp; SOC Monitoring</option>
                     <option>Cloud Migration &amp; Hybrid Infrastructure</option>
                     <option>Cybersecurity &amp; Ransomware Defense</option>
@@ -299,7 +299,7 @@ export default function CustomerRegisterPage() {
         )}
 
         <p className="mt-6 text-center text-[11px] text-slate-400">
-          ISO Class-5 Cleanroom Certified • Protected by The Data Dot 99.98% Recovery Guarantee
+          Enterprise Certified • Protected by The Data Dot 99.98% Data Recovery Guarantee
         </p>
       </div>
     </main>

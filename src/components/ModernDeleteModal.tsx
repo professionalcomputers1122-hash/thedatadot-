@@ -19,12 +19,12 @@ export default function ModernDeleteModal({
   isOpen,
   onClose,
   onConfirm,
-  title = "Confirm Permanent Deletion",
+  title = "Confirm Deletion",
   itemType = "Item",
   itemName,
   description,
-  warningNote = "This action is irreversible. The record, historical telemetry, and all associated data will be permanently wiped.",
-  confirmButtonText = "Permanently Delete",
+  warningNote = "This action is irreversible. The record, historical telemetry, and all associated data will be permanently removed.",
+  confirmButtonText = "Delete",
   isDeleting = false,
 }: ModernDeleteModalProps) {
   // Close on Escape key
@@ -43,97 +43,108 @@ export default function ModernDeleteModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50"
       onClick={() => {
         if (!isDeleting) onClose();
       }}
     >
-      {/* Centered Modal Card */}
+      {/* Clean, Minimalist Modal Card - No Animations, Clean Enterprise Dialog */}
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-500/20 bg-gradient-to-b from-[#0f172a] to-[#0b1324] p-6 sm:p-7 text-white shadow-2xl shadow-rose-950/40 animate-in zoom-in-95 duration-200 text-xs"
+        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Ambient Top Glow */}
-        <div className="pointer-events-none absolute -left-20 -top-20 h-44 w-44 rounded-full bg-rose-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 -bottom-20 h-44 w-44 rounded-full bg-red-600/10 blur-3xl" />
-
-        {/* Header with Icon & Close */}
-        <div className="flex items-start justify-between relative z-10">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-inner">
-            <svg
-              className="h-6 w-6 animate-pulse"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
+        {/* Header with Clean Red Icon & Close */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 border border-rose-100 text-rose-600">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-950">
+                {title}
+              </h3>
+              {itemType && (
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+                  {itemType} Deletion
+                </p>
+              )}
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="rounded-xl border border-slate-800 bg-slate-900/80 p-2 text-slate-400 hover:border-slate-700 hover:text-white transition disabled:opacity-40"
-            title="Cancel and close"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-40 cursor-pointer"
+            title="Close dialog"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Title */}
-        <div className="mt-4 relative z-10">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400/90 font-mono">
-            Destructive Action Required
-          </span>
-          <h3 className="text-base sm:text-lg font-bold tracking-tight text-white mt-0.5">
-            {title}
-          </h3>
-        </div>
-
         {/* Target Item Highlight */}
         {itemName && (
-          <div className="mt-3.5 rounded-xl border border-rose-500/20 bg-rose-950/20 p-3 relative z-10 flex items-center gap-2.5">
-            <div className="h-2 w-2 rounded-full bg-rose-400 animate-ping shrink-0" />
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                {itemType} Target
-              </span>
-              <p className="font-mono text-xs font-bold text-rose-200 truncate">
-                {itemName}
-              </p>
-            </div>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Target {itemType}
+            </span>
+            <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+              {itemName}
+            </p>
           </div>
         )}
 
         {/* Description */}
-        <p className="mt-3 text-slate-300 leading-relaxed relative z-10 text-xs">
+        <p className="mt-3 text-xs text-slate-600 leading-relaxed">
           {description ||
-            `Are you sure you want to permanently purge this ${itemType.toLowerCase()} from the system? This record will be completely removed.`}
+            `Are you sure you want to delete this ${itemType.toLowerCase()}? This action will permanently remove the record.`}
         </p>
 
-        {/* Caution Callout */}
-        <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-300/90 flex items-start gap-2 relative z-10">
-          <span className="text-sm shrink-0">⚠️</span>
-          <p className="text-[11px] leading-tight text-amber-200/80">
-            {warningNote}
-          </p>
-        </div>
+        {/* Warning Callout - Clean Minimalist SVG (No Emojis) */}
+        {warningNote && (
+          <div className="mt-3.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2.5">
+            <svg
+              className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <p className="text-[11px] leading-relaxed text-amber-800">
+              {warningNote}
+            </p>
+          </div>
+        )}
 
-        {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-800/80 relative z-10">
+        {/* Action Buttons - Clean, Minimalist, Professional */}
+        <div className="mt-6 flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition disabled:opacity-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
@@ -141,16 +152,28 @@ export default function ModernDeleteModal({
             type="button"
             onClick={() => onConfirm()}
             disabled={isDeleting}
-            className="rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-950/50 transition flex items-center gap-2 disabled:opacity-50 active:scale-95 cursor-pointer"
+            className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-semibold text-white transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
           >
             {isDeleting ? (
               <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Purging Record...</span>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <span>Deleting...</span>
               </>
             ) : (
               <>
-                <span>🗑️</span>
+                <svg
+                  className="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
                 <span>{confirmButtonText}</span>
               </>
             )}

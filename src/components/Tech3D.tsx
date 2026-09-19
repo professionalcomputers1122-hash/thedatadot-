@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Tech3D.css";
 
 const securityItems = [
@@ -48,6 +48,7 @@ const securityItems = [
 ];
 
 export default function Tech3D() {
+  const [isProtectionOn, setIsProtectionOn] = useState(true);
   const sceneRef = useRef<HTMLDivElement>(null);
   const mouseAnimationRef = useRef<number | null>(null);
 
@@ -106,7 +107,7 @@ export default function Tech3D() {
   return (
     <div
       ref={sceneRef}
-      className="security-scene powered-on"
+      className={`security-scene ${isProtectionOn ? "powered-on" : ""}`}
     >
       {/* Ambient background */}
       <div className="ambient-glow ambient-glow-one" />
@@ -271,12 +272,56 @@ export default function Tech3D() {
         </div>
 
         {/* =========================
+            PROTECTION ON / OFF BUTTON
+        ========================== */}
+
+        {isProtectionOn ? (
+          <button
+            type="button"
+            className="power-button power-button-online"
+            onClick={() => setIsProtectionOn(false)}
+            title="Click to turn Protection Off"
+            aria-label="Protection On. Click to turn Protection Off."
+          >
+            <span className="online-dot" />
+
+            <span className="power-text">
+              PROTECTION ON
+            </span>
+
+            <span className="power-subtext">
+              (CLICK FOR OFF)
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="power-button"
+            onClick={() => setIsProtectionOn(true)}
+            title="Click to turn Protection On"
+            aria-label="Protection Off. Click to turn Protection On."
+          >
+            <span className="power-icon">
+              <span />
+            </span>
+
+            <span className="power-text">
+              PROTECTION OFF
+            </span>
+
+            <span className="power-arrow">
+              →
+            </span>
+          </button>
+        )}
+
+        {/* =========================
             TOP STATUS
         ========================== */}
 
         <div className="system-label">
-          <span className="active" />
-          SECURITY SYSTEM ACTIVE
+          <span className={isProtectionOn ? "active" : ""} />
+          {isProtectionOn ? "PROTECTION ON • ACTIVE" : "PROTECTION OFF • STANDBY"}
         </div>
       </div>
     </div>

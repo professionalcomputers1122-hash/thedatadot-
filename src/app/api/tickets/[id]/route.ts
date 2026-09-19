@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabaseServer";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
 export async function GET(
   req: Request,
   props: { params: Promise<{ id: string }> }
@@ -11,23 +20,24 @@ export async function GET(
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Ticket ID is required" },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
+    const cleanId = id.trim().toUpperCase();
     const supabase = createAdminClient();
 
-    // Fetch ticket details
+    // Fetch ticket details with case-insensitive matching
     const { data: ticket, error: ticketError } = await supabase
       .from("tickets")
       .select("*")
-      .eq("id", id)
-      .single();
+      .or(`id.eq.${cleanId},id.ilike.${cleanId}`)
+      .maybeSingle();
 
     if (ticketError || !ticket) {
       return NextResponse.json(
         { success: false, error: "Ticket not found" },
-        { status: 404 }
+        { status: 404, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -35,19 +45,22 @@ export async function GET(
     const { data: messages } = await supabase
       .from("ticket_messages")
       .select("*")
-      .eq("ticket_id", id)
+      .or(`ticket_id.eq.${cleanId},ticket_id.ilike.${cleanId}`)
       .order("created_at", { ascending: true });
 
-    return NextResponse.json({
-      success: true,
-      ticket,
-      messages: messages || [],
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        ticket,
+        messages: messages || [],
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err: any) {
     console.error("[API /api/tickets/[id] GET exception]:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Internal server error" },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
@@ -62,10 +75,11 @@ export async function PATCH(
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Ticket ID is required" },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
+    const cleanId = id.trim().toUpperCase();
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
@@ -89,11 +103,20 @@ export async function PATCH(
     if (body.assigned_tech !== undefined) updates.assigned_tech = body.assigned_tech;
     if (body.urgency !== undefined) updates.urgency = body.urgency;
 
+    // Check if ticket exists in database (case-insensitive)
+    const { data: existingTicket } = await supabase
+      .from("tickets")
+      .select("*")
+      .or(`id.eq.${cleanId},id.ilike.${cleanId}`)
+      .maybeSingle();
+
+    const targetDbId = existingTicket?.id || cleanId;
     let updatedTicket = null;
+
     const { data: updateData, error: updateErr } = await supabase
       .from("tickets")
       .update(updates)
-      .eq("id", id)
+      .eq("id", targetDbId)
       .select();
 
     if (updateData && updateData.length > 0) {
@@ -101,18 +124,18 @@ export async function PATCH(
     } else {
       // If the ticket was not yet in Supabase table, upsert it so updates are permanently stored
       const insertRecord: Record<string, any> = {
-        id,
-        company_name: body.companyName || body.client || "Client Organization",
-        customer_name: body.customerName || body.client || "Client",
-        customer_email: body.customerEmail || "support@thedatadot.com",
-        device_or_subject: body.deviceOrSubject || body.device || "Support Incident",
+        id: targetDbId,
+        company_name: body.companyName || body.client || existingTicket?.company_name || "Client Organization",
+        customer_name: body.customerName || body.client || existingTicket?.customer_name || "Client",
+        customer_email: body.customerEmail || existingTicket?.customer_email || "support@thedatadot.com",
+        device_or_subject: body.deviceOrSubject || body.device || existingTicket?.device_or_subject || "Support Incident",
         status: updates.status || "In Progress",
         cloned_percent: updates.cloned_percent || 0,
         urgency: updates.urgency || "Standard",
         tech_notes: updates.tech_notes || "Updated via technician portal",
         assigned_bench: updates.assigned_bench || "Bench 01",
         assigned_tech: updates.assigned_tech || "Technician",
-        created_at: new Date().toISOString(),
+        created_at: existingTicket?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       try {
@@ -142,7 +165,7 @@ export async function PATCH(
           id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
           actor,
           action: "UPDATE_TICKET",
-          target: `Ticket #${id} (${summaryChange})`,
+          target: `Ticket #${targetDbId} (${summaryChange})`,
           ip: clientIp,
           created_at: new Date().toISOString(),
         },
@@ -151,15 +174,18 @@ export async function PATCH(
       console.warn("[API /api/tickets/[id] PATCH audit warn]:", auditErr);
     }
 
-    return NextResponse.json({
-      success: true,
-      ticket: updatedTicket,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        ticket: updatedTicket,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err: any) {
     console.error("[API /api/tickets/[id] PATCH exception]:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Internal server error" },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }
@@ -174,10 +200,11 @@ export async function DELETE(
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Ticket ID is required" },
-        { status: 400 }
+        { status: 400, headers: NO_CACHE_HEADERS }
       );
     }
 
+    const cleanId = id.trim().toUpperCase();
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
@@ -186,16 +213,16 @@ export async function DELETE(
     const supabase = createAdminClient();
 
     // 1. Delete associated chat messages
-    await supabase.from("ticket_messages").delete().eq("ticket_id", id);
+    await supabase.from("ticket_messages").delete().or(`ticket_id.eq.${cleanId},ticket_id.ilike.${cleanId}`);
 
     // 2. Delete ticket record from tickets table
-    const { error } = await supabase.from("tickets").delete().eq("id", id);
+    const { error } = await supabase.from("tickets").delete().or(`id.eq.${cleanId},id.ilike.${cleanId}`);
 
     if (error) {
       console.error("[API /api/tickets/[id] DELETE error]:", error);
       return NextResponse.json(
         { success: false, error: error.message },
-        { status: 500 }
+        { status: 500, headers: NO_CACHE_HEADERS }
       );
     }
 
@@ -206,7 +233,7 @@ export async function DELETE(
           id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
           actor: "Admin / Client User",
           action: "DELETE_TICKET",
-          target: `Ticket #${id}`,
+          target: `Ticket #${cleanId}`,
           ip: clientIp,
           created_at: new Date().toISOString(),
         },
@@ -215,15 +242,18 @@ export async function DELETE(
       console.warn("[API /api/tickets/[id] DELETE audit warn]:", auditErr);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Ticket #${id} permanently purged`,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Ticket #${cleanId} permanently purged`,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err: any) {
     console.error("[API /api/tickets/[id] DELETE exception]:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Internal server error" },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

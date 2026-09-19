@@ -201,6 +201,7 @@ export default function TechnicianTicketDetailPage({
           status,
           progress,
           notes,
+          timestamp: Date.now(),
           updatedAt: "Just now",
         };
         overrides[ticket.id] = overrideData;

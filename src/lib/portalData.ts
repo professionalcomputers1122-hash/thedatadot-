@@ -310,6 +310,7 @@ export function saveStoredTechnicians(technicians: TechnicianRecord[]): void {
 }
 
 // ================= LIVE SUPABASE REAL-TIME HELPERS =================
+export { supabase, isSupabaseConfigured } from "./supabase";
 import { supabase, isSupabaseConfigured } from "./supabase";
 
 export function parseTicketRow(row: any): Ticket {
@@ -449,11 +450,20 @@ export function applyTicketOverrides(t: Ticket): Ticket {
     const raw = localStorage.getItem("tdd_ticket_overrides");
     if (!raw) return t;
     const overrides = JSON.parse(raw);
+    const cleanId = (t.id || "").trim().toUpperCase();
     const ov =
+      overrides[cleanId] ||
       overrides[t.id] ||
-      (t.id ? overrides[t.id.toUpperCase()] : null) ||
       (t.id ? overrides[t.id.toLowerCase()] : null);
     if (ov) {
+      // Overrides older than 45 seconds have expired — server DB is authoritative
+      if (ov.timestamp && Date.now() - ov.timestamp > 45000) {
+        return t;
+      }
+      // If server data already matches or has progressed past this override, don't override
+      if (t.status === ov.status && (ov.progress === undefined || t.clonedPercent === ov.progress)) {
+        return t;
+      }
       return {
         ...t,
         status: ov.status || t.status,
@@ -477,9 +487,15 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
   try {
     if (typeof window !== "undefined") {
       const url = customerEmail
-        ? `/api/tickets?customer_email=${encodeURIComponent(customerEmail)}`
-        : "/api/tickets";
-      const res = await fetch(url);
+        ? `/api/tickets?customer_email=${encodeURIComponent(customerEmail)}&_t=${Date.now()}`
+        : `/api/tickets?_t=${Date.now()}`;
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "Pragma": "no-cache",
+          "Cache-Control": "no-cache",
+        },
+      });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.tickets)) {
@@ -497,7 +513,13 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
 
           // If querying for customerEmail returned 0 tickets, try global list as fallback
           if (list.length === 0 && customerEmail) {
-            const fallbackRes = await fetch("/api/tickets");
+            const fallbackRes = await fetch(`/api/tickets?_t=${Date.now()}`, {
+              cache: "no-store",
+              headers: {
+                "Pragma": "no-cache",
+                "Cache-Control": "no-cache",
+              },
+            });
             if (fallbackRes.ok) {
               const fallbackJson = await fallbackRes.json();
               if (Array.isArray(fallbackJson.tickets) && fallbackJson.tickets.length > 0) {
@@ -583,9 +605,48 @@ export async function updateTicketInSupabase(
     urgency?: string;
   }
 ) {
+  const cleanId = (id || "").trim().toUpperCase();
+
+  // Optimistic broadcast and local override for instant 0ms cross-tab reflection
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("tdd_ticket_overrides");
+      const overrides = raw ? JSON.parse(raw) : {};
+      const overrideData = {
+        ...(overrides[cleanId] || {}),
+        status: updates.status,
+        progress: updates.clonedPercent,
+        priority: updates.priority || updates.urgency,
+        bench: updates.assignedBench,
+        notes: updates.techNotes,
+        timestamp: Date.now(),
+        updatedAt: "Just now",
+      };
+      overrides[cleanId] = overrideData;
+      overrides[cleanId.toLowerCase()] = overrideData;
+      localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+      window.dispatchEvent(new Event("tickets-updated"));
+
+      if (typeof BroadcastChannel !== "undefined") {
+        const bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.postMessage({
+          type: "TICKET_UPDATED",
+          id: cleanId,
+          status: updates.status,
+          progress: updates.clonedPercent,
+          bench: updates.assignedBench,
+          timestamp: Date.now(),
+        });
+        bc.close();
+      }
+    } catch (e) {
+      console.warn("Local sync broadcast warn:", e);
+    }
+  }
+
   try {
     if (typeof window !== "undefined") {
-      const res = await fetch(`/api/tickets/${id}`, {
+      const res = await fetch(`/api/tickets/${cleanId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -609,7 +670,7 @@ export async function updateTicketInSupabase(
     if (updates.assignedTech !== undefined) payload.assigned_tech = updates.assignedTech;
     if (updates.urgency || updates.priority) payload.urgency = updates.urgency || updates.priority;
 
-    await supabase.from("tickets").update(payload).eq("id", id);
+    await supabase.from("tickets").update(payload).or(`id.eq.${cleanId},id.ilike.${cleanId}`);
   } catch (err) {
     console.error("Failed to update ticket in Supabase:", err);
   }

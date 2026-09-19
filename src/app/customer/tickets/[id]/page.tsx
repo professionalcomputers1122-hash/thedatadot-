@@ -16,6 +16,8 @@ import {
   applyTicketOverrides,
   TicketAttachment,
   getTicketAttachments,
+  supabase,
+  isSupabaseConfigured,
 } from "@/lib/portalData";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 
@@ -71,7 +73,10 @@ export default function CustomerTicketDetailPage({
 
         // 1. Direct single-ticket endpoint fetch for instant live telemetry
         try {
-          const res = await fetch(`/api/tickets/${ticketId}`);
+          const res = await fetch(`/api/tickets/${ticketId}?_t=${Date.now()}`, {
+            cache: "no-store",
+            headers: { "Pragma": "no-cache", "Cache-Control": "no-cache" },
+          });
           if (res.ok) {
             const data = await res.json();
             if (data?.ticket) {
@@ -171,17 +176,76 @@ export default function CustomerTicketDetailPage({
 
     loadData();
 
-    // Auto-poll live ticket telemetry from technician every 5 seconds & instant event sync
-    const interval = setInterval(() => loadData(true), 5000);
+    // Auto-poll live ticket telemetry from technician every 2 seconds & instant event sync
+    const interval = setInterval(() => loadData(true), 2000);
     const handleSync = () => loadData(true);
 
     window.addEventListener("tickets-updated", handleSync);
     window.addEventListener("storage", handleSync);
 
+    // Instant 0ms Cross-Tab BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (ev.data?.type === "TICKET_UPDATED") {
+            if (ev.data.id?.toUpperCase() === ticketId.toUpperCase()) {
+              loadData(true);
+            }
+          }
+        };
+      } catch (e) {}
+    }
+
+    // Supabase Realtime Database Subscription
+    let realtimeChannel: any = null;
+    if (isSupabaseConfigured) {
+      try {
+        realtimeChannel = supabase
+          .channel(`realtime-ticket-detail-${ticketId.toUpperCase()}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "tickets" },
+            (payload: any) => {
+              if (
+                payload.new?.id?.toUpperCase() === ticketId.toUpperCase() ||
+                payload.old?.id?.toUpperCase() === ticketId.toUpperCase()
+              ) {
+                loadData(true);
+              }
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "ticket_messages" },
+            (payload: any) => {
+              if (
+                payload.new?.ticket_id?.toUpperCase() === ticketId.toUpperCase() ||
+                payload.old?.ticket_id?.toUpperCase() === ticketId.toUpperCase()
+              ) {
+                loadData(true);
+              }
+            }
+          )
+          .subscribe();
+      } catch (e) {}
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleSync);
       window.removeEventListener("storage", handleSync);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
+      if (realtimeChannel && isSupabaseConfigured) {
+        try {
+          supabase.removeChannel(realtimeChannel);
+        } catch (e) {}
+      }
     };
   }, [ticketId, router]);
 

@@ -60,16 +60,33 @@ export default function CustomerTicketsPage() {
     }
     load();
 
-    const interval = setInterval(load, 5000);
+    const interval = setInterval(load, 2000);
     const handleUpdate = () => load();
 
     window.addEventListener("tickets-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
 
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (ev.data?.type === "TICKET_UPDATED") {
+            load();
+          }
+        };
+      } catch (e) {}
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
     };
   }, [router]);
 

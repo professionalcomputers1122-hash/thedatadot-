@@ -16,6 +16,8 @@ import {
   Ticket,
   TicketAttachment,
   getTicketAttachments,
+  supabase,
+  isSupabaseConfigured,
 } from "@/lib/portalData";
 
 interface TimelineStage {
@@ -447,35 +449,6 @@ export default function CustomerDashboardPage() {
           }
         }
 
-        // Apply instant local overrides from technician dashboard for zero-latency cross-tab sync
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("tdd_ticket_overrides");
-            if (raw) {
-              const overrides = JSON.parse(raw);
-              myTickets = myTickets.map((t) => {
-                const ov =
-                  overrides[t.id] ||
-                  (t.id ? overrides[t.id.toUpperCase()] : null) ||
-                  (t.id ? overrides[t.id.toLowerCase()] : null);
-                if (ov) {
-                  return {
-                    ...t,
-                    status: ov.status || t.status,
-                    clonedPercent: ov.progress !== undefined ? ov.progress : t.clonedPercent,
-                    priority: ov.priority || t.priority,
-                    assignedBench: ov.bench || t.assignedBench,
-                    techNotes: ov.notes || t.techNotes,
-                  };
-                }
-                return t;
-              });
-            }
-          } catch (e) {
-            console.warn("Could not apply local overrides in customer dashboard:", e);
-          }
-        }
-
         setTickets(myTickets);
       } catch (err) {
         console.warn("Failed to load customer tickets:", err);
@@ -485,14 +458,67 @@ export default function CustomerDashboardPage() {
     }
 
     loadTickets();
-    const interval = setInterval(loadTickets, 5000);
+    // Fast 2-second background refresh to guarantee freshness
+    const interval = setInterval(loadTickets, 2000);
     const handleUpdate = () => loadTickets();
     const handleProfileChange = () => setCustomer(getCustomerSession());
 
+    // 1. Same-window custom event
     window.addEventListener("tickets-updated", handleUpdate);
     window.addEventListener("customer-profile-updated", handleProfileChange);
+
+    // 2. Cross-tab storage event
     window.addEventListener("storage", handleUpdate);
     window.addEventListener("storage", handleProfileChange);
+
+    // 3. Instant 0ms Cross-Tab BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (ev.data?.type === "TICKET_UPDATED" || ev.data?.type === "TICKET_CREATED") {
+            const { id, status, progress, bench } = ev.data;
+            if (id) {
+              setTickets((prev) =>
+                prev.map((t) =>
+                  t.id.toUpperCase() === id.toUpperCase()
+                    ? {
+                        ...t,
+                        status: status || t.status,
+                        clonedPercent: progress !== undefined ? progress : t.clonedPercent,
+                        assignedBench: bench || t.assignedBench,
+                      }
+                    : t
+                )
+              );
+            }
+            loadTickets();
+          }
+        };
+      } catch (bcErr) {
+        console.warn("BroadcastChannel error:", bcErr);
+      }
+    }
+
+    // 4. Supabase Realtime Database Subscription for Cross-Device / Cross-Browser Instant Sync
+    let realtimeChannel: any = null;
+    if (isSupabaseConfigured) {
+      try {
+        realtimeChannel = supabase
+          .channel("realtime-customer-tickets-all")
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "tickets" },
+            () => {
+              loadTickets();
+            }
+          )
+          .subscribe();
+      } catch (subErr) {
+        console.warn("Supabase Realtime subscription warn:", subErr);
+      }
+    }
 
     return () => {
       clearInterval(interval);
@@ -500,6 +526,16 @@ export default function CustomerDashboardPage() {
       window.removeEventListener("customer-profile-updated", handleProfileChange);
       window.removeEventListener("storage", handleUpdate);
       window.removeEventListener("storage", handleProfileChange);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
+      if (realtimeChannel && isSupabaseConfigured) {
+        try {
+          supabase.removeChannel(realtimeChannel);
+        } catch (e) {}
+      }
     };
   }, [router]);
 
@@ -523,8 +559,13 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  const activeTicket = tickets.length > 0 ? (tickets.find((t) => t.status !== "Resolved") || tickets[0]) : null;
-  const activeCount = tickets.filter((t) => t.status !== "Resolved").length;
+  const activeTicket =
+    tickets.length > 0
+      ? tickets.find((t) => t.status !== "Resolved" && t.status !== "Closed") || tickets[0]
+      : null;
+  const activeCount = tickets.filter(
+    (t) => t.status !== "Resolved" && t.status !== "Closed"
+  ).length;
 
   const stages = activeTicket
     ? getTimelineStages(activeTicket.category, activeTicket.status, activeTicket.clonedPercent || 0)

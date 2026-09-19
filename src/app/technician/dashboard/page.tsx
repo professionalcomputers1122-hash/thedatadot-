@@ -1138,7 +1138,7 @@ export default function TechnicianWorkbenchPage() {
   const handleSaveWorkbenchStatus = async (overrideStatus?: string) => {
     if (!activeCase) return;
 
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
     if (!selectedCaseId && targetId) {
       selectedCaseIdRef.current = targetId;
       setSelectedCaseId(targetId);
@@ -1187,6 +1187,7 @@ export default function TechnicianWorkbenchPage() {
           priority: newPriority,
           bench: newBench,
           notes: newNotes,
+          timestamp: Date.now(),
           updatedAt: "Just now",
         };
         overrides[targetId] = overrideData;
@@ -1240,7 +1241,7 @@ export default function TechnicianWorkbenchPage() {
     if (e) e.preventDefault();
     if (!activeCase) return;
 
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
     setIsSendingClientUpdate(true);
     lastManualUpdateRef.current = Date.now();
 
@@ -1307,6 +1308,7 @@ export default function TechnicianWorkbenchPage() {
           progress: autoProgress,
           priority: editPriority || activeCase.priority,
           bench: currentStation,
+          timestamp: Date.now(),
           updatedAt: "Just now",
         };
         overrides[targetId] = overrideData;
@@ -1357,7 +1359,7 @@ export default function TechnicianWorkbenchPage() {
     setClientStatus(stageValue);
     setEditStatus(stageValue);
 
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
     lastManualUpdateRef.current = Date.now();
 
     const currentStation = editBench || activeCase.bench;
@@ -1433,6 +1435,7 @@ export default function TechnicianWorkbenchPage() {
           progress: autoProgress,
           priority: editPriority || activeCase.priority,
           bench: currentStation,
+          timestamp: Date.now(),
           updatedAt: "Just now",
         };
         overrides[targetId] = overrideData;
@@ -1491,7 +1494,7 @@ export default function TechnicianWorkbenchPage() {
   // Administrative Close Ticket
   const handleCloseTicket = async () => {
     if (!activeCase) return;
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
     if (!window.confirm(`Are you sure you want to close Ticket #${targetId}?`)) return;
     setEditStatus("Closed");
     setClientStatus("Closed");
@@ -1893,6 +1896,23 @@ export default function TechnicianWorkbenchPage() {
         setIsNewTicketModalOpen(false);
         setNotification(`Ticket #${newCaseItem.id} created successfully and saved to Supabase!`);
         setTimeout(() => setNotification(""), 4500);
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("tickets-updated"));
+          if (typeof BroadcastChannel !== "undefined") {
+            try {
+              const bc = new BroadcastChannel("tdd-ticket-sync");
+              bc.postMessage({
+                type: "TICKET_CREATED",
+                id: newCaseItem.id,
+                status: newCaseItem.status,
+                customerEmail: t.customer_email || newTicketForm.customerEmail,
+                timestamp: Date.now(),
+              });
+              bc.close();
+            } catch (e) {}
+          }
+        }
 
         setNewTicketForm({
           customerName: "",

@@ -3,6 +3,8 @@ import Image from "next/image";
 import Tech3D from "@/components/Tech3D";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import WordReveal from "@/components/WordReveal";
+import ScrollReveal from "@/components/ScrollReveal";
 
 export default function Home() {
   return (
@@ -20,7 +22,7 @@ export default function Home() {
             </div>
 
             <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-[42px] leading-tight">
-              IT support that keeps your business moving.
+              <WordReveal text="IT support that keeps your business moving." />
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
@@ -104,56 +106,70 @@ export default function Home() {
       {/* ================= SERVICES ================= */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              Core Capabilities
-            </p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
-              Technology that works for your business
-            </h2>
+          <ScrollReveal>
+            <div className="max-w-3xl">
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                Core Capabilities
+              </p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
+                Technology that works for your business
+              </h2>
 
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-              From everyday IT support to cybersecurity and cloud infrastructure,
-              we help businesses keep technology reliable, secure, and useful.
-            </p>
-          </div>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                From everyday IT support to cybersecurity and cloud infrastructure,
+                we help businesses keep technology reliable, secure, and useful.
+              </p>
+            </div>
+          </ScrollReveal>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <ServiceCard
-              icon={<HeadsetIcon />}
-              title="Managed IT"
-              description="Reliable day-to-day technology support for your team, so you can focus on your business."
-            />
+            <ScrollReveal delay={0.05}>
+              <ServiceCard
+                icon={<HeadsetIcon />}
+                title="Managed IT"
+                description="Reliable day-to-day technology support for your team, so you can focus on your business."
+              />
+            </ScrollReveal>
 
-            <ServiceCard
-              icon={<CybersecurityIcon />}
-              title="Cybersecurity"
-              description="Protect users, systems and business data from modern threats."
-            />
+            <ScrollReveal delay={0.15}>
+              <ServiceCard
+                icon={<CybersecurityIcon />}
+                title="Cybersecurity"
+                description="Protect users, systems and business data from modern threats."
+              />
+            </ScrollReveal>
 
-            <ServiceCard
-              icon={<CloudIcon />}
-              title="Cloud & Microsoft 365"
-              description="Modern cloud systems without unnecessary complexity."
-            />
+            <ScrollReveal delay={0.25}>
+              <ServiceCard
+                icon={<CloudIcon />}
+                title="Cloud & Microsoft 365"
+                description="Modern cloud systems without unnecessary complexity."
+              />
+            </ScrollReveal>
 
-            <ServiceCard
-              icon={<NetworkIcon />}
-              title="Networks"
-              description="Reliable business connectivity and infrastructure."
-            />
+            <ScrollReveal delay={0.35}>
+              <ServiceCard
+                icon={<NetworkIcon />}
+                title="Networks"
+                description="Reliable business connectivity and infrastructure."
+              />
+            </ScrollReveal>
 
-            <ServiceCard
-              icon={<BackupRecoveryIcon />}
-              title="Backup & Recovery"
-              description="Prepare your business for disruption and recovery."
-            />
+            <ScrollReveal delay={0.45}>
+              <ServiceCard
+                icon={<BackupRecoveryIcon />}
+                title="Backup & Recovery"
+                description="Prepare your business for disruption and recovery."
+              />
+            </ScrollReveal>
 
-            <ServiceCard
-              icon={<ConsultingIcon />}
-              title="IT Consulting"
-              description="Make better technology decisions with confidence."
-            />
+            <ScrollReveal delay={0.55}>
+              <ServiceCard
+                icon={<ConsultingIcon />}
+                title="IT Consulting"
+                description="Make better technology decisions with confidence."
+              />
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -162,73 +178,77 @@ export default function Home() {
       <section className="bg-slate-50 py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                Why The Data Dot
-              </p>
+            <ScrollReveal direction="left">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                  Why The Data Dot
+                </p>
 
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                Technology should make business easier
-              </h2>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                  Technology should make business easier
+                </h2>
 
-              <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-600">
-                We focus on clear communication, practical solutions, and
-                security-conscious technology decisions instead of unnecessary
-                complexity.
-              </p>
+                <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-600">
+                  We focus on clear communication, practical solutions, and
+                  security-conscious technology decisions instead of unnecessary
+                  complexity.
+                </p>
 
-              <div className="mt-8 space-y-5">
-                <Benefit
-                  title="Business-focused support"
-                  text="We look at the technology problem from a business perspective."
-                />
-
-                <Benefit
-                  title="Security-conscious by design"
-                  text="Security is considered across systems, users, devices and data."
-                />
-
-                <Benefit
-                  title="Clear communication"
-                  text="You should understand what is happening and why it matters."
-                />
-
-                <Benefit
-                  title="Built to scale"
-                  text="Technology should support your business as it grows."
-                />
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <StatCard
-                    number="01"
-                    title="Understand"
-                    text="Learn how your business operates."
+                <div className="mt-8 space-y-5">
+                  <Benefit
+                    title="Business-focused support"
+                    text="We look at the technology problem from a business perspective."
                   />
 
-                  <StatCard
-                    number="02"
-                    title="Assess"
-                    text="Identify risks and technology gaps."
+                  <Benefit
+                    title="Security-conscious by design"
+                    text="Security is considered across systems, users, devices and data."
                   />
 
-                  <StatCard
-                    number="03"
-                    title="Improve"
-                    text="Implement practical improvements."
+                  <Benefit
+                    title="Clear communication"
+                    text="You should understand what is happening and why it matters."
                   />
 
-                  <StatCard
-                    number="04"
-                    title="Support"
-                    text="Keep improving as your business changes."
+                  <Benefit
+                    title="Built to scale"
+                    text="Technology should support your business as it grows."
                   />
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={0.15}>
+              <div className="relative">
+                <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <StatCard
+                      number="01"
+                      title="Understand"
+                      text="Learn how your business operates."
+                    />
+
+                    <StatCard
+                      number="02"
+                      title="Assess"
+                      text="Identify risks and technology gaps."
+                    />
+
+                    <StatCard
+                      number="03"
+                      title="Improve"
+                      text="Implement practical improvements."
+                    />
+
+                    <StatCard
+                      number="04"
+                      title="Support"
+                      text="Keep improving as your business changes."
+                    />
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -236,50 +256,61 @@ export default function Home() {
       {/* ================= INDUSTRIES ================= */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                Industries
-              </p>
+          <ScrollReveal>
+            <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                  Industries
+                </p>
 
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                IT support for growing businesses
-              </h2>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                  IT support for growing businesses
+                </h2>
 
-              <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-600">
-                Our approach can be adapted to the technology needs,
-                workflows, and security requirements of different industries.
-              </p>
+                <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-600">
+                  Our approach can be adapted to the technology needs,
+                  workflows, and security requirements of different industries.
+                </p>
+              </div>
+
+              <Link
+                href="/industries"
+                className="group inline-flex items-center gap-1.5 font-semibold text-blue-600 hover:text-blue-700"
+              >
+                <span>View all industries</span>
+                <span className="zoho-hover-arrow">→</span>
+              </Link>
             </div>
-
-            <Link
-              href="/industries"
-              className="font-semibold text-blue-600 hover:text-blue-700"
-            >
-              View all industries →
-            </Link>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <IndustryCard
-              title="Small & Medium Businesses"
-              image="/images/industries/smb.jpg.png"
-            />
+            <ScrollReveal delay={0.05}>
+              <IndustryCard
+                title="Small & Medium Businesses"
+                image="/images/industries/smb.jpg.png"
+              />
+            </ScrollReveal>
 
-            <IndustryCard
-              title="Professional Services"
-              image="/images/industries/professional-services.jpg.png"
-            />
+            <ScrollReveal delay={0.15}>
+              <IndustryCard
+                title="Professional Services"
+                image="/images/industries/professional-services.jpg.png"
+              />
+            </ScrollReveal>
 
-            <IndustryCard
-              title="Healthcare"
-              image="/images/industries/healthcare.jpg.png"
-            />
+            <ScrollReveal delay={0.25}>
+              <IndustryCard
+                title="Healthcare"
+                image="/images/industries/healthcare.jpg.png"
+              />
+            </ScrollReveal>
 
-            <IndustryCard
-              title="Construction"
-              image="/images/industries/construction.jpg.png"
-            />
+            <ScrollReveal delay={0.35}>
+              <IndustryCard
+                title="Construction"
+                image="/images/industries/construction.jpg.png"
+              />
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -288,49 +319,59 @@ export default function Home() {
       <section className="bg-slate-950 py-24 text-white">
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-400">
-                Security &amp; Trust
-              </p>
+            <ScrollReveal direction="left">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                  Security &amp; Trust
+                </p>
 
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Protect the technology your business depends on
-              </h2>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  Protect the technology your business depends on
+                </h2>
 
-              <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-300">
-                Security is not a single product. It is a layered approach
-                covering identity, devices, networks, cloud services,
-                backups, and people.
-              </p>
+                <p className="mt-4 text-sm sm:text-base leading-relaxed text-slate-300">
+                  Security is not a single product. It is a layered approach
+                  covering identity, devices, networks, cloud services,
+                  backups, and people.
+                </p>
 
-              <Link
-                href="/security"
-                className="mt-8 inline-flex rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
-              >
-                Explore Security
-              </Link>
-            </div>
+                <Link
+                  href="/security"
+                  className="mt-8 inline-flex rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
+                >
+                  Explore Security
+                </Link>
+              </div>
+            </ScrollReveal>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <SecurityCard
-                title="Identity & Access"
-                text="Protect accounts and control access."
-              />
+              <ScrollReveal delay={0.08}>
+                <SecurityCard
+                  title="Identity & Access"
+                  text="Protect accounts and control access."
+                />
+              </ScrollReveal>
 
-              <SecurityCard
-                title="Endpoint Security"
-                text="Protect business devices and users."
-              />
+              <ScrollReveal delay={0.18}>
+                <SecurityCard
+                  title="Endpoint Security"
+                  text="Protect business devices and users."
+                />
+              </ScrollReveal>
 
-              <SecurityCard
-                title="Network Security"
-                text="Reduce infrastructure and connectivity risks."
-              />
+              <ScrollReveal delay={0.28}>
+                <SecurityCard
+                  title="Network Security"
+                  text="Reduce infrastructure and connectivity risks."
+                />
+              </ScrollReveal>
 
-              <SecurityCard
-                title="Backup & Recovery"
-                text="Prepare for accidental loss and disruption."
-              />
+              <ScrollReveal delay={0.38}>
+                <SecurityCard
+                  title="Backup & Recovery"
+                  text="Prepare for accidental loss and disruption."
+                />
+              </ScrollReveal>
             </div>
           </div>
         </div>
@@ -339,82 +380,92 @@ export default function Home() {
       {/* ================= HOW IT WORKS ================= */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              How It Works
-            </p>
+          <ScrollReveal>
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                How It Works
+              </p>
 
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              A Transparent, Predictable Path to Reliable IT
-            </h2>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                A Transparent, Predictable Path to Reliable IT
+              </h2>
 
-            <p className="mt-2 text-sm text-slate-600">
-              From initial assessment to continuous 24/7 monitoring, we ensure seamless technology without unexpected downtime.
-            </p>
-          </div>
+              <p className="mt-2 text-sm text-slate-600">
+                From initial assessment to continuous 24/7 monitoring, we ensure seamless technology without unexpected downtime.
+              </p>
+            </div>
+          </ScrollReveal>
 
           <div className="mt-14 relative">
             <div className="hidden md:block absolute top-12 left-12 right-12 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200 -z-0" />
 
             <div className="grid gap-6 md:grid-cols-4 relative z-10">
-              <ProcessStep
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    <path d="M8 9h8" />
-                    <path d="M8 13h5" />
-                  </svg>
-                }
-                badge="Phase 1"
-                title="Discover"
-                subtitle="Goal Alignment & Review"
-                text="We discuss your business workflows, team challenges, and software stack in a zero-pressure discovery session."
-              />
+              <ScrollReveal delay={0.1}>
+                <ProcessStep
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      <path d="M8 9h8" />
+                      <path d="M8 13h5" />
+                    </svg>
+                  }
+                  badge="Phase 1"
+                  title="Discover"
+                  subtitle="Goal Alignment & Review"
+                  text="We discuss your business workflows, team challenges, and software stack in a zero-pressure discovery session."
+                />
+              </ScrollReveal>
 
-              <ProcessStep
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <circle cx="12" cy="11" r="3" />
-                    <path d="m14.5 13.5 2.5 2.5" />
-                  </svg>
-                }
-                badge="Phase 2"
-                title="Audit & Assess"
-                subtitle="Infrastructure Health Check"
-                text="We inspect your network, cloud setup, and security gaps to deliver a prioritized, transparent roadmap."
-              />
+              <ScrollReveal delay={0.2}>
+                <ProcessStep
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <circle cx="12" cy="11" r="3" />
+                      <path d="m14.5 13.5 2.5 2.5" />
+                    </svg>
+                  }
+                  badge="Phase 2"
+                  title="Audit & Assess"
+                  subtitle="Infrastructure Health Check"
+                  text="We inspect your network, cloud setup, and security gaps to deliver a prioritized, transparent roadmap."
+                />
+              </ScrollReveal>
 
-              <ProcessStep
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-                    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-                    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-                    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-                  </svg>
-                }
-                badge="Phase 3"
-                title="Deploy & Modernize"
-                subtitle="Zero-Downtime Rollout"
-                text="We roll out tested cloud tools, automated backups, and cybersecurity defenses without interrupting your team."
-              />
+              <ScrollReveal delay={0.3}>
+                <ProcessStep
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                    </svg>
+                  }
+                  badge="Phase 3"
+                  title="Deploy & Modernize"
+                  subtitle="Zero-Downtime Rollout"
+                  text="We roll out tested cloud tools, automated backups, and cybersecurity defenses without interrupting your team."
+                />
+              </ScrollReveal>
 
-              <ProcessStep
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-                    <path d="M12 12v3" />
-                    <path d="M9 13.5h6" />
-                  </svg>
-                }
-                badge="Continuous"
-                badgeColor="emerald"
-                title="Protect & Manage"
-                subtitle="24/7 Monitoring & 15-Min SLA"
-                text="Certified engineers monitor your infrastructure 24/7/365, proactively preventing downtime with rapid support."
-              />
+              <ScrollReveal delay={0.4}>
+                <ProcessStep
+                  icon={
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                      <path d="M12 12v3" />
+                      <path d="M9 13.5h6" />
+                    </svg>
+                  }
+                  badge="Continuous"
+                  badgeColor="emerald"
+                  title="Protect & Manage"
+                  subtitle="24/7 Monitoring & 15-Min SLA"
+                  text="Certified engineers monitor your infrastructure 24/7/365, proactively preventing downtime with rapid support."
+                />
+              </ScrollReveal>
             </div>
           </div>
         </div>
@@ -423,60 +474,68 @@ export default function Home() {
       {/* ================= BLOG & INSIGHTS ================= */}
       <section className="border-b border-slate-200/80 bg-slate-50/60 py-24">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-                <span>Knowledge &amp; Tech Advice</span>
+          <ScrollReveal>
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span>Knowledge &amp; Tech Advice</span>
+                </div>
+
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                  Practical Technology Insights
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-500 max-w-xl">
+                  Actionable advice on cybersecurity, cloud migrations, and proactive IT support from our technical specialists.
+                </p>
               </div>
 
-              <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                Practical Technology Insights
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-500 max-w-xl">
-                Actionable advice on cybersecurity, cloud migrations, and proactive IT support from our technical specialists.
-              </p>
+              <Link
+                href="/blog"
+                className="group inline-flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-800"
+              >
+                <span>View all articles</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" className="zoho-hover-arrow">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
             </div>
-
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-800"
-            >
-              <span>View all articles</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            <BlogCard
-              title="10 Cybersecurity Tips for Small Businesses"
-              category="Cybersecurity"
-              date="Sep 10, 2026"
-              readTime="5 min read"
-              image="/images/blog/cybersecurity-tips.jpg"
-              excerpt="Practical, cost-effective defense tactics to protect workstations, employee credentials, and sensitive customer data."
-            />
+            <ScrollReveal delay={0.08}>
+              <BlogCard
+                title="10 Cybersecurity Tips for Small Businesses"
+                category="Cybersecurity"
+                date="Sep 10, 2026"
+                readTime="5 min read"
+                image="/images/blog/cybersecurity-tips.jpg"
+                excerpt="Practical, cost-effective defense tactics to protect workstations, employee credentials, and sensitive customer data."
+              />
+            </ScrollReveal>
 
-            <BlogCard
-              title="The Benefits of Cloud Solutions for Growing Companies"
-              category="Cloud Solutions"
-              date="Sep 05, 2026"
-              readTime="4 min read"
-              image="/images/blog/cloud-solutions.jpg"
-              excerpt="How modern cloud infrastructure and Microsoft 365 eliminate physical server headaches and enhance remote collaboration."
-            />
+            <ScrollReveal delay={0.18}>
+              <BlogCard
+                title="The Benefits of Cloud Solutions for Growing Companies"
+                category="Cloud Solutions"
+                date="Sep 05, 2026"
+                readTime="4 min read"
+                image="/images/blog/cloud-solutions.jpg"
+                excerpt="How modern cloud infrastructure and Microsoft 365 eliminate physical server headaches and enhance remote collaboration."
+              />
+            </ScrollReveal>
 
-            <BlogCard
-              title="How to Choose the Right IT Support Partner"
-              category="Managed IT"
-              date="Aug 28, 2026"
-              readTime="6 min read"
-              image="/images/blog/it-partner.jpg"
-              excerpt="The critical criteria to evaluate before signing an IT agreement: response SLAs, security accountability, and flat pricing."
-            />
+            <ScrollReveal delay={0.28}>
+              <BlogCard
+                title="How to Choose the Right IT Support Partner"
+                category="Managed IT"
+                date="Aug 28, 2026"
+                readTime="6 min read"
+                image="/images/blog/it-partner.jpg"
+                excerpt="The critical criteria to evaluate before signing an IT agreement: response SLAs, security accountability, and flat pricing."
+              />
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -746,7 +805,7 @@ function ServiceCard({
   return (
     <Link
       href={href}
-      className="group relative flex flex-col items-start overflow-hidden rounded-[28px] border border-blue-100/80 bg-white p-8 sm:p-9 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/10"
+      className="group relative flex flex-col items-start overflow-hidden rounded-[28px] border border-blue-100/80 bg-white p-8 sm:p-9 shadow-sm zoho-card-lift transition-all duration-300 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/10"
     >
       <div className="pointer-events-none absolute -bottom-10 -right-10 h-36 w-36 rounded-full bg-gradient-to-tl from-blue-100/60 via-blue-50/30 to-transparent transition-transform duration-500 group-hover:scale-125" />
 
@@ -762,7 +821,7 @@ function ServiceCard({
         {description}
       </p>
 
-      <div className="mt-6 flex h-9 w-9 items-center justify-center rounded-full bg-[#ecf3fe] text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:translate-x-1">
+      <div className="mt-6 flex h-9 w-9 items-center justify-center rounded-full bg-[#ecf3fe] text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white">
         <svg
           width="16"
           height="16"
@@ -772,6 +831,7 @@ function ServiceCard({
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          className="zoho-hover-arrow"
         >
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
@@ -816,7 +876,7 @@ function StatCard({
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 zoho-card-lift">
       <span className="text-sm font-bold text-blue-600">
         {number}
       </span>
@@ -842,7 +902,7 @@ function IndustryCard({
   return (
     <Link
       href="/industries"
-      className="group relative block h-64 overflow-hidden rounded-2xl bg-slate-200"
+      className="group relative block h-64 overflow-hidden rounded-2xl bg-slate-200 zoho-card-lift"
     >
       <Image
         src={image}
@@ -875,7 +935,7 @@ function SecurityCard({
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 zoho-card-lift hover:border-slate-700">
       <div className="mb-4 h-2 w-10 rounded-full bg-blue-500" />
 
       <h3 className="font-bold text-white">
@@ -905,7 +965,7 @@ function ProcessStep({
   text: string;
 }) {
   return (
-    <div className="group flex flex-col items-center rounded-3xl border border-slate-200/90 bg-white p-7 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/10">
+    <div className="group flex flex-col items-center rounded-3xl border border-slate-200/90 bg-white p-7 text-center shadow-sm zoho-card-lift transition-all duration-300 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/10">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/30 transition-all duration-300 group-hover:scale-110 group-hover:from-blue-500 group-hover:to-blue-600">
         {icon}
       </div>
@@ -953,7 +1013,7 @@ function BlogCard({
   return (
     <Link
       href="/blog"
-      className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/10"
+      className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm zoho-card-lift transition-all duration-300 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/10"
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
         <Image
@@ -996,7 +1056,7 @@ function BlogCard({
               fill="none"
               stroke="currentColor"
               strokeWidth="2.3"
-              className="transition group-hover:translate-x-1"
+              className="zoho-hover-arrow"
             >
               <path
                 d="M5 12h14M12 5l7 7-7 7"

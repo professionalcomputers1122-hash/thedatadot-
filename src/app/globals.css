@@ -32,3 +32,100 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+/* ==========================================================================
+   ZOHO ERP MOTION SYSTEM (Spring Physics, Slide & Word Opening)
+   ========================================================================== */
+
+:root {
+  --zoho-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --zoho-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. Staggered Word Reveal (Opening Headline Animation) */
+@keyframes zohoWordReveal {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.zoho-word-span {
+  display: inline-block;
+  will-change: transform, opacity;
+  animation: zohoWordReveal 0.85s var(--zoho-spring) both;
+}
+
+/* 2. Normal Slide (Scroll-Triggered Fade-In-Up) */
+.zoho-slide-up {
+  opacity: 0;
+  transform: translateY(48px);
+  transition: opacity 0.6s ease, transform 0.85s var(--zoho-spring);
+  will-change: transform, opacity;
+}
+
+.zoho-slide-up.zoho-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.zoho-slide-left {
+  opacity: 0;
+  transform: translateX(48px);
+  transition: opacity 0.6s ease, transform 0.85s var(--zoho-spring);
+  will-change: transform, opacity;
+}
+
+.zoho-slide-left.zoho-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.zoho-slide-right {
+  opacity: 0;
+  transform: translateX(-48px);
+  transition: opacity 0.6s ease, transform 0.85s var(--zoho-spring);
+  will-change: transform, opacity;
+}
+
+.zoho-slide-right.zoho-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 3. Card Hover Lift & Arrow Micro-Interactions */
+.zoho-card-lift {
+  transition: transform 0.4s var(--zoho-spring), box-shadow 0.4s ease, border-color 0.3s ease;
+}
+
+.zoho-card-lift:hover {
+  transform: translateY(-6px);
+}
+
+.zoho-hover-arrow {
+  display: inline-block;
+  transition: transform 0.35s var(--zoho-spring), color 0.3s ease;
+}
+
+.group:hover .zoho-hover-arrow,
+.zoho-card-lift:hover .zoho-hover-arrow {
+  transform: translateX(5px);
+}
+
+/* 4. Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .zoho-word-span,
+  .zoho-slide-up,
+  .zoho-slide-left,
+  .zoho-slide-right {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+

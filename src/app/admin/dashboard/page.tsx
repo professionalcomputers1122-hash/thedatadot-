@@ -9,6 +9,7 @@ import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/li
 export default function AdminDashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [customerCount, setCustomerCount] = useState<number>(0);
+  const [newInquiriesCount, setNewInquiriesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -33,6 +34,18 @@ export default function AdminDashboardPage() {
         }
       } catch (e) {
         console.warn("Failed fetching customer count:", e);
+      }
+
+      try {
+        const inqRes = await fetch("/api/inquiries?status=New%20Request");
+        if (inqRes.ok) {
+          const inqData = await inqRes.json();
+          if (Array.isArray(inqData.inquiries)) {
+            setNewInquiriesCount(inqData.inquiries.length);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed fetching inquiries count:", e);
       }
     }
 
@@ -99,15 +112,44 @@ export default function AdminDashboardPage() {
       title="Executive Command Dashboard"
       subtitle="Overview of lab operations, SLA metrics, customer pipelines, and published content"
       actions={
-        <Link
-          href="/admin/tickets"
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
-        >
-          View All Tickets ({tickets.length}) →
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/inquiries"
+            className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-300 hover:bg-blue-500/20 transition shadow-sm flex items-center gap-1.5"
+          >
+            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span>Client Leads ({newInquiriesCount})</span>
+          </Link>
+          <Link
+            href="/admin/tickets"
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm"
+          >
+            View All Tickets ({tickets.length}) →
+          </Link>
+        </div>
       }
     >
       <div className="space-y-8">
+        {/* New Leads Notification Banner */}
+        {newInquiriesCount > 0 && (
+          <div className="rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-[#0f172a] p-4 text-xs text-blue-200 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-blue-950/20">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400 font-bold">
+                🔔
+              </span>
+              <span>
+                You have <strong className="text-white font-bold">{newInquiriesCount} new client consultation / SLA request(s)</strong> waiting for review and coordination.
+              </span>
+            </div>
+            <Link
+              href="/admin/inquiries"
+              className="rounded-xl bg-blue-600 px-3.5 py-1.5 font-bold text-white hover:bg-blue-500 transition"
+            >
+              Review Leads &amp; Coordinate →
+            </Link>
+          </div>
+        )}
+
         {/* METRICS ROW */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="rounded-2xl border border-slate-800 bg-[#0f172a] p-5 shadow-sm">

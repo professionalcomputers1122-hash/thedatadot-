@@ -392,6 +392,7 @@ export async function deleteTicketFromSupabase(ticketId: string): Promise<boolea
 
 export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<Ticket[]> {
   const deletedIds = getDeletedTicketIds();
+  const inquiryStatuses = new Set(["New Request", "In Coordination", "Contacted", "Converted"]);
 
   try {
     if (typeof window !== "undefined") {
@@ -404,7 +405,12 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
         if (Array.isArray(json.tickets)) {
           return json.tickets
             .map(parseTicketRow)
-            .filter((t: Ticket) => !deletedIds.has(t.id.trim().toUpperCase()));
+            .filter(
+              (t: Ticket) =>
+                !deletedIds.has(t.id.trim().toUpperCase()) &&
+                !t.id.toUpperCase().startsWith("INQ-") &&
+                !inquiryStatuses.has(t.status)
+            );
         }
       }
     }
@@ -434,7 +440,12 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
 
     return data
       .map(parseTicketRow)
-      .filter((t: Ticket) => !deletedIds.has(t.id.trim().toUpperCase()));
+      .filter(
+        (t: Ticket) =>
+          !deletedIds.has(t.id.trim().toUpperCase()) &&
+          !t.id.toUpperCase().startsWith("INQ-") &&
+          !inquiryStatuses.has(t.status)
+      );
   } catch (err) {
     console.error("Failed to fetch from Supabase:", err);
     return [];
@@ -812,3 +823,86 @@ export async function createOrUpdateFaqInSupabase(faq: SupabaseFaq) {
     console.error("Failed to upsert faq in Supabase:", err);
   }
 }
+
+// ================= CLIENT INQUIRIES & LEADS =================
+
+export interface Inquiry {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  companyName: string;
+  phone: string;
+  teamSize?: string;
+  service: string;
+  urgency: string;
+  message: string;
+  coordinationNotes?: string;
+  status: "New Request" | "In Coordination" | "Contacted" | "Converted" | string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export async function fetchInquiriesFromSupabase(statusFilter?: string): Promise<Inquiry[]> {
+  try {
+    if (typeof window !== "undefined") {
+      const url =
+        statusFilter && statusFilter !== "ALL"
+          ? `/api/inquiries?status=${encodeURIComponent(statusFilter)}`
+          : "/api/inquiries";
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.inquiries)) {
+          return json.inquiries;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Error fetching inquiries from API:", err);
+  }
+  return [];
+}
+
+export async function updateInquiryInSupabase(
+  id: string,
+  updates: {
+    status?: string;
+    coordinationNotes?: string;
+    assignedTech?: string;
+  }
+): Promise<boolean> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/inquiries/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        window.dispatchEvent(new Event("inquiries-updated"));
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn("Failed updating inquiry via API:", err);
+  }
+  return false;
+}
+
+export async function deleteInquiryFromSupabase(id: string): Promise<boolean> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/inquiries/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        window.dispatchEvent(new Event("inquiries-updated"));
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn("Failed deleting inquiry via API:", err);
+  }
+  return false;
+}
+

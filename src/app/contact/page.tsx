@@ -4,7 +4,6 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { createTicketInSupabase } from "@/lib/portalData";
 
 // Custom SVG Icons
 function PhoneIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -141,36 +140,47 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const generatedRef = `TDD-${Math.floor(100000 + Math.random() * 900000)}`;
+    const generatedRef = `INQ-${Math.floor(100000 + Math.random() * 900000)}`;
+    const cleanUrgency =
+      formData.urgency === "critical"
+        ? "Critical"
+        : formData.urgency === "high"
+        ? "High"
+        : "Standard";
 
     try {
       // 1. Persist inquiry into Supabase
-      await createTicketInSupabase({
-        id: generatedRef,
-        customerName: formData.name,
-        customerEmail: formData.email,
-        companyName: formData.company || "Direct Client Inquiry",
-        deviceOrSubject: formData.service,
-        mediaType: "GENERAL",
-        urgency: formData.urgency === "critical" ? "Critical" : formData.urgency === "high" ? "High" : "Standard",
-        symptoms: `Team size: ${formData.teamSize}. Phone: ${formData.phone || "N/A"}. Message: ${formData.message}`,
-        techNotes: "Incoming client inquiry via website Contact page.",
+      await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: generatedRef,
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          phone: formData.phone,
+          teamSize: formData.teamSize,
+          service: formData.service,
+          urgency: cleanUrgency,
+          message: formData.message,
+        }),
       });
 
-      // 2. Dispatch via Resend to Support Mailbox & Client
+      // 2. Dispatch Dual Emails (Admin notification + Client confirmation receipt)
       await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "contact",
-          ticketId: generatedRef,
+          type: "inquiry",
+          inquiryId: generatedRef,
           customerName: formData.name,
           customerEmail: formData.email,
           companyName: formData.company,
           phone: formData.phone,
+          teamSize: formData.teamSize,
           service: formData.service,
-          urgency: formData.urgency === "critical" ? "Critical" : formData.urgency === "high" ? "High" : "Standard",
-          message: `Team Size: ${formData.teamSize}\n\n${formData.message}`,
+          urgency: cleanUrgency,
+          message: formData.message,
         }),
       });
     } catch (err) {

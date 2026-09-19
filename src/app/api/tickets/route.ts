@@ -64,8 +64,12 @@ export async function GET(req: Request) {
       console.warn("Audit logs check note in tickets GET:", logErr);
     }
 
+    const inquiryStatuses = new Set(["New Request", "In Coordination", "Contacted", "Converted"]);
     const cleanTickets = (data || []).filter(
-      (t) => !deletedTicketIds.has((t.id || "").trim().toUpperCase())
+      (t) =>
+        !deletedTicketIds.has((t.id || "").trim().toUpperCase()) &&
+        !t.id.toUpperCase().startsWith("INQ-") &&
+        !inquiryStatuses.has(t.status)
     );
 
     return NextResponse.json({

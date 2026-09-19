@@ -253,7 +253,7 @@ export function getCategoryConfig(
   }
 
   // Data Recovery (Default)
-  const isStage4 = isResolved || norm.includes("tree") || norm.includes("return") || norm.includes("file system");
+  const isStage4 = isResolved || norm.includes("verif") || norm.includes("tree") || norm.includes("return") || norm.includes("file system");
   const isStage3 = isStage4 || norm.includes("pc-3000") || norm.includes("mirror") || norm.includes("translator") || norm.includes("imaging") || norm.includes("clon");
   const isStage2 = isStage3 || norm.includes("cleanroom") || norm.includes("diagnos");
 
@@ -955,8 +955,10 @@ export default function TechnicianWorkbenchPage() {
     // Automatic progress calculation based on the 4 stages for DB compatibility
     let autoProgress = 25;
     const norm = newStatus.toLowerCase();
-    if (norm.includes("resolved") || norm.includes("return") || norm.includes("verification") || norm.includes("hardening") || norm.includes("audit") || norm.includes("handover") || norm.includes("closed")) {
+    if (norm.includes("resolved") || norm.includes("closed") || norm.includes("completed") || (norm.includes("return") && norm.includes("resolved"))) {
       autoProgress = 100;
+    } else if (norm.includes("return") || norm.includes("verification") || norm.includes("hardening") || norm.includes("audit") || norm.includes("handover")) {
+      autoProgress = 95;
     } else if (norm.includes("pc-3000") || norm.includes("imaging") || norm.includes("containment") || norm.includes("remediation") || norm.includes("deployment") || norm.includes("migration") || norm.includes("rollout") || norm.includes("repair")) {
       autoProgress = 75;
     } else if (norm.includes("cleanroom") || norm.includes("diagnos") || norm.includes("forensic") || norm.includes("architecture") || norm.includes("assessment")) {
@@ -1050,6 +1052,144 @@ export default function TechnicianWorkbenchPage() {
     } finally {
       setIsSendingClientUpdate(false);
       setTimeout(() => setNotification(""), 4500);
+    }
+  };
+
+  // Instant 1-Click Stage Selection & Sync to Client Portal
+  const handleSelectAndSyncStage = async (stageValue: string) => {
+    if (!activeCase) return;
+
+    setClientStatus(stageValue);
+    setEditStatus(stageValue);
+
+    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    lastManualUpdateRef.current = Date.now();
+
+    const currentStation = editBench || activeCase.bench;
+
+    // Automatic progress calculation based on the 4 stages for DB compatibility
+    let autoProgress = 25;
+    const norm = stageValue.toLowerCase();
+    if (
+      norm.includes("resolved") ||
+      norm.includes("closed") ||
+      norm.includes("completed") ||
+      (norm.includes("return") && norm.includes("resolved"))
+    ) {
+      autoProgress = 100;
+    } else if (
+      norm.includes("return") ||
+      norm.includes("verification") ||
+      norm.includes("hardening") ||
+      norm.includes("audit") ||
+      norm.includes("handover")
+    ) {
+      autoProgress = 95;
+    } else if (
+      norm.includes("pc-3000") ||
+      norm.includes("imaging") ||
+      norm.includes("containment") ||
+      norm.includes("remediation") ||
+      norm.includes("deployment") ||
+      norm.includes("migration") ||
+      norm.includes("rollout") ||
+      norm.includes("repair")
+    ) {
+      autoProgress = 75;
+    } else if (
+      norm.includes("cleanroom") ||
+      norm.includes("diagnos") ||
+      norm.includes("forensic") ||
+      norm.includes("architecture") ||
+      norm.includes("assessment")
+    ) {
+      autoProgress = 50;
+    } else {
+      autoProgress = 25;
+    }
+
+    setClientProgress(autoProgress);
+    setEditProgress(autoProgress);
+
+    // Optimistically update status and progress in cases state
+    setCases((prev) =>
+      prev.map((c) =>
+        c.id.toLowerCase() === targetId.toLowerCase()
+          ? {
+              ...c,
+              status: stageValue,
+              progress: autoProgress,
+              priority: editPriority || activeCase.priority,
+              bench: currentStation,
+              updatedAt: "Just now",
+            }
+          : c
+      )
+    );
+
+    // Save persistent local override immediately for instant 0ms cross-tab sync
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("tdd_ticket_overrides");
+        const overrides = raw ? JSON.parse(raw) : {};
+        const overrideData = {
+          ...(overrides[targetId] || {}),
+          status: stageValue,
+          progress: autoProgress,
+          priority: editPriority || activeCase.priority,
+          bench: currentStation,
+          updatedAt: "Just now",
+        };
+        overrides[targetId] = overrideData;
+        overrides[targetId.toUpperCase()] = overrideData;
+        overrides[targetId.toLowerCase()] = overrideData;
+        localStorage.setItem("tdd_ticket_overrides", JSON.stringify(overrides));
+        window.dispatchEvent(new Event("tickets-updated"));
+      } catch (e) {
+        console.warn("Could not save persistent ticket override:", e);
+      }
+    }
+
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}" (${autoProgress}%).`);
+    setTimeout(() => setNotification(""), 4000);
+
+    const broadcastMsg = `Ticket lifecycle stage updated to "${stageValue}".`;
+    setChatMessages((prev) => ({
+      ...prev,
+      [targetId]: [
+        ...(prev[targetId] || []),
+        {
+          sender: "Technician",
+          author: techUser.name,
+          time: "Just now",
+          text: broadcastMsg,
+        },
+      ],
+    }));
+
+    setActivityFeed((prev) => [
+      {
+        id: Date.now(),
+        text: `Stage advanced on #${targetId} → ${stageValue}`,
+        time: "Just now",
+        dotColor: "bg-blue-500",
+      },
+      ...prev.slice(0, 4),
+    ]);
+
+    // Asynchronously update Supabase backend
+    try {
+      await Promise.all([
+        updateTicketInSupabase(targetId, {
+          status: stageValue,
+          clonedPercent: autoProgress,
+          priority: editPriority || activeCase.priority,
+          assignedBench: currentStation,
+        }),
+        sendMessageToSupabase(targetId, "Technician", techUser.name, broadcastMsg),
+      ]);
+    } catch (err) {
+      console.warn("Failed to broadcast stage update to Supabase:", err);
     }
   };
 
@@ -2006,10 +2146,7 @@ export default function TechnicianWorkbenchPage() {
                           </label>
                           <select
                             value={clientStatus || activeCase.status}
-                            onChange={(e) => {
-                              setClientStatus(e.target.value);
-                              setEditStatus(e.target.value);
-                            }}
+                            onChange={(e) => handleSelectAndSyncStage(e.target.value)}
                             className="w-full rounded-xl border border-blue-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                           >
                             {ticketStages.map((st) => (
@@ -2430,7 +2567,7 @@ export default function TechnicianWorkbenchPage() {
                       {activeCase.category || "Data Recovery"} 4-Stage Workflow (Client Portal Synced)
                     </span>
                     <span className="text-[11px] text-slate-400">
-                      Click stage to select • Click <strong className="text-blue-600 font-semibold">Sync &amp; Send Client Update</strong> below to apply
+                      Click any stage to <strong className="text-blue-600 font-semibold">instantly advance &amp; sync</strong> client portal in real-time
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -2444,10 +2581,7 @@ export default function TechnicianWorkbenchPage() {
                         <button
                           key={st.value}
                           type="button"
-                          onClick={() => {
-                            setClientStatus(st.value);
-                            setEditStatus(st.value);
-                          }}
+                          onClick={() => handleSelectAndSyncStage(st.value)}
                           title={`Select Stage ${i + 1}: ${st.label}`}
                           className={`text-left p-3 rounded-xl border text-xs font-semibold transition cursor-pointer hover:shadow-sm ${
                             isSelected
@@ -2902,10 +3036,7 @@ export default function TechnicianWorkbenchPage() {
                       </label>
                       <select
                         value={clientStatus || activeCase.status}
-                        onChange={(e) => {
-                          setClientStatus(e.target.value);
-                          setEditStatus(e.target.value);
-                        }}
+                        onChange={(e) => handleSelectAndSyncStage(e.target.value)}
                         className="w-full rounded-xl border border-blue-200 bg-white p-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                       >
                         {ticketStages.map((st) => (

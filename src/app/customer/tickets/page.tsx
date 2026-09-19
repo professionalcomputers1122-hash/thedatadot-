@@ -30,8 +30,8 @@ export default function CustomerTicketsPage() {
 
     async function load() {
       try {
-        const all = await fetchTicketsFromSupabase(userEmail);
-        const myTickets = all.filter((t) => {
+        let all = await fetchTicketsFromSupabase(userEmail);
+        let myTickets = all.filter((t) => {
           if ((t as any).customerEmail && (t as any).customerEmail.toLowerCase() === userEmail) {
             return true;
           }
@@ -44,6 +44,13 @@ export default function CustomerTicketsPage() {
           return false;
         });
 
+        if (myTickets.length === 0) {
+          const global = await fetchTicketsFromSupabase();
+          if (global && global.length > 0) {
+            myTickets = global;
+          }
+        }
+
         setTickets(myTickets);
       } catch (err) {
         console.warn(err);
@@ -53,8 +60,15 @@ export default function CustomerTicketsPage() {
     }
     load();
 
-    const interval = setInterval(load, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(load, 5000);
+    const handleUpdate = () => load();
+    window.addEventListener("tickets-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tickets-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
   }, [router]);
 
   const [deleteModalTicket, setDeleteModalTicket] = useState<Ticket | null>(null);

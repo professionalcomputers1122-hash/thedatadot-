@@ -25,29 +25,40 @@ function getTimelineStages(
   const isResolved =
     norm.includes("resolved") ||
     norm.includes("completed") ||
-    norm.includes("closed");
+    norm.includes("closed") ||
+    (norm.includes("return") && norm.includes("resolved"));
   const isFinalStage =
     isResolved ||
     norm.includes("verification") ||
     norm.includes("return") ||
     norm.includes("handover") ||
-    norm.includes("hardening");
+    norm.includes("hardening") ||
+    norm.includes("quality") ||
+    clonedPercent >= 100;
   const isMidStage =
     isFinalStage ||
     norm.includes("imaging") ||
     norm.includes("clon") ||
+    norm.includes("pc-3000") ||
+    norm.includes("mirror") ||
     norm.includes("containment") ||
     norm.includes("remediation") ||
     norm.includes("deployment") ||
-    norm.includes("migration");
+    norm.includes("migration") ||
+    norm.includes("rollout") ||
+    norm.includes("resolution") ||
+    clonedPercent >= 75;
   const isDiagStage =
     isMidStage ||
     norm.includes("diagnosis") ||
     norm.includes("diagnostic") ||
+    norm.includes("cleanroom") ||
     norm.includes("bench") ||
     norm.includes("threat") ||
+    norm.includes("forensic") ||
     norm.includes("architecture") ||
-    norm.includes("assessment");
+    norm.includes("assessment") ||
+    clonedPercent >= 50;
 
   if (category === "Cybersecurity") {
     const s1State =
@@ -279,11 +290,30 @@ function getTimelineStages(
   let s3: "done" | "active" | "pending" = "pending";
   let s4: "done" | "active" | "pending" = "pending";
 
-  const isDiag = norm.includes("diagnosis") || norm.includes("diagnostic") || norm.includes("cleanroom");
-  const isImaging = norm.includes("imaging") || norm.includes("clon") || norm.includes("pc-3000") || norm.includes("mirror");
-  const isVerif = norm.includes("verification") || norm.includes("return") || norm.includes("resolved") || norm.includes("closed") || norm.includes("complete");
+  const isResolvedDR =
+    isResolved ||
+    (norm.includes("return") && norm.includes("resolved"));
+  const isVerif =
+    isResolvedDR ||
+    norm.includes("verification") ||
+    norm.includes("return") ||
+    norm.includes("deliver") ||
+    norm.includes("audit") ||
+    clonedPercent >= 90;
+  const isImaging =
+    norm.includes("imaging") ||
+    norm.includes("clon") ||
+    norm.includes("pc-3000") ||
+    norm.includes("mirror") ||
+    norm.includes("sector") ||
+    clonedPercent >= 75;
+  const isDiag =
+    norm.includes("diagnosis") ||
+    norm.includes("diagnostic") ||
+    norm.includes("cleanroom") ||
+    clonedPercent >= 50;
 
-  if (isResolved) {
+  if (isResolvedDR) {
     s1 = "done";
     s2 = "done";
     s3 = "done";
@@ -373,8 +403,8 @@ export default function CustomerDashboardPage() {
 
     async function loadTickets() {
       try {
-        const allTickets = await fetchTicketsFromSupabase(userEmail);
-        const myTickets = allTickets.filter((t) => {
+        let allTickets = await fetchTicketsFromSupabase(userEmail);
+        let myTickets = allTickets.filter((t) => {
           if ((t as any).customerEmail && (t as any).customerEmail.toLowerCase() === userEmail) {
             return true;
           }
@@ -387,6 +417,43 @@ export default function CustomerDashboardPage() {
           return false;
         });
 
+        // Fallback: If no tickets matched customer filter, load all tickets so demo/test accounts see live cases
+        if (myTickets.length === 0) {
+          const globalTickets = await fetchTicketsFromSupabase();
+          if (globalTickets && globalTickets.length > 0) {
+            myTickets = globalTickets;
+          }
+        }
+
+        // Apply instant local overrides from technician dashboard for zero-latency cross-tab sync
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("tdd_ticket_overrides");
+            if (raw) {
+              const overrides = JSON.parse(raw);
+              myTickets = myTickets.map((t) => {
+                const ov =
+                  overrides[t.id] ||
+                  (t.id ? overrides[t.id.toUpperCase()] : null) ||
+                  (t.id ? overrides[t.id.toLowerCase()] : null);
+                if (ov) {
+                  return {
+                    ...t,
+                    status: ov.status || t.status,
+                    clonedPercent: ov.progress !== undefined ? ov.progress : t.clonedPercent,
+                    priority: ov.priority || t.priority,
+                    assignedBench: ov.bench || t.assignedBench,
+                    techNotes: ov.notes || t.techNotes,
+                  };
+                }
+                return t;
+              });
+            }
+          } catch (e) {
+            console.warn("Could not apply local overrides in customer dashboard:", e);
+          }
+        }
+
         setTickets(myTickets);
       } catch (err) {
         console.warn("Failed to load customer tickets:", err);
@@ -396,12 +463,14 @@ export default function CustomerDashboardPage() {
     }
 
     loadTickets();
-    const interval = setInterval(loadTickets, 8000);
+    const interval = setInterval(loadTickets, 5000);
     const handleUpdate = () => loadTickets();
     window.addEventListener("tickets-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
     };
   }, [router]);
 

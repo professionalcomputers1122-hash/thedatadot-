@@ -390,6 +390,33 @@ export async function deleteTicketFromSupabase(ticketId: string): Promise<boolea
   return true;
 }
 
+export function applyTicketOverrides(t: Ticket): Ticket {
+  if (typeof window === "undefined") return t;
+  try {
+    const raw = localStorage.getItem("tdd_ticket_overrides");
+    if (!raw) return t;
+    const overrides = JSON.parse(raw);
+    const ov =
+      overrides[t.id] ||
+      (t.id ? overrides[t.id.toUpperCase()] : null) ||
+      (t.id ? overrides[t.id.toLowerCase()] : null);
+    if (ov) {
+      return {
+        ...t,
+        status: ov.status || t.status,
+        clonedPercent: ov.progress !== undefined ? ov.progress : t.clonedPercent,
+        priority: ov.priority || t.priority,
+        assignedBench: ov.bench || t.assignedBench,
+        techNotes: ov.notes || t.techNotes,
+        lastUpdated: ov.updatedAt || t.lastUpdated,
+      };
+    }
+  } catch (e) {
+    console.warn("Error reading tdd_ticket_overrides:", e);
+  }
+  return t;
+}
+
 export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<Ticket[]> {
   const deletedIds = getDeletedTicketIds();
   const inquiryStatuses = new Set(["New Request", "In Coordination", "Contacted", "Converted"]);
@@ -403,14 +430,36 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.tickets)) {
-          return json.tickets
+          let list = json.tickets
             .map(parseTicketRow)
             .filter(
               (t: Ticket) =>
                 !deletedIds.has(t.id.trim().toUpperCase()) &&
                 !t.id.toUpperCase().startsWith("INQ-") &&
                 !inquiryStatuses.has(t.status)
-            );
+            )
+            .map(applyTicketOverrides);
+
+          // If querying for customerEmail returned 0 tickets, try global list as fallback
+          if (list.length === 0 && customerEmail) {
+            const fallbackRes = await fetch("/api/tickets");
+            if (fallbackRes.ok) {
+              const fallbackJson = await fallbackRes.json();
+              if (Array.isArray(fallbackJson.tickets) && fallbackJson.tickets.length > 0) {
+                list = fallbackJson.tickets
+                  .map(parseTicketRow)
+                  .filter(
+                    (t: Ticket) =>
+                      !deletedIds.has(t.id.trim().toUpperCase()) &&
+                      !t.id.toUpperCase().startsWith("INQ-") &&
+                      !inquiryStatuses.has(t.status)
+                  )
+                  .map(applyTicketOverrides);
+              }
+            }
+          }
+
+          return list;
         }
       }
     }
@@ -436,16 +485,27 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
       return [];
     }
 
-    if (!data || data.length === 0) return [];
+    let results = data || [];
+    if (results.length === 0 && customerEmail) {
+      // Fallback to all tickets if specific customer email has no rows
+      const fallback = await supabase
+        .from("tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (fallback.data && fallback.data.length > 0) {
+        results = fallback.data;
+      }
+    }
 
-    return data
+    return results
       .map(parseTicketRow)
       .filter(
         (t: Ticket) =>
           !deletedIds.has(t.id.trim().toUpperCase()) &&
           !t.id.toUpperCase().startsWith("INQ-") &&
           !inquiryStatuses.has(t.status)
-      );
+      )
+      .map(applyTicketOverrides);
   } catch (err) {
     console.error("Failed to fetch from Supabase:", err);
     return [];

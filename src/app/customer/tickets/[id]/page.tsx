@@ -13,6 +13,7 @@ import {
   sendMessageToSupabase,
   deleteTicketFromSupabase,
   parseTicketRow,
+  applyTicketOverrides,
 } from "@/lib/portalData";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 
@@ -69,7 +70,7 @@ export default function CustomerTicketDetailPage({
           if (res.ok) {
             const data = await res.json();
             if (data?.ticket) {
-              found = parseTicketRow(data.ticket);
+              found = applyTicketOverrides(parseTicketRow(data.ticket));
             }
           }
         } catch (apiErr) {
@@ -165,13 +166,15 @@ export default function CustomerTicketDetailPage({
 
     loadData();
 
-    // Auto-poll live ticket telemetry from technician every 8 seconds & instant event sync
-    const interval = setInterval(() => loadData(true), 8000);
+    // Auto-poll live ticket telemetry from technician every 5 seconds & instant event sync
+    const interval = setInterval(() => loadData(true), 5000);
     const handleSync = () => loadData(true);
     window.addEventListener("tickets-updated", handleSync);
+    window.addEventListener("storage", handleSync);
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleSync);
+      window.removeEventListener("storage", handleSync);
     };
   }, [ticketId, router]);
 

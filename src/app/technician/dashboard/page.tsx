@@ -976,7 +976,7 @@ export default function TechnicianWorkbenchPage() {
       [targetId]: [...(prev[targetId] || []), newMsg],
     }));
 
-    // Optimistically update status and progress in cases
+    // Optimistically update status, progress, priority, bench in cases
     setCases((prev) =>
       prev.map((c) =>
         c.id.toLowerCase() === targetId.toLowerCase()
@@ -984,6 +984,8 @@ export default function TechnicianWorkbenchPage() {
               ...c,
               status: newStatus,
               progress: newProgress,
+              priority: editPriority || activeCase.priority,
+              bench: currentStation,
               updatedAt: "Just now",
             }
           : c
@@ -999,6 +1001,8 @@ export default function TechnicianWorkbenchPage() {
           ...(overrides[targetId] || {}),
           status: newStatus,
           progress: newProgress,
+          priority: editPriority || activeCase.priority,
+          bench: currentStation,
           updatedAt: "Just now",
         };
         overrides[targetId] = overrideData;
@@ -1029,6 +1033,8 @@ export default function TechnicianWorkbenchPage() {
         updateTicketInSupabase(targetId, {
           status: newStatus,
           clonedPercent: newProgress,
+          priority: editPriority || activeCase.priority,
+          assignedBench: currentStation,
         }),
         sendMessageToSupabase(targetId, "Technician", techUser.name, broadcastMessage),
       ]);
@@ -1939,245 +1945,183 @@ export default function TechnicianWorkbenchPage() {
                         </button>
                       </div>
 
-                      {/* 2-UPDATE SELECTOR TABS: INTERNAL VS CLIENT */}
-                      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setDashboardDrawerTab("internal")}
-                          className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${
-                            dashboardDrawerTab === "internal"
-                              ? "bg-white text-blue-600 shadow-sm"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          <span>⚙️</span>
-                          <span>Internal Update</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDashboardDrawerTab("client")}
-                          className={`py-1.5 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${
-                            dashboardDrawerTab === "client"
-                              ? "bg-white text-blue-600 shadow-sm"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          <span>📢</span>
-                          <span>Client Update</span>
-                        </button>
-                      </div>
-
-                      {/* MODULE 1: INTERNAL WORKBENCH UPDATE (Internal Only) */}
-                      {dashboardDrawerTab === "internal" && (
-                        <div className="space-y-3 text-xs">
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 space-y-1">
-                            <span className="font-semibold text-slate-800 text-[11px] block">
-                              Internal Bench &amp; SLA Controls
-                            </span>
-                            <p className="text-[10px] text-slate-500">
-                              Confidential engineering directives. Not visible to client.
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
+                      {/* UNIFIED CLIENT PORTAL UPDATE PANEL */}
+                      <div className="space-y-3.5 text-xs">
+                        <div className="rounded-xl border border-blue-200/80 bg-blue-50/50 p-2.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">📢</span>
                             <div>
-                              <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                                Internal Priority:
-                              </label>
-                              <select
-                                value={editPriority || activeCase.priority}
-                                onChange={(e) => setEditPriority(e.target.value as any)}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
-                              >
-                                <option value="CRITICAL">High</option>
-                                <option value="HIGH">Medium</option>
-                                <option value="STANDARD">Low</option>
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                                Station:
-                              </label>
-                              <select
-                                value={editBench || activeCase.bench}
-                                onChange={(e) => setEditBench(e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white truncate font-medium"
-                              >
-                                {currentConfig?.benchOptions.map((opt) => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
+                              <span className="font-bold text-slate-900 text-xs block">Client Portal Update</span>
+                              <span className="text-[10px] text-slate-500">Live sync to customer tracking portal</span>
                             </div>
                           </div>
-
-                          <div>
-                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Internal Lab / Bench Notes:
-                            </label>
-                            <textarea
-                              rows={3}
-                              value={editNotes}
-                              onChange={(e) => setEditNotes(e.target.value)}
-                              placeholder="Internal lab log, firmware rev, donor head serials, engineering handover..."
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
-                            />
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleSaveWorkbenchStatus()}
-                            disabled={isUpdatingStatus}
-                            className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                          >
-                            {isUpdatingStatus ? (
-                              <>
-                                <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span>Saving Internal Update...</span>
-                              </>
-                            ) : (
-                              <>
-                                <span>💾</span>
-                                <span>Save Internal Update</span>
-                              </>
-                            )}
-                          </button>
+                          <span className="rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold px-2 py-0.5 border border-emerald-200">
+                            🟢 Live Sync
+                          </span>
                         </div>
-                      )}
 
-                      {/* MODULE 2: CLIENT PORTAL UPDATE (Customer-Facing & Live Synced) */}
-                      {dashboardDrawerTab === "client" && (
-                        <div className="space-y-3 text-xs">
-                          {/* Client Lifecycle Stage */}
+                        {/* Priority & Station Grid */}
+                        <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Client Lifecycle Stage:
+                              Priority:
                             </label>
                             <select
-                              value={clientStatus || activeCase.status}
-                              onChange={(e) => setClientStatus(e.target.value)}
-                              className="w-full rounded-xl border border-blue-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
+                              value={editPriority || activeCase.priority}
+                              onChange={(e) => setEditPriority(e.target.value as any)}
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                             >
-                              <optgroup label="Core Lifecycle (Steps 1 - 6)">
-                                {availableStages.core.map((st) => (
+                              <option value="CRITICAL">High</option>
+                              <option value="HIGH">Medium</option>
+                              <option value="STANDARD">Low</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                              Station:
+                            </label>
+                            <select
+                              value={editBench || activeCase.bench}
+                              onChange={(e) => setEditBench(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 truncate font-medium"
+                            >
+                              {currentConfig?.benchOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Client Lifecycle Stage */}
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                            Client Lifecycle Stage:
+                          </label>
+                          <select
+                            value={clientStatus || activeCase.status}
+                            onChange={(e) => setClientStatus(e.target.value)}
+                            className="w-full rounded-xl border border-blue-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
+                          >
+                            <optgroup label="Core Lifecycle (Steps 1 - 6)">
+                              {availableStages.core.map((st) => (
+                                <option key={st.value} value={st.value}>
+                                  {st.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {availableStages.extras.length > 0 && (
+                              <optgroup label={`${activeCase.category} Execution Stages`}>
+                                {availableStages.extras.map((st) => (
                                   <option key={st.value} value={st.value}>
                                     {st.label}
                                   </option>
                                 ))}
                               </optgroup>
-                              {availableStages.extras.length > 0 && (
-                                <optgroup label={`${activeCase.category} Execution Stages`}>
-                                  {availableStages.extras.map((st) => (
-                                    <option key={st.value} value={st.value}>
-                                      {st.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )}
-                            </select>
-                          </div>
-
-                          {/* Client Progress Slider */}
-                          <div>
-                            <div className="flex items-center justify-between text-[11px] mb-1">
-                              <span className="font-semibold text-slate-700">Client Completion Progress:</span>
-                              <span className="font-mono font-bold text-blue-600">
-                                {clientProgress !== undefined ? clientProgress : activeCase.progress}%
-                              </span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              value={clientProgress !== undefined ? clientProgress : activeCase.progress}
-                              onChange={(e) => setClientProgress(Number(e.target.value))}
-                              className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
-                            />
-                            <div className="flex items-center gap-1.5 pt-1.5">
-                              {[25, 50, 75, 100].map((pct) => (
-                                <button
-                                  key={pct}
-                                  type="button"
-                                  onClick={() => setClientProgress(pct)}
-                                  className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
-                                    (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
-                                      ? "bg-blue-600 text-white border-blue-600"
-                                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"
-                                  }`}
-                                >
-                                  {pct}%
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                              Quick Presets:
-                            </label>
-                            <div className="flex flex-col gap-1">
-                              {[
-                                "Diagnostics completed, bench operations underway.",
-                                "Recovery 100% verified, preparing files for handover.",
-                                "Awaiting customer authorization for next phase.",
-                              ].map((tmpl, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setClientUpdateText(tmpl)}
-                                  className="rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 px-2 py-1 text-[11px] text-slate-700 text-left truncate transition cursor-pointer"
-                                >
-                                  + {tmpl}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
-                              Customer Message / Dispatch:
-                            </label>
-                            <textarea
-                              rows={3}
-                              value={clientUpdateText}
-                              onChange={(e) => setClientUpdateText(e.target.value)}
-                              placeholder={`Update message for ${activeCase.client} (optional)...`}
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
-                            />
-                          </div>
-
-                          <label className="flex items-center gap-2 text-[11px] font-medium text-slate-600 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={notifyClientWithTelemetry}
-                              onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span>Include stage &amp; progress stamp in message</span>
-                          </label>
-
-                          <button
-                            type="button"
-                            onClick={handleSendClientUpdate}
-                            disabled={isSendingClientUpdate}
-                            className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSendingClientUpdate ? (
-                              <>
-                                <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                <span>Syncing to Portal...</span>
-                              </>
-                            ) : (
-                              <>
-                                <span>🌐</span>
-                                <span>Sync &amp; Send Client Update</span>
-                              </>
                             )}
-                          </button>
+                          </select>
                         </div>
-                      )}
+
+                        {/* Client Progress Slider */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-semibold text-slate-700">Client Completion Progress:</span>
+                            <span className="font-mono font-bold text-blue-600">
+                              {clientProgress !== undefined ? clientProgress : activeCase.progress}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={clientProgress !== undefined ? clientProgress : activeCase.progress}
+                            onChange={(e) => setClientProgress(Number(e.target.value))}
+                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-100 rounded-lg"
+                          />
+                          <div className="flex items-center gap-1.5 pt-1.5">
+                            {[25, 50, 75, 100].map((pct) => (
+                              <button
+                                key={pct}
+                                type="button"
+                                onClick={() => setClientProgress(pct)}
+                                className={`flex-1 py-1 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
+                                  (clientProgress !== undefined ? clientProgress : activeCase.progress) === pct
+                                    ? "bg-blue-600 text-white border-blue-600"
+                                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300"
+                                }`}
+                              >
+                                {pct}%
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Quick Presets:
+                          </label>
+                          <div className="flex flex-col gap-1">
+                            {[
+                              "Diagnostics completed, bench operations underway.",
+                              "Recovery 100% verified, preparing files for handover.",
+                              "Awaiting customer authorization for next phase.",
+                            ].map((tmpl, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setClientUpdateText(tmpl)}
+                                className="rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 px-2 py-1 text-[11px] text-slate-700 text-left truncate transition cursor-pointer"
+                              >
+                                + {tmpl}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1 text-[11px]">
+                            Customer Message / Dispatch:
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={clientUpdateText}
+                            onChange={(e) => setClientUpdateText(e.target.value)}
+                            placeholder={`Update message for ${activeCase.client} (optional)...`}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
+                          />
+                        </div>
+
+                        <label className="flex items-center gap-2 text-[11px] font-medium text-slate-600 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={notifyClientWithTelemetry}
+                            onChange={(e) => setNotifyClientWithTelemetry(e.target.checked)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>Include stage &amp; progress stamp in message</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={handleSendClientUpdate}
+                          disabled={isSendingClientUpdate}
+                          className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-500 shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSendingClientUpdate ? (
+                            <>
+                              <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Syncing to Portal...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🌐</span>
+                              <span>Sync &amp; Send Client Update</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
 
                       {/* QUICK ATTACHMENT & WORKSPACE ACTIONS */}
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
@@ -2924,24 +2868,24 @@ export default function TechnicianWorkbenchPage() {
 
                 {/* RIGHT: TICKET ACTIONS (4 COLS - SEPARATED WORKBENCH & CLIENT DISPATCH) */}
                 <div className="lg:col-span-4 space-y-5">
-                  {/* 1. INTERNAL WORKBENCH STATUS UPDATE */}
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  {/* CLIENT STATUS & PORTAL UPDATE (CUSTOMER-FACING & LIVE SYNC) */}
+                  <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-b from-blue-50/40 to-white p-5 shadow-sm space-y-3.5 text-xs">
+                    <div className="flex items-center justify-between border-b border-blue-100 pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100">
-                          🛠️
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-sm">
+                          📢
                         </span>
                         <div>
                           <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                            Workbench Status (Internal)
+                            Client Status Update
                           </h3>
-                          <span className="text-[10px] text-slate-400 block">
-                            Internal operational controls
+                          <span className="text-[10px] text-slate-500 block">
+                            Live sync with customer tracking portal
                           </span>
                         </div>
                       </div>
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-700 border border-amber-200">
-                        🔒 Internal Only
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                        🟢 Client Portal Sync
                       </span>
                     </div>
 
@@ -2949,12 +2893,12 @@ export default function TechnicianWorkbenchPage() {
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
                         <label className="block font-semibold text-slate-700 text-[11px]">
-                          Internal Priority:
+                          Priority:
                         </label>
                         <select
                           value={editPriority || activeCase.priority}
                           onChange={(e) => setEditPriority(e.target.value as any)}
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium"
+                          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium"
                         >
                           <option value="CRITICAL">High</option>
                           <option value="HIGH">Medium</option>
@@ -2964,12 +2908,12 @@ export default function TechnicianWorkbenchPage() {
 
                       <div className="space-y-1">
                         <label className="block font-semibold text-slate-700 text-[11px]">
-                          Station:
+                          Station / Bench:
                         </label>
                         <select
                           value={editBench || activeCase.bench}
                           onChange={(e) => setEditBench(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium truncate"
+                          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-blue-500 font-medium truncate"
                         >
                           {currentConfig?.benchOptions.map((opt) => (
                             <option key={opt} value={opt}>
@@ -2978,65 +2922,6 @@ export default function TechnicianWorkbenchPage() {
                           ))}
                         </select>
                       </div>
-                    </div>
-
-                    {/* Internal Tech Notes */}
-                    <div className="space-y-1 pt-1">
-                      <label className="block font-semibold text-slate-700 text-[11px]">
-                        Internal Workbench Notes:
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={editNotes}
-                        onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Internal lab log, firmware revision, donor head serials, engineering findings..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:bg-white resize-none"
-                      />
-                    </div>
-
-                    {/* Dedicated Status Update Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleSaveWorkbenchStatus()}
-                      disabled={isUpdatingStatus}
-                      className="w-full rounded-xl bg-slate-800 py-2.5 font-bold text-white hover:bg-slate-700 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      {isUpdatingStatus ? (
-                        <>
-                          <span className="inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Saving Internal Update...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>💾</span>
-                          <span>Save Internal Update</span>
-                        </>
-                      )}
-                    </button>
-                    <p className="text-[10px] text-slate-400 text-center -mt-1">
-                      Saves station &amp; internal notes only. Client portal is unaffected.
-                    </p>
-                  </div>
-
-                  {/* 2. CLIENT PORTAL UPDATE (CUSTOMER-FACING BROADCAST & LIVE SYNC) */}
-                  <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-b from-blue-50/40 to-white p-5 shadow-sm space-y-3.5 text-xs">
-                    <div className="flex items-center justify-between border-b border-blue-100/70 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-sm">
-                          📢
-                        </span>
-                        <div>
-                          <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                            Client Portal Update
-                          </h3>
-                          <span className="text-[10px] text-slate-500 block">
-                            Live sync to customer tracking portal
-                          </span>
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                        🟢 Customer Visible
-                      </span>
                     </div>
 
                     {/* Client Lifecycle Stage */}

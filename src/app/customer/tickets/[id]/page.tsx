@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
-import DiagnosticReportModal from "@/components/DiagnosticReportModal";
 import {
   initialTickets,
   fetchTicketsFromSupabase,
@@ -49,7 +48,6 @@ export default function CustomerTicketDetailPage({
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
   // Sync ticket details and perform authorization boundary check
   useEffect(() => {
@@ -586,36 +584,21 @@ export default function CustomerTicketDetailPage({
                             </button>
                           )}
 
-                          {file.name.toLowerCase().includes("diagnostic_report") || file.name.toLowerCase().includes("cleanroom_diagnostic") ? (
-                            <button
-                              type="button"
-                              onClick={() => setShowReportModal(true)}
-                              className="rounded-lg px-2.5 py-1.5 text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                              title="View Official Cleanroom Diagnostic Report"
-                            >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                                <path d="M10 9H8" />
-                                <path d="M16 13H8" />
-                                <path d="M16 17H8" />
-                              </svg>
-                              <span>View Official Report</span>
-                            </button>
-                          ) : file.url ? (
+                          {file.url ? (
                             <a
                               href={file.url}
                               download={file.name}
                               target="_blank"
                               rel="noreferrer"
                               title="Download Attachment"
-                              className="rounded-lg p-1.5 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition flex items-center gap-1"
+                              className="rounded-lg px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition flex items-center gap-1 border border-blue-200"
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="7 10 12 15 17 10" />
                                 <line x1="12" x2="12" y1="15" y2="3" />
                               </svg>
+                              <span>Download</span>
                             </a>
                           ) : (
                             <span className="text-[10px] text-slate-400">Stored</span>
@@ -831,32 +814,6 @@ export default function CustomerTicketDetailPage({
           isDeleting={isDeleting}
         />
 
-        {/* OFFICIAL CLEANROOM DIAGNOSTIC REPORT MODAL */}
-        {ticket && (
-          <DiagnosticReportModal
-            isOpen={showReportModal}
-            onClose={() => setShowReportModal(false)}
-            reportData={{
-              ticketId: ticket.id,
-              clientName: customer?.name || ticket.customerName || "Authorized Client",
-              companyName: customer?.company || ticket.companyName || "The Data Dot Client",
-              deviceOrSubject: ticket.deviceOrSubject || ticket.subject || "Storage Drive / Hardware Unit",
-              serialNumber: ticket.serialNumber || `TDD-SN-${ticket.id}`,
-              category: ticket.category || "Data Recovery",
-              priority: ticket.priority,
-              status: ticket.status || "In Progress",
-              clonedPercent: ticket.clonedPercent || 0,
-              assignedTech: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "K. Vignesh (Cleanroom Lead)",
-              assignedBench: ticket.assignedBench || "ISO Class-5 Bench #1",
-              symptoms: ticket.symptoms || ticket.deviceOrSubject || "Cleanroom diagnostic examination required",
-              headsHealth: ticket.headsHealth || "100% Functional",
-              badSectorsRemapped: ticket.badSectorsRemapped || 0,
-              temp: ticket.temp || "28.4°C",
-              notes: ticket.techNotes,
-              createdAt: ticket.createdAt,
-            }}
-          />
-        )}
       </main>
 
       <Footer />

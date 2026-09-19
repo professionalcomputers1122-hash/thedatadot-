@@ -40,7 +40,19 @@ export function getTicketAttachments(ticketId: string): TicketAttachment[] {
       localStorage.getItem(`tdd_attachments_${ticketId.toLowerCase()}`);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter(
+          (a) =>
+            a &&
+            !a.name?.toLowerCase().includes("diagnostic_telemetry") &&
+            !a.name?.toLowerCase().includes("telemetry.pdf") &&
+            !a.uploadedBy?.toLowerCase().includes("lab diagnostics hub")
+        );
+        if (filtered.length !== parsed.length) {
+          saveTicketAttachments(ticketId, filtered);
+        }
+        return filtered;
+      }
     }
   } catch (e) {
     console.warn("Could not read attachments:", e);

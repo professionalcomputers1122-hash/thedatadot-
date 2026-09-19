@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DiagnosticReportModal from "@/components/DiagnosticReportModal";
 import {
   fetchTicketsFromSupabase,
   updateTicketInSupabase,
@@ -438,7 +437,6 @@ export default function TechnicianWorkbenchPage() {
   const [attachments, setAttachments] = useState<Record<string, TicketAttachment[]>>({});
   const [internalNotes, setInternalNotes] = useState<Record<string, InternalNote[]>>({});
   const [newInternalNoteText, setNewInternalNoteText] = useState("");
-  const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedCaseIdRef = useRef<string>("");
@@ -797,7 +795,13 @@ export default function TechnicianWorkbenchPage() {
           if (storedAtts) {
             const parsed = JSON.parse(storedAtts);
             const filtered = Array.isArray(parsed)
-              ? parsed.filter((a: any) => !a.name?.includes("_diagnostic_telemetry.pdf"))
+              ? parsed.filter(
+                  (a: any) =>
+                    a &&
+                    !a.name?.toLowerCase().includes("diagnostic_telemetry") &&
+                    !a.name?.toLowerCase().includes("telemetry.pdf") &&
+                    !a.uploadedBy?.toLowerCase().includes("lab diagnostics hub")
+                )
               : [];
             if (Array.isArray(parsed) && filtered.length !== parsed.length) {
               const json = JSON.stringify(filtered);
@@ -912,14 +916,7 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    const targetStatus = overrideStatus || editStatus || activeCase.status;
-    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, targetStatus, clientProgress || editProgress);
-
-    if (reportAutoAttached) {
-      setNotification(`Diagnosis updated & Cleanroom Diagnostic Report automatically generated & attached!`);
-    } else {
-      setNotification(`Internal workbench notes & station updated for #${targetId}.`);
-    }
+    setNotification(`Internal workbench notes & station updated for #${targetId}.`);
 
     setActivityFeed((prev) => [
       {
@@ -1039,14 +1036,8 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, newStatus, autoProgress);
-
     setClientUpdateText("");
-    if (reportAutoAttached) {
-      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}" & Diagnostic Report automatically attached.`);
-    } else {
-      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}".`);
-    }
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${newStatus}".`);
 
     setActivityFeed((prev) => [
       {
@@ -1171,19 +1162,10 @@ export default function TechnicianWorkbenchPage() {
       }
     }
 
-    // Automatically provide diagnosis report once technician changes diagnosis to next update
-    const reportAutoAttached = autoAttachReportIfDiagnosisAdvanced(targetId, stageValue, autoProgress);
+    setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}".`);
+    setTimeout(() => setNotification(""), 4000);
 
-    if (reportAutoAttached) {
-      setNotification(`✅ Diagnosis advanced to "${stageValue}" → Official Cleanroom Diagnostic Report automatically generated & attached.`);
-    } else {
-      setNotification(`✅ Client Portal updated: Case #${targetId} set to "${stageValue}".`);
-    }
-    setTimeout(() => setNotification(""), 4500);
-
-    const broadcastMsg = reportAutoAttached
-      ? `Ticket lifecycle stage updated to "${stageValue}". Technical diagnosis completed — official Cleanroom Diagnostic Report has been automatically generated and attached to your case files.`
-      : `Ticket lifecycle stage updated to "${stageValue}".`;
+    const broadcastMsg = `Ticket lifecycle stage updated to "${stageValue}".`;
     setChatMessages((prev) => ({
       ...prev,
       [targetId]: [
@@ -1390,128 +1372,6 @@ export default function TechnicianWorkbenchPage() {
 
     setNotification("Attachment removed.");
     setTimeout(() => setNotification(""), 3000);
-  };
-
-  const handleAttachGeneratedReport = (reportAtt: TicketAttachment) => {
-    if (!activeCase) return;
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
-    setAttachments((prev) => {
-      const updated = [...(prev[targetId] || []), reportAtt];
-      try {
-        const json = JSON.stringify(updated);
-        localStorage.setItem(`tdd_attachments_${targetId}`, json);
-        localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
-        localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
-        window.dispatchEvent(new Event("attachments-updated"));
-        window.dispatchEvent(new Event("storage"));
-      } catch (err) {
-        console.warn("Storage warning for attachments:", err);
-      }
-      return { ...prev, [targetId]: updated };
-    });
-    setTicketDetailTab("attachments");
-    setNotification(`📄 Cleanroom Diagnostic Report attached to Case #${targetId} and synchronized with client portal.`);
-    setActivityFeed((prev) => [
-      {
-        id: Date.now(),
-        text: `You generated & attached diagnostic report to #${targetId}`,
-        time: "Just now",
-        dotColor: "bg-blue-500",
-      },
-      ...prev.slice(0, 4),
-    ]);
-    setTimeout(() => setNotification(""), 4500);
-  };
-
-  // Automatically provide diagnosis report once technician changes diagnosis to next update
-  const autoAttachReportIfDiagnosisAdvanced = (
-    targetId: string,
-    newStatus: string,
-    progressVal?: number
-  ): boolean => {
-    const norm = (newStatus || "").toLowerCase();
-    // Check if stage is moving to next update beyond initial intake/diagnosis
-    // (e.g. Stage 3: PC-3000 Imaging / Resolution & Rollout / Containment / Deployment, or Stage 4, or progress >= 50%)
-    const isAdvancedPastDiagnosis =
-      norm.includes("pc-3000") ||
-      norm.includes("imaging") ||
-      norm.includes("resolution") ||
-      norm.includes("rollout") ||
-      norm.includes("containment") ||
-      norm.includes("remediation") ||
-      norm.includes("deployment") ||
-      norm.includes("migration") ||
-      norm.includes("verification") ||
-      norm.includes("return") ||
-      norm.includes("hardening") ||
-      norm.includes("handover") ||
-      norm.includes("audit") ||
-      norm.includes("resolved") ||
-      norm.includes("closed") ||
-      norm.includes("completed") ||
-      (progressVal !== undefined && progressVal >= 50);
-
-    if (!isAdvancedPastDiagnosis) return false;
-
-    let currentList: TicketAttachment[] = [];
-    try {
-      const stored = localStorage.getItem(`tdd_attachments_${targetId}`);
-      if (stored) {
-        currentList = JSON.parse(stored);
-      } else {
-        currentList = attachments[targetId] || [];
-      }
-    } catch {
-      currentList = attachments[targetId] || [];
-    }
-
-    const alreadyHasReport = currentList.some(
-      (a) =>
-        a.name.toLowerCase().includes("diagnostic_report") ||
-        a.name.toLowerCase().includes("cleanroom_diagnostic")
-    );
-
-    if (!alreadyHasReport) {
-      const newReportAtt: TicketAttachment = {
-        id: `att-rep-${targetId}-${Date.now()}`,
-        name: `Cleanroom_Diagnostic_Report_${targetId}.pdf`,
-        size: "1.2 MB",
-        type: "pdf",
-        uploadedAt: "Just now (Auto-Generated)",
-        uploadedBy: activeCase?.leadTech && activeCase.leadTech !== "Unassigned" ? activeCase.leadTech : techUser.name,
-      };
-
-      const updated = [...currentList, newReportAtt];
-      setAttachments((prev) => ({
-        ...prev,
-        [targetId]: updated,
-      }));
-
-      try {
-        const json = JSON.stringify(updated);
-        localStorage.setItem(`tdd_attachments_${targetId}`, json);
-        localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
-        localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
-        window.dispatchEvent(new Event("attachments-updated"));
-        window.dispatchEvent(new Event("storage"));
-      } catch (err) {
-        console.warn("Could not save auto-generated report attachment:", err);
-      }
-
-      setActivityFeed((prev) => [
-        {
-          id: Date.now(),
-          text: `Diagnostic report automatically attached on #${targetId} (${newStatus})`,
-          time: "Just now",
-          dotColor: "bg-emerald-500",
-        },
-        ...prev.slice(0, 4),
-      ]);
-
-      return true;
-    }
-
-    return false;
   };
 
   const handleAddInternalNote = (e: React.FormEvent) => {
@@ -2691,34 +2551,16 @@ export default function TechnicianWorkbenchPage() {
 
               {/* TICKET TITLE & BADGES (Matching Panel 7) */}
               <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-mono text-xs font-bold text-slate-800">
-                      #{activeCase.id}
-                    </span>
-                    <span className="rounded-full bg-rose-50 border border-rose-200 text-rose-600 px-2.5 py-0.5 text-[10px] font-bold">
-                      {activeCase.priority || "High Priority"}
-                    </span>
-                    <span className="rounded-full bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 text-[10px] font-semibold">
-                      {activeCase.category || "Data Recovery"}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowReportModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 transition shadow-xs cursor-pointer"
-                    title="Generate official Cleanroom Forensic Diagnostic Report with Company Logo"
-                  >
-                    <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                      <path d="M10 9H8" />
-                      <path d="M16 13H8" />
-                      <path d="M16 17H8" />
-                    </svg>
-                    <span>Generate Diagnosis Report</span>
-                  </button>
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-xs font-bold text-slate-800">
+                    #{activeCase.id}
+                  </span>
+                  <span className="rounded-full bg-rose-50 border border-rose-200 text-rose-600 px-2.5 py-0.5 text-[10px] font-bold">
+                    {activeCase.priority || "High Priority"}
+                  </span>
+                  <span className="rounded-full bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 text-[10px] font-semibold">
+                    {activeCase.category || "Data Recovery"}
+                  </span>
                 </div>
 
                 <h1 className="text-xl font-bold text-slate-900">
@@ -3023,35 +2865,18 @@ export default function TechnicianWorkbenchPage() {
                     {/* TAB 3: ATTACHMENTS */}
                     {ticketDetailTab === "attachments" && (
                       <div className="space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-800">
                             Attached Files &amp; Laboratory Logs ({((attachments[activeCase.id]) || []).length})
                           </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowReportModal(true)}
-                              className="rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                              title="Generate Cleanroom Forensic Diagnostic Report with Company Logo"
-                            >
-                              <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                                <path d="M10 9H8" />
-                                <path d="M16 13H8" />
-                                <path d="M16 17H8" />
-                              </svg>
-                              <span>Generate Diagnosis Report</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <span>📎</span>
-                              <span>Upload New File</span>
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-blue-500 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>📎</span>
+                            <span>Upload New File</span>
+                          </button>
                         </div>
 
                         {/* FILE LIST */}
@@ -3061,17 +2886,9 @@ export default function TechnicianWorkbenchPage() {
                               <span className="text-3xl block mb-2">📁</span>
                               <p className="font-semibold text-slate-700">No attachments uploaded yet</p>
                               <p className="text-xs text-slate-400 mt-1 mb-4">
-                                Attach forensic captures, intake photos, SMART reports, or generate an official diagnostic report.
+                                Attach forensic captures, intake photos, or diagnostic files from your computer.
                               </p>
-                              <div className="flex flex-wrap items-center justify-center gap-2.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowReportModal(true)}
-                                  className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 text-xs font-bold transition cursor-pointer"
-                                >
-                                  <span>📄</span>
-                                  <span>Generate Diagnosis Report</span>
-                                </button>
+                              <div className="flex items-center justify-center">
                                 <button
                                   type="button"
                                   onClick={() => fileInputRef.current?.click()}
@@ -4066,33 +3883,6 @@ export default function TechnicianWorkbenchPage() {
         </div>
       )}
 
-      {/* Diagnostic Report Generator Modal with Official Company Logo */}
-      {activeCase && (
-        <DiagnosticReportModal
-          isOpen={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          reportData={{
-            ticketId: activeCase.id,
-            clientName: activeCase.customerName || activeCase.client,
-            companyName: activeCase.company || activeCase.client,
-            deviceOrSubject: activeCase.device,
-            serialNumber: activeCase.serial || `TDD-SN-${activeCase.id}`,
-            category: activeCase.category || "Data Recovery",
-            priority: activeCase.priority,
-            status: clientStatus || editStatus || activeCase.status || "In Progress",
-            clonedPercent: clientProgress || editProgress || activeCase.progress || 0,
-            assignedTech: activeCase.leadTech && activeCase.leadTech !== "Unassigned" ? activeCase.leadTech : techUser.name,
-            assignedBench: editBench || activeCase.bench || "Cleanroom Station 01",
-            symptoms: activeCase.symptoms || activeCase.device || "Technical diagnostics and recovery required",
-            headsHealth: activeCase.headsHealth || "100% OK",
-            badSectorsRemapped: activeCase.badSectorsRemapped || 0,
-            temp: activeCase.temp || "28.4°C",
-            notes: editNotes || activeCase.notes,
-            createdAt: activeCase.createdAt,
-          }}
-          onAttachReport={handleAttachGeneratedReport}
-        />
-      )}
 
       {/* Hidden Native File Input for Attachments */}
       <input

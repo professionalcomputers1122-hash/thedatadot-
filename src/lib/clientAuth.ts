@@ -214,6 +214,50 @@ export function getCustomerSession(): CustomerUser | null {
 }
 
 /**
+ * Client-side image compression to ensure avatar never exceeds localStorage quota
+ */
+export function compressImageToDataUrl(file: File, maxDim = 320, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * Retrieves the custom client avatar from localStorage
  */
 export function getCustomerAvatar(): string | null {
@@ -246,6 +290,21 @@ export function updateCustomerAvatar(avatarDataUrl: string | null): void {
       if (parsed) {
         parsed.avatarUrl = avatarDataUrl || undefined;
         localStorage.setItem("tdd_customer_session", JSON.stringify(parsed));
+
+        // Also sync into registered customers cache
+        try {
+          const regRaw = localStorage.getItem("tdd_registered_customers");
+          if (regRaw && parsed.email) {
+            const reg = JSON.parse(regRaw);
+            const normEmail = parsed.email.toLowerCase().trim();
+            if (reg[normEmail]) {
+              reg[normEmail].avatarUrl = avatarDataUrl || undefined;
+              localStorage.setItem("tdd_registered_customers", JSON.stringify(reg));
+            }
+          }
+        } catch (regErr) {
+          console.warn("Failed syncing avatar to registered accounts:", regErr);
+        }
       }
     }
 
@@ -257,34 +316,14 @@ export function updateCustomerAvatar(avatarDataUrl: string | null): void {
 }
 
 /**
- * Retrieves client dashboard theme ("light" | "dark")
+ * Fixed previous enterprise portal theme
  */
-export function getCustomerTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
-  try {
-    const stored = localStorage.getItem("tdd_customer_theme");
-    if (stored === "dark" || stored === "light") return stored;
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-  } catch (e) {
-    console.warn("Failed reading customer theme:", e);
-  }
+export function getCustomerTheme(): "light" {
   return "light";
 }
 
-/**
- * Sets client dashboard theme and dispatches events
- */
-export function setCustomerTheme(theme: "light" | "dark"): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem("tdd_customer_theme", theme);
-    window.dispatchEvent(new Event("customer-theme-changed"));
-    window.dispatchEvent(new Event("storage"));
-  } catch (e) {
-    console.warn("Failed saving customer theme:", e);
-  }
+export function setCustomerTheme(_theme: string): void {
+  // Theme fixed to previous clean enterprise theme as requested
 }
 
 /**
@@ -371,8 +410,17 @@ export function updateCustomerSession(updates: Partial<CustomerUser>): CustomerU
   const updated = { ...current, ...updates };
 
   if (typeof window !== "undefined") {
+    if (updates.avatarUrl !== undefined) {
+      if (updates.avatarUrl) {
+        localStorage.setItem("tdd_customer_avatar", updates.avatarUrl);
+      } else {
+        localStorage.removeItem("tdd_customer_avatar");
+      }
+    }
     localStorage.setItem("tdd_customer_session", JSON.stringify(updated));
     registerCustomerAccount(updated);
+    window.dispatchEvent(new Event("customer-profile-updated"));
+    window.dispatchEvent(new Event("storage"));
   }
 
   return updated;

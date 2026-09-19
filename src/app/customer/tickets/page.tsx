@@ -7,7 +7,7 @@ import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
 import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
-import { getCustomerSession, getCustomerTheme } from "@/lib/clientAuth";
+import { getCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerTicketsPage() {
   const router = useRouter();
@@ -17,7 +17,6 @@ export default function CustomerTicketsPage() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     const cust = getCustomerSession();
@@ -25,7 +24,6 @@ export default function CustomerTicketsPage() {
       router.push("/customer/login");
       return;
     }
-    setTheme(getCustomerTheme());
     const activeCust = cust;
     const userEmail = activeCust.email.toLowerCase();
     const userCompany = activeCust.company.toLowerCase();
@@ -64,19 +62,14 @@ export default function CustomerTicketsPage() {
 
     const interval = setInterval(load, 5000);
     const handleUpdate = () => load();
-    const handleThemeChange = () => setTheme(getCustomerTheme());
 
     window.addEventListener("tickets-updated", handleUpdate);
-    window.addEventListener("customer-theme-changed", handleThemeChange);
     window.addEventListener("storage", handleUpdate);
-    window.addEventListener("storage", handleThemeChange);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
-      window.removeEventListener("customer-theme-changed", handleThemeChange);
       window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener("storage", handleThemeChange);
     };
   }, [router]);
 
@@ -113,20 +106,12 @@ export default function CustomerTicketsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const isDark = theme === "dark";
-
   const getCategoryBadge = (cat?: string) => {
     switch (cat) {
       case "Cybersecurity":
         return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border ${
-              isDark
-                ? "bg-rose-950/30 text-rose-300 border-rose-900/40"
-                : "bg-rose-50 text-rose-700 border-rose-200"
-            }`}
-          >
-            <svg className="w-3 h-3 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border bg-rose-50 text-rose-700 border-rose-200">
+            <svg className="w-3 h-3 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <span>Cybersecurity</span>
@@ -134,14 +119,8 @@ export default function CustomerTicketsPage() {
         );
       case "Cloud Solutions":
         return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border ${
-              isDark
-                ? "bg-indigo-950/30 text-indigo-300 border-indigo-900/40"
-                : "bg-indigo-50 text-indigo-700 border-indigo-200"
-            }`}
-          >
-            <svg className="w-3 h-3 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">
+            <svg className="w-3 h-3 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
             </svg>
             <span>Cloud Solutions</span>
@@ -149,14 +128,8 @@ export default function CustomerTicketsPage() {
         );
       case "Managed IT":
         return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border ${
-              isDark
-                ? "bg-emerald-950/30 text-emerald-300 border-emerald-900/40"
-                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-            }`}
-          >
-            <svg className="w-3 h-3 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+            <svg className="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="8" y1="21" x2="16" y2="21" />
               <line x1="12" y1="17" x2="12" y2="21" />
@@ -166,14 +139,8 @@ export default function CustomerTicketsPage() {
         );
       default:
         return (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border ${
-              isDark
-                ? "bg-blue-950/30 text-blue-300 border-blue-900/40"
-                : "bg-blue-50 text-blue-700 border-blue-200"
-            }`}
-          >
-            <svg className="w-3 h-3 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-bold border bg-blue-50 text-blue-700 border-blue-200">
+            <svg className="w-3 h-3 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
               <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
               <line x1="6" y1="6" x2="6.01" y2="6" />
@@ -186,21 +153,17 @@ export default function CustomerTicketsPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen flex flex-col antialiased transition-colors duration-200 ${
-        isDark ? "bg-[#070e1b] text-slate-100" : "bg-[#fafbfd] text-slate-900"
-      }`}
-    >
+    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
       <CustomerNav />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className={`text-2xl font-bold tracking-tight ${isDark ? "text-white" : "text-slate-950"}`}>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950">
               Enterprise Support &amp; Recovery Tickets
             </h1>
-            <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="text-xs text-slate-500 mt-0.5">
               Live telemetry for Data Recovery, Cybersecurity, Cloud Infrastructure, and Managed IT
             </p>
           </div>
@@ -214,22 +177,14 @@ export default function CustomerTicketsPage() {
         </div>
 
         {/* SEARCH & FILTERS BAR */}
-        <div
-          className={`rounded-2xl border p-4 mb-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 ${
-            isDark ? "border-[#15253e] bg-[#0a1628]" : "border-slate-200 bg-white"
-          }`}
-        >
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 mb-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="w-full sm:w-80">
             <input
               type="text"
               placeholder="Search Ticket ID, hardware target, domain..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={`w-full rounded-xl border px-3.5 py-2 text-xs outline-none transition ${
-                isDark
-                  ? "border-[#1c2e47] bg-[#070f1c] text-slate-200 placeholder:text-slate-500 focus:border-blue-500"
-                  : "border-slate-200 bg-slate-50/70 text-slate-900 focus:border-blue-500 focus:bg-white"
-              }`}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
             />
           </div>
 
@@ -238,11 +193,7 @@ export default function CustomerTicketsPage() {
               onClick={() => setCategoryFilter("ALL")}
               className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
                 categoryFilter === "ALL"
-                  ? isDark
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-900 text-white"
-                  : isDark
-                  ? "border border-[#1c2e47] bg-[#0c182b] text-slate-300 hover:bg-[#12233f]"
+                  ? "bg-slate-900 text-white"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -253,8 +204,6 @@ export default function CustomerTicketsPage() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
                 categoryFilter === "Data Recovery"
                   ? "bg-blue-600 text-white"
-                  : isDark
-                  ? "border border-[#1c2e47] bg-[#0c182b] text-slate-300 hover:bg-[#12233f]"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -265,8 +214,6 @@ export default function CustomerTicketsPage() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
                 categoryFilter === "Cybersecurity"
                   ? "bg-rose-600 text-white"
-                  : isDark
-                  ? "border border-[#1c2e47] bg-[#0c182b] text-slate-300 hover:bg-[#12233f]"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -277,8 +224,6 @@ export default function CustomerTicketsPage() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
                 categoryFilter === "Cloud Solutions"
                   ? "bg-indigo-600 text-white"
-                  : isDark
-                  ? "border border-[#1c2e47] bg-[#0c182b] text-slate-300 hover:bg-[#12233f]"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -289,8 +234,6 @@ export default function CustomerTicketsPage() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
                 categoryFilter === "Managed IT"
                   ? "bg-emerald-600 text-white"
-                  : isDark
-                  ? "border border-[#1c2e47] bg-[#0c182b] text-slate-300 hover:bg-[#12233f]"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -300,35 +243,25 @@ export default function CustomerTicketsPage() {
         </div>
 
         {/* TICKETS TABLE */}
-        <div
-          className={`rounded-3xl border shadow-xs overflow-hidden ${
-            isDark ? "border-[#15253e] bg-[#0a1628]" : "border-slate-200 bg-white"
-          }`}
-        >
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-3" />
-              <p className={`text-xs font-mono ${isDark ? "text-slate-400" : "text-slate-400"}`}>
+              <p className="text-xs font-mono text-slate-400">
                 Synchronizing live portal tickets...
               </p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className={`p-12 text-center ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              <p className={`font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>No tickets found</p>
-              <p className="text-xs opacity-60 mt-1">
+            <div className="p-12 text-center text-slate-500">
+              <p className="font-semibold text-slate-700">No tickets found</p>
+              <p className="text-xs text-slate-400 mt-1">
                 {search ? "No cases match your search criteria." : "You have no active support tickets in this view."}
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className={`w-full text-left text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                <thead
-                  className={`text-[10px] font-bold uppercase border-b ${
-                    isDark
-                      ? "bg-[#0c192d] text-slate-400 border-[#15253e]"
-                      : "bg-slate-50 text-slate-500 border-slate-200"
-                  }`}
-                >
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="text-[10px] font-bold uppercase border-b bg-slate-50 text-slate-500 border-slate-200">
                   <tr>
                     <th className="px-5 py-3.5">Ticket ID</th>
                     <th className="px-5 py-3.5">Service Category</th>
@@ -339,7 +272,7 @@ export default function CustomerTicketsPage() {
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDark ? "divide-[#15253e]" : "divide-slate-100"}`}>
+                <tbody className="divide-y divide-slate-100">
                   {filtered.map((t) => {
                     const isUnassigned =
                       !t.assignedTech ||
@@ -347,22 +280,17 @@ export default function CustomerTicketsPage() {
                       t.assignedTech.toLowerCase().includes("unassigned");
 
                     return (
-                      <tr
-                        key={t.id}
-                        className={`transition ${
-                          isDark ? "hover:bg-[#0e1d33]" : "hover:bg-slate-50/60"
-                        }`}
-                      >
-                        <td className="px-5 py-4 font-bold text-blue-500">
+                      <tr key={t.id} className="transition hover:bg-slate-50/60">
+                        <td className="px-5 py-4 font-bold text-blue-600">
                           #{t.id}
                         </td>
                         <td className="px-5 py-4">
                           {getCategoryBadge(t.category)}
                         </td>
                         <td className="px-5 py-4">
-                          <p className={`font-bold ${isDark ? "text-slate-100" : "text-slate-900"}`}>{t.deviceOrSubject}</p>
+                          <p className="font-bold text-slate-900">{t.deviceOrSubject}</p>
                           {t.serialNumber && (
-                            <span className="text-[11px] opacity-60 font-mono block mt-0.5">
+                            <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
                               ID: {t.serialNumber}
                             </span>
                           )}
@@ -371,11 +299,9 @@ export default function CustomerTicketsPage() {
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                               t.priority === "CRITICAL"
-                                ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                                ? "bg-rose-100 text-rose-800"
                                 : t.priority === "HIGH"
-                                ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                                : isDark
-                                ? "bg-slate-800 text-slate-300"
+                                ? "bg-amber-100 text-amber-800"
                                 : "bg-slate-100 text-slate-700"
                             }`}
                           >
@@ -387,8 +313,8 @@ export default function CustomerTicketsPage() {
                             <span
                               className={`inline-block w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                                 t.status === "Resolved"
-                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-blue-100 text-blue-800"
                               }`}
                             >
                               {t.status}
@@ -397,12 +323,12 @@ export default function CustomerTicketsPage() {
                         </td>
                         <td className="px-5 py-4">
                           {isUnassigned ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/20">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                               Pending Dispatch
                             </span>
                           ) : (
-                            <span className={`font-medium ${isDark ? "text-slate-200" : "text-slate-800"}`}>
+                            <span className="font-medium text-slate-800">
                               {t.assignedTech}
                             </span>
                           )}
@@ -411,11 +337,7 @@ export default function CustomerTicketsPage() {
                           <div className="flex items-center justify-end gap-2">
                             <Link
                               href={`/customer/tickets/${t.id}`}
-                              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1 font-bold transition ${
-                                isDark
-                                  ? "border-[#1b3252] bg-[#0c1a2e] text-blue-400 hover:bg-[#112440]"
-                                  : "border-slate-200 text-blue-600 hover:bg-blue-50"
-                              }`}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-blue-600 hover:bg-blue-50 transition"
                             >
                               <span>View</span>
                               <span>→</span>
@@ -424,11 +346,7 @@ export default function CustomerTicketsPage() {
                               type="button"
                               onClick={() => setDeleteModalTicket(t)}
                               disabled={deletingId === t.id}
-                              className={`p-1.5 rounded transition cursor-pointer ${
-                                isDark
-                                  ? "text-rose-400 hover:bg-rose-950/30 hover:text-rose-300"
-                                  : "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                              }`}
+                              className="p-1.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                               title={`Delete Ticket #${t.id}`}
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

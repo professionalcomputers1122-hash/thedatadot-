@@ -9,8 +9,8 @@ import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   getCustomerSession,
   CustomerUser,
-  getCustomerTheme,
   updateCustomerAvatar,
+  compressImageToDataUrl,
 } from "@/lib/clientAuth";
 import {
   fetchTicketsFromSupabase,
@@ -68,7 +68,6 @@ function getTimelineStages(
     norm.includes("threat") ||
     norm.includes("forensic") ||
     norm.includes("architecture") ||
-    norm.includes("assessment") ||
     clonedPercent >= 50;
 
   if (category === "Cybersecurity") {
@@ -76,46 +75,44 @@ function getTimelineStages(
       isDiagStage && !norm.includes("intake") && !norm.includes("new")
         ? "done"
         : "active";
+
     let s2State: "done" | "active" | "pending" = "pending";
-    if (isMidStage && !norm.includes("threat") && !norm.includes("diagnostic"))
+    if (
+      isMidStage &&
+      !norm.includes("analysis") &&
+      !norm.includes("diagnos") &&
+      !norm.includes("forensic")
+    )
       s2State = "done";
     else if (
-      norm.includes("threat") ||
-      norm.includes("diagnostic") ||
-      norm.includes("analysis")
+      norm.includes("analysis") ||
+      norm.includes("diagnos") ||
+      norm.includes("forensic")
     )
       s2State = "active";
 
     let s3State: "done" | "active" | "pending" = "pending";
     if (
       isFinalStage &&
-      !norm.includes("containment") &&
-      !norm.includes("remediation")
+      !norm.includes("contain") &&
+      !norm.includes("remediat")
     )
       s3State = "done";
-    else if (
-      norm.includes("containment") ||
-      norm.includes("remediation") ||
-      norm.includes("patch")
-    )
+    else if (norm.includes("contain") || norm.includes("remediat"))
       s3State = "active";
 
     let s4State: "done" | "active" | "pending" = "pending";
     if (isResolved) s4State = "done";
-    else if (
-      norm.includes("verification") ||
-      norm.includes("hardening") ||
-      norm.includes("closure")
-    )
+    else if (norm.includes("harden") || norm.includes("sign-off"))
       s4State = "active";
 
     return [
       {
-        title: "1. Threat Intake",
+        title: "1. Incident Intake",
         description:
           s1State === "done"
-            ? "Threat profile registered & isolated."
-            : "Intake triage & containment review.",
+            ? "SOC alert verified."
+            : "Alert intake & triage in progress.",
         state: isResolved ? "done" : s1State,
       },
       {
@@ -155,71 +152,73 @@ function getTimelineStages(
       isDiagStage && !norm.includes("intake") && !norm.includes("new")
         ? "done"
         : "active";
+
     let s2State: "done" | "active" | "pending" = "pending";
     if (
       isMidStage &&
-      !norm.includes("architecture") &&
-      !norm.includes("planning")
+      !norm.includes("review") &&
+      !norm.includes("architect") &&
+      !norm.includes("diagnos")
     )
       s2State = "done";
     else if (
-      norm.includes("architecture") ||
-      norm.includes("planning") ||
-      norm.includes("assessment")
+      norm.includes("review") ||
+      norm.includes("architect") ||
+      norm.includes("diagnos")
     )
       s2State = "active";
 
     let s3State: "done" | "active" | "pending" = "pending";
     if (
       isFinalStage &&
-      !norm.includes("deployment") &&
-      !norm.includes("migration")
+      !norm.includes("migrat") &&
+      !norm.includes("deploy")
     )
       s3State = "done";
-    else if (norm.includes("deployment") || norm.includes("migration"))
+    else if (norm.includes("migrat") || norm.includes("deploy"))
       s3State = "active";
 
     let s4State: "done" | "active" | "pending" = "pending";
     if (isResolved) s4State = "done";
-    else if (norm.includes("verification") || norm.includes("handover"))
+    else if (norm.includes("handover") || norm.includes("quality"))
       s4State = "active";
 
     return [
       {
-        title: "1. Scope Intake",
+        title: "1. Scope & Telemetry Intake",
         description:
           s1State === "done"
-            ? "Cloud tenant specs registered."
-            : "Requirements intake & triage.",
+            ? "Workload specifications verified."
+            : "Requirement telemetry under review.",
         state: isResolved ? "done" : s1State,
       },
       {
-        title: "2. Cloud Architecture",
+        title: "2. Cloud Architecture Review",
         description:
           s2State === "done"
-            ? "Architecture design approved."
+            ? "Tenant topology calibrated."
             : s2State === "active"
-            ? "Validating tenant & network policies."
-            : "Architecture review queued.",
+            ? "Cloud blueprint calibration underway."
+            : "Architecture blueprint queued.",
         state: isResolved ? "done" : s2State,
       },
       {
         title: "3. Deployment & Migration",
         description:
           s3State === "done"
-            ? "Cloud assets deployed & synced."
+            ? "Instances provisioned & verified."
             : s3State === "active"
-            ? "Cloud assets migration and workload provisioning active."
-            : "Tenant migration queued.",
+            ? "Automated infrastructure rollout in progress."
+            : "Deployment pipeline queued.",
         state: isResolved ? "done" : s3State,
       },
       {
-        title: "4. Handover & Audit",
+        title: "4. Quality Verification",
         description: isResolved
-          ? "Cloud services verified & active."
+          ? "Production sign-off complete."
           : s4State === "active"
-          ? "Testing uptime & client handover."
-          : "Final audit pending.",
+          ? "Load verification & client handover in progress."
+          : "Sign-off & monitoring pending.",
         state: isResolved ? "done" : s4State,
       },
     ];
@@ -230,9 +229,20 @@ function getTimelineStages(
       isDiagStage && !norm.includes("intake") && !norm.includes("new")
         ? "done"
         : "active";
+
     let s2State: "done" | "active" | "pending" = "pending";
-    if (isMidStage && !norm.includes("assessment")) s2State = "done";
-    else if (norm.includes("assessment") || norm.includes("diagnos"))
+    if (
+      isMidStage &&
+      !norm.includes("triage") &&
+      !norm.includes("assess") &&
+      !norm.includes("diagnos")
+    )
+      s2State = "done";
+    else if (
+      norm.includes("triage") ||
+      norm.includes("assess") ||
+      norm.includes("diagnos")
+    )
       s2State = "active";
 
     let s3State: "done" | "active" | "pending" = "pending";
@@ -284,19 +294,19 @@ function getTimelineStages(
         state: isResolved ? "done" : s3State,
       },
       {
-        title: "4. Quality Verification",
+        title: "4. User Verification",
         description: isResolved
-          ? "Workstation verified & delivered."
+          ? "Incident resolution confirmed."
           : s4State === "active"
-          ? "Client test & satisfaction sign-off."
-          : "Verification pending.",
+          ? "User validation & sign-off."
+          : "Validation pending.",
         state: isResolved ? "done" : s4State,
       },
     ];
   }
 
-  // Data Recovery (Default)
-  let s1: "done" | "active" | "pending" = "done";
+  // DEFAULT: DATA RECOVERY
+  let s1: "done" | "active" | "pending" = "pending";
   let s2: "done" | "active" | "pending" = "pending";
   let s3: "done" | "active" | "pending" = "pending";
   let s4: "done" | "active" | "pending" = "pending";
@@ -399,7 +409,6 @@ export default function CustomerDashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -412,7 +421,6 @@ export default function CustomerDashboardPage() {
     }
     const activeCust = currentCustomer;
     setCustomer(activeCust);
-    setTheme(getCustomerTheme());
 
     const userEmail = activeCust.email.toLowerCase();
     const userCompany = activeCust.company.toLowerCase();
@@ -481,23 +489,18 @@ export default function CustomerDashboardPage() {
     loadTickets();
     const interval = setInterval(loadTickets, 5000);
     const handleUpdate = () => loadTickets();
-    const handleThemeChange = () => setTheme(getCustomerTheme());
     const handleProfileChange = () => setCustomer(getCustomerSession());
 
     window.addEventListener("tickets-updated", handleUpdate);
-    window.addEventListener("customer-theme-changed", handleThemeChange);
     window.addEventListener("customer-profile-updated", handleProfileChange);
     window.addEventListener("storage", handleUpdate);
-    window.addEventListener("storage", handleThemeChange);
     window.addEventListener("storage", handleProfileChange);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
-      window.removeEventListener("customer-theme-changed", handleThemeChange);
       window.removeEventListener("customer-profile-updated", handleProfileChange);
       window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener("storage", handleThemeChange);
       window.removeEventListener("storage", handleProfileChange);
     };
   }, [router]);
@@ -550,8 +553,8 @@ export default function CustomerDashboardPage() {
     };
   }, [activeTicket?.id]);
 
-  // Client Photo Upload Handler
-  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Photo Upload Handler with client-side compression
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -560,13 +563,20 @@ export default function CustomerDashboardPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      updateCustomerAvatar(result);
-      setCustomer((prev) => (prev ? { ...prev, avatarUrl: result } : prev));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageToDataUrl(file, 320, 0.85);
+      updateCustomerAvatar(compressed);
+      setCustomer((prev) => (prev ? { ...prev, avatarUrl: compressed } : prev));
+    } catch (err) {
+      console.error("Failed compressing photo:", err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        updateCustomerAvatar(result);
+        setCustomer((prev) => (prev ? { ...prev, avatarUrl: result } : prev));
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = "";
   };
 
@@ -587,36 +597,18 @@ export default function CustomerDashboardPage() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const isDark = theme === "dark";
-
   return (
-    <div
-      className={`min-h-screen flex flex-col antialiased transition-colors duration-200 ${
-        isDark ? "bg-[#070e1b] text-slate-100" : "bg-[#fafbfd] text-slate-900"
-      }`}
-    >
+    <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
       <CustomerNav />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        {/* WELCOME BANNER WITH CLIENT PHOTO PROFILE */}
-        <div
-          className={`mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-3xl border transition ${
-            isDark
-              ? "border-[#15243b] bg-[#0a1526]"
-              : "border-slate-200 bg-white shadow-xs"
-          }`}
-        >
+        {/* WELCOME BANNER WITH PHOTO PROFILE */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-3xl border border-slate-200 bg-white shadow-xs">
           {/* USER AVATAR & INFO */}
           <div className="flex items-center gap-4">
             {/* AVATAR WITH PHOTO UPLOAD TRIGGER */}
             <div className="relative group">
-              <div
-                className={`relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden font-black text-xl sm:text-2xl shadow-md border-2 transition ${
-                  isDark
-                    ? "bg-blue-600 text-white border-blue-500/40"
-                    : "bg-blue-600 text-white border-blue-200"
-                }`}
-              >
+              <div className="relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl overflow-hidden font-black text-xl sm:text-2xl shadow-sm border-2 border-blue-200 bg-blue-600 text-white transition">
                 {customer?.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -656,13 +648,7 @@ export default function CustomerDashboardPage() {
 
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${
-                    isDark
-                      ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
-                      : "border-blue-200 bg-blue-50 text-blue-700"
-                  }`}
-                >
+                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border border-blue-200 bg-blue-50 text-blue-700">
                   <span>{customer?.company || "Enterprise Client Desk"}</span>
                   <span className="opacity-60">• #{customer?.accountNumber || "TDD-CLI-8492"}</span>
                 </span>
@@ -671,19 +657,17 @@ export default function CustomerDashboardPage() {
                   <button
                     type="button"
                     onClick={handleRemoveAvatar}
-                    className={`text-[10px] underline cursor-pointer transition ${
-                      isDark ? "text-slate-400 hover:text-rose-400" : "text-slate-500 hover:text-rose-600"
-                    }`}
+                    className="text-[10px] text-slate-500 hover:text-rose-600 underline cursor-pointer transition"
                   >
                     Remove Photo
                   </button>
                 )}
               </div>
 
-              <h1 className={`text-xl sm:text-2xl font-extrabold tracking-tight ${isDark ? "text-white" : "text-slate-950"}`}>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950">
                 Welcome back, {customer?.name || "Client"}
               </h1>
-              <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+              <p className="text-xs text-slate-600 mt-0.5">
                 Live telemetry and forensic lifecycle tracking for your support cases.
               </p>
             </div>
@@ -694,22 +678,18 @@ export default function CustomerDashboardPage() {
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
-                isDark
-                  ? "border-[#1b314f] bg-[#0e1d33] text-slate-200 hover:bg-[#142844] hover:text-white"
-                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-              }`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer shadow-xs"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
                 <circle cx="12" cy="13" r="3" />
               </svg>
-              <span>{customer?.avatarUrl ? "Change Photo" : "Add Photo"}</span>
+              <span>{customer?.avatarUrl ? "Change Photo" : "Upload Your Photo"}</span>
             </button>
 
             <Link
               href="/customer/tickets/new"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-500 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14" />
@@ -722,12 +702,8 @@ export default function CustomerDashboardPage() {
 
         {/* METRICS OVERVIEW */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div
-            className={`rounded-2xl border p-5 transition ${
-              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
-            }`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
               {activeTicket?.category === "Cybersecurity"
                 ? "Active Incident"
                 : activeTicket?.category === "Cloud Solutions"
@@ -737,72 +713,49 @@ export default function CustomerDashboardPage() {
                 : "Active Recovery"}
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-blue-500">
+              <span className="text-2xl font-black text-blue-600">
                 {activeCount} {activeCount === 1 ? "Case" : "Cases"}
               </span>
               {activeTicket && (
-                <span className="text-[11px] font-semibold text-emerald-500 truncate max-w-[150px]" title={activeTicket.status}>
+                <span className="text-[11px] font-semibold text-emerald-600 truncate max-w-[150px]" title={activeTicket.status}>
                   {activeTicket.status || "Media Intake"}
                 </span>
               )}
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl border p-5 transition ${
-              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
-            }`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
               SLA Response Guarantee
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-950"}`}>
+              <span className="text-2xl font-black text-slate-950">
                 15-Min
               </span>
-              <span className="text-[11px] font-semibold text-blue-500">24/7/365</span>
+              <span className="text-[11px] font-semibold text-blue-600">24/7/365</span>
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl border p-5 transition ${
-              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
-            }`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
-              Service Standard
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+              Assigned Lead Bench
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-emerald-500">
-                {activeTicket?.category === "Cybersecurity"
-                  ? "Zero Breach"
-                  : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
-                  ? "99.99%"
-                  : "99.98%"}
-              </span>
-              <span className="text-[11px] font-semibold opacity-60">
-                {activeTicket?.category === "Cybersecurity"
-                  ? "SOC Assurance"
-                  : activeTicket?.category === "Cloud Solutions" || activeTicket?.category === "Managed IT"
-                  ? "Uptime SLA"
-                  : "Cleanroom Score"}
+              <span className="text-base font-bold text-slate-900 truncate">
+                {activeTicket?.assignedBench || "ISO Class-5 Cleanroom"}
               </span>
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl border p-5 transition ${
-              isDark ? "border-[#15243b] bg-[#0c182a]" : "border-slate-200 bg-white shadow-xs"
-            }`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
-              Total Cases
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+              Account Overview
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className={`text-2xl font-black ${isDark ? "text-white" : "text-slate-950"}`}>
+              <span className="text-2xl font-black text-slate-950">
                 {tickets.length} Cases
               </span>
-              <span className="text-[11px] font-semibold opacity-60">
+              <span className="text-[11px] font-semibold text-slate-500">
                 {activeCount} Active · {tickets.length - activeCount} Closed
               </span>
             </div>
@@ -811,26 +764,10 @@ export default function CustomerDashboardPage() {
 
         {/* ACTIVE CASE SPOTLIGHT OR EMPTY STATE */}
         {activeTicket ? (
-          <div
-            className={`rounded-3xl border p-6 sm:p-8 shadow-sm mb-8 transition ${
-              isDark
-                ? "border-[#192f4c] bg-gradient-to-br from-[#091424] via-[#0c192c] to-[#091424]"
-                : "border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20"
-            }`}
-          >
-            <div
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5 mb-6 ${
-                isDark ? "border-[#162740]" : "border-slate-200/80"
-              }`}
-            >
+          <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20 p-6 sm:p-8 shadow-xs mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5 mb-6">
               <div>
-                <div
-                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-2 border ${
-                    isDark
-                      ? "border-blue-500/30 bg-blue-500/15 text-blue-300"
-                      : "border-blue-200 bg-blue-50 text-blue-700"
-                  }`}
-                >
+                <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-2 border border-blue-200 bg-blue-50 text-blue-700">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
@@ -847,11 +784,11 @@ export default function CustomerDashboardPage() {
                   </span>
                 </div>
 
-                <h2 className={`text-xl sm:text-2xl font-extrabold ${isDark ? "text-white" : "text-slate-950"}`}>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-950">
                   {activeTicket.deviceOrSubject}
                 </h2>
 
-                <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                <p className="text-xs text-slate-600 mt-1">
                   {activeTicket.category === "Cybersecurity" ? (
                     <>Target Segment / Host: <strong>{activeTicket.serialNumber || "Corporate Network"}</strong> • Indicators: {activeTicket.symptoms || "Threat analysis in progress"}</>
                   ) : activeTicket.category === "Cloud Solutions" || activeTicket.category === "Managed IT" ? (
@@ -863,7 +800,7 @@ export default function CustomerDashboardPage() {
               </div>
 
               <div className="sm:text-right">
-                <span className="text-xs opacity-60 block">
+                <span className="text-xs text-slate-500 block">
                   {activeTicket.category === "Cybersecurity"
                     ? "Assigned Security Lead"
                     : activeTicket.category === "Cloud Solutions"
@@ -872,12 +809,12 @@ export default function CustomerDashboardPage() {
                     ? "Assigned Systems Lead"
                     : "Assigned Lead Engineer"}
                 </span>
-                <span className={`text-sm font-bold ${isDark ? "text-slate-100" : "text-slate-900"}`}>
+                <span className="text-sm font-bold text-slate-900">
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
                     ? activeTicket.assignedTech
                     : "Pending Specialist Dispatch"}
                 </span>
-                <p className="text-xs font-bold text-blue-500 mt-0.5">
+                <p className="text-xs font-bold text-blue-600 mt-0.5">
                   {activeTicket.assignedTech && activeTicket.assignedTech !== "Unassigned"
                     ? "Direct Desk Hotline: +91 6380488373"
                     : "Triage Queue • Specialist Pending"}
@@ -892,20 +829,16 @@ export default function CustomerDashboardPage() {
                   return (
                     <div
                       key={sIdx}
-                      className={`rounded-2xl border p-4 transition ${
-                        isDark
-                          ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-300"
-                          : "border-emerald-200 bg-emerald-50/80 text-emerald-900"
-                      }`}
+                      className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900 transition"
                     >
                       <span className="text-xs font-bold flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                         <span>{stg.title}</span>
                       </span>
-                      <p className="text-[11px] opacity-80 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-emerald-500 block mt-2 font-bold">Done</span>
+                      <p className="text-[11px] text-emerald-800/80 mt-1">{stg.description}</p>
+                      <span className="text-[10px] text-emerald-600 block mt-2 font-bold">Done</span>
                     </div>
                   );
                 }
@@ -913,18 +846,14 @@ export default function CustomerDashboardPage() {
                   return (
                     <div
                       key={sIdx}
-                      className={`rounded-2xl border-2 p-4 shadow-sm relative overflow-hidden transition ${
-                        isDark
-                          ? "border-blue-500 bg-blue-950/30 text-blue-100 ring-2 ring-blue-500/20"
-                          : "border-blue-600 bg-blue-50 text-blue-950 ring-2 ring-blue-500/20"
-                      }`}
+                      className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4 text-blue-950 ring-2 ring-blue-500/20 shadow-xs relative overflow-hidden transition"
                     >
-                      <span className="text-xs font-bold flex items-center gap-1.5 text-blue-500">
-                        <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                      <span className="text-xs font-bold flex items-center gap-1.5 text-blue-700">
+                        <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
                         <span>{stg.title}</span>
                       </span>
-                      <p className="text-[11px] opacity-90 mt-1">{stg.description}</p>
-                      <span className="text-[10px] text-blue-500 block mt-2 font-extrabold">
+                      <p className="text-[11px] text-blue-900/90 mt-1">{stg.description}</p>
+                      <span className="text-[10px] text-blue-700 block mt-2 font-extrabold">
                         Active In Progress
                       </span>
                     </div>
@@ -933,11 +862,7 @@ export default function CustomerDashboardPage() {
                 return (
                   <div
                     key={sIdx}
-                    className={`rounded-2xl border p-4 opacity-70 transition ${
-                      isDark
-                        ? "border-[#15233b] bg-[#0b1626]/60 text-slate-400"
-                        : "border-slate-200 bg-slate-50/80 text-slate-500"
-                    }`}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-slate-500 transition opacity-80"
                   >
                     <span className="text-xs font-bold">○ {stg.title}</span>
                     <p className="text-[11px] opacity-80 mt-1">{stg.description}</p>
@@ -948,26 +873,22 @@ export default function CustomerDashboardPage() {
             </div>
 
             {/* ATTACHED LABORATORY FILES & DIAGNOSTICS (Real-time synced from technician) */}
-            <div
-              className={`rounded-2xl border p-5 mb-6 transition ${
-                isDark ? "border-[#172740] bg-[#0a1526]/80" : "border-slate-200/90 bg-white shadow-xs"
-              }`}
-            >
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-5 mb-6 shadow-xs">
               <div className="flex items-center justify-between gap-4 mb-3">
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
-                  <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
+                  <span className="text-xs font-bold text-slate-900">
                     Attached Laboratory Files &amp; Diagnostics
                   </span>
-                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-extrabold text-blue-400">
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-blue-700 border border-blue-200">
                     {attachments.length}
                   </span>
                 </div>
 
-                <span className="text-[10px] opacity-60 hidden sm:inline-block">
+                <span className="text-[10px] text-slate-400 hidden sm:inline-block">
                   Synced directly with Cleanroom &amp; Technician Workspace
                 </span>
               </div>
@@ -981,35 +902,26 @@ export default function CustomerDashboardPage() {
                     return (
                       <div
                         key={file.id}
-                        className={`group flex items-center justify-between rounded-xl border p-3 transition ${
-                          isDark
-                            ? "border-[#1b2f4c] bg-[#0e1d33] hover:border-blue-500/40"
-                            : "border-slate-200 bg-slate-50/80 hover:border-blue-300 hover:bg-white"
-                        }`}
+                        className="group flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 p-3 hover:border-blue-300 hover:bg-white transition"
                       >
                         <div className="flex items-center gap-3 min-w-0 pr-2">
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                               isPdf
-                                ? "bg-rose-500/15 text-rose-400"
+                                ? "bg-rose-100 text-rose-700"
                                 : isImg
-                                ? "bg-indigo-500/15 text-indigo-400"
-                                : "bg-blue-500/15 text-blue-400"
+                                ? "bg-indigo-100 text-indigo-700"
+                                : "bg-blue-100 text-blue-700"
                             }`}
                           >
                             {isPdf ? "PDF" : isImg ? "IMG" : "DOC"}
                           </div>
 
                           <div className="min-w-0">
-                            <span
-                              className={`block truncate text-xs font-bold ${
-                                isDark ? "text-slate-200" : "text-slate-800"
-                              }`}
-                              title={file.name}
-                            >
+                            <span className="block truncate text-xs font-bold text-slate-800" title={file.name}>
                               {file.name}
                             </span>
-                            <span className="block text-[10px] opacity-60">
+                            <span className="block text-[10px] text-slate-400">
                               {file.size} • {file.uploadedAt}
                             </span>
                           </div>
@@ -1021,11 +933,7 @@ export default function CustomerDashboardPage() {
                               type="button"
                               onClick={() => setPreviewImage(file.url || null)}
                               title="Preview Image"
-                              className={`rounded-lg p-1.5 text-xs transition cursor-pointer ${
-                                isDark
-                                  ? "hover:bg-[#152740] text-blue-400"
-                                  : "hover:bg-slate-200 text-blue-600"
-                              }`}
+                              className="rounded-lg p-1.5 text-xs text-blue-600 hover:bg-slate-200 transition cursor-pointer"
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -1041,11 +949,7 @@ export default function CustomerDashboardPage() {
                               target="_blank"
                               rel="noreferrer"
                               title="Download Attachment"
-                              className={`rounded-lg p-1.5 text-xs font-bold transition flex items-center gap-1 ${
-                                isDark
-                                  ? "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
-                                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                              }`}
+                              className="rounded-lg p-1.5 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 transition flex items-center gap-1"
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -1054,7 +958,7 @@ export default function CustomerDashboardPage() {
                               </svg>
                             </a>
                           ) : (
-                            <span className="text-[10px] opacity-40">Stored</span>
+                            <span className="text-[10px] text-slate-400">Stored</span>
                           )}
                         </div>
                       </div>
@@ -1062,13 +966,9 @@ export default function CustomerDashboardPage() {
                   })}
                 </div>
               ) : (
-                <div
-                  className={`rounded-xl border border-dashed p-4 text-center text-xs ${
-                    isDark ? "border-[#1c2e47] text-slate-400" : "border-slate-200 text-slate-500"
-                  }`}
-                >
+                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">
                   <p>No laboratory files or diagnostic attachments uploaded yet for this case.</p>
-                  <p className="text-[10px] opacity-60 mt-0.5">
+                  <p className="text-[10px] text-slate-400 mt-0.5">
                     Bench reports and forensic media logs will appear here automatically as tests complete.
                   </p>
                 </div>
@@ -1076,13 +976,9 @@ export default function CustomerDashboardPage() {
             </div>
 
             {/* CASE GUARANTEES & FOOTER ACTIONS */}
-            <div
-              className={`flex flex-wrap items-center justify-between gap-4 pt-4 border-t ${
-                isDark ? "border-[#162740]" : "border-slate-200/80"
-              }`}
-            >
-              <div className="flex items-center gap-2 text-xs opacity-70">
-                <svg className="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
                 <span>
@@ -1101,11 +997,7 @@ export default function CustomerDashboardPage() {
                   type="button"
                   onClick={() => setDeleteModalTicket(activeTicket)}
                   disabled={deletingId === activeTicket.id}
-                  className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                    isDark
-                      ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
-                      : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                  }`}
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer flex items-center gap-1.5"
                   title="Permanently remove this ticket"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1118,7 +1010,7 @@ export default function CustomerDashboardPage() {
 
                 <Link
                   href={`/customer/tickets/${activeTicket.id}`}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 shadow-sm transition"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition"
                 >
                   View Full Ticket Thread →
                 </Link>
@@ -1126,28 +1018,24 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         ) : (
-          <div
-            className={`rounded-3xl border border-dashed p-10 text-center mb-8 transition ${
-              isDark ? "border-[#1a2c47] bg-[#0a1526]" : "border-slate-300 bg-white"
-            }`}
-          >
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 mb-3">
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center mb-8">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-3">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                 <polyline points="3.29 7 12 12 20.71 7" />
                 <line x1="12" x2="12" y1="22" y2="12" />
               </svg>
             </div>
-            <h3 className={`text-base font-bold ${isDark ? "text-white" : "text-slate-950"}`}>
+            <h3 className="text-base font-bold text-slate-950">
               No Active Service Cases
             </h3>
-            <p className={`mt-1 text-xs max-w-md mx-auto ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
               Your organization currently has no open tickets. If you experience hardware failure, security alerts, or cloud service outages, open a ticket for immediate dispatch.
             </p>
             <div className="mt-5">
               <Link
                 href="/customer/tickets/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-500 shadow-xs transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition"
               >
                 <span>+ Open Your First Ticket</span>
               </Link>
@@ -1156,23 +1044,19 @@ export default function CustomerDashboardPage() {
         )}
 
         {/* RECENT TICKETS TABLE */}
-        <div
-          className={`rounded-3xl border p-6 sm:p-8 transition ${
-            isDark ? "border-[#15243b] bg-[#0a1526]" : "border-slate-200 bg-white shadow-xs"
-          }`}
-        >
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-950"}`}>
+              <h3 className="text-lg font-bold text-slate-950">
                 Your Tickets
               </h3>
-              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              <p className="text-xs text-slate-500">
                 Active and recent support requests
               </p>
             </div>
             <Link
               href="/customer/tickets"
-              className="text-xs font-bold text-blue-500 hover:underline"
+              className="text-xs font-bold text-blue-600 hover:underline"
             >
               View All Tickets ({tickets.length}) →
             </Link>
@@ -1180,14 +1064,8 @@ export default function CustomerDashboardPage() {
 
           <div className="overflow-x-auto">
             {tickets.length > 0 ? (
-              <table className={`w-full text-left text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                <thead
-                  className={`text-[10px] font-bold uppercase border-b ${
-                    isDark
-                      ? "border-[#15233b] bg-[#070e1b] text-slate-400"
-                      : "border-slate-200 bg-slate-50 text-slate-500"
-                  }`}
-                >
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="text-[10px] font-bold uppercase border-b border-slate-200 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Ticket ID</th>
                     <th className="px-4 py-3">Category</th>
@@ -1196,28 +1074,21 @@ export default function CustomerDashboardPage() {
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${isDark ? "divide-[#15233b]" : "divide-slate-100"}`}>
+                <tbody className="divide-y divide-slate-100">
                   {tickets.map((t) => (
-                    <tr
-                      key={t.id}
-                      className={`transition ${isDark ? "hover:bg-[#0e1d32]" : "hover:bg-slate-50/60"}`}
-                    >
-                      <td className="px-4 py-3.5 font-bold text-blue-500">#{t.id}</td>
-                      <td className={`px-4 py-3.5 font-semibold ${isDark ? "text-slate-200" : "text-slate-900"}`}>
+                    <tr key={t.id} className="transition hover:bg-slate-50/60">
+                      <td className="px-4 py-3.5 font-bold text-blue-600">#{t.id}</td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-900">
                         {t.category}
                       </td>
-                      <td className={`px-4 py-3.5 font-medium ${isDark ? "text-slate-300" : "text-slate-900"}`}>
+                      <td className="px-4 py-3.5 font-medium text-slate-900">
                         {t.deviceOrSubject}
                       </td>
                       <td className="px-4 py-3.5">
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             t.status === "Resolved"
-                              ? isDark
-                                ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/50"
-                                : "bg-emerald-100 text-emerald-800"
-                              : isDark
-                              ? "bg-blue-950/60 text-blue-400 border border-blue-800/50"
+                              ? "bg-emerald-100 text-emerald-800"
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
@@ -1228,7 +1099,7 @@ export default function CustomerDashboardPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/customer/tickets/${t.id}`}
-                            className="font-bold text-blue-500 hover:underline"
+                            className="font-bold text-blue-600 hover:underline"
                           >
                             Inspect →
                           </Link>
@@ -1236,11 +1107,7 @@ export default function CustomerDashboardPage() {
                             type="button"
                             onClick={() => setDeleteModalTicket(t)}
                             disabled={deletingId === t.id}
-                            className={`p-1.5 rounded transition cursor-pointer ${
-                              isDark
-                                ? "text-rose-400 hover:bg-rose-950/40"
-                                : "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                            }`}
+                            className="p-1.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                             title={`Delete Ticket #${t.id}`}
                           >
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1256,8 +1123,8 @@ export default function CustomerDashboardPage() {
                 </tbody>
               </table>
             ) : (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                No tickets registered yet for {customer?.company || "your account"}.
+              <div className="py-8 text-center text-xs text-slate-400">
+                No tickets currently registered.
               </div>
             )}
           </div>
@@ -1266,29 +1133,32 @@ export default function CustomerDashboardPage() {
         {/* IMAGE PREVIEW LIGHTBOX MODAL */}
         {previewImage && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
             onClick={() => setPreviewImage(null)}
           >
             <div
-              className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 p-2 shadow-2xl"
+              className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-2xl bg-white p-2 border border-slate-300 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-slate-200">Attached Laboratory Photo Preview</span>
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-xs">
+                <span className="font-bold text-slate-900">Attachment Preview</span>
                 <button
                   type="button"
                   onClick={() => setPreviewImage(null)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                 >
-                  ✕
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
               </div>
-              <div className="p-2 flex items-center justify-center">
+              <div className="p-2 flex items-center justify-center max-h-[75vh] overflow-auto">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewImage}
-                  alt="Laboratory Preview"
-                  className="max-h-[70vh] max-w-full object-contain rounded-lg"
+                  alt="Attachment preview"
+                  className="max-h-[70vh] w-auto rounded-lg object-contain"
                 />
               </div>
             </div>
@@ -1300,15 +1170,15 @@ export default function CustomerDashboardPage() {
           isOpen={!!deleteModalTicket}
           onClose={() => setDeleteModalTicket(null)}
           onConfirm={handleConfirmDeleteTicket}
-          title="Delete Support Case"
+          title="Delete Support Ticket"
           itemType="Ticket"
-          itemName={deleteModalTicket ? `Case #${deleteModalTicket.id} - ${deleteModalTicket.deviceOrSubject}` : ""}
+          itemName={deleteModalTicket ? `Ticket #${deleteModalTicket.id} - ${deleteModalTicket.deviceOrSubject}` : ""}
           description={
             deleteModalTicket
-              ? `Are you sure you want to permanently delete Case #${deleteModalTicket.id}? This will remove the case from your portal and purge all historical diagnostics.`
+              ? `Are you sure you want to permanently delete Ticket #${deleteModalTicket.id}? This will remove the case from your ticket directory and purge all diagnostic logs.`
               : ""
           }
-          confirmButtonText="Permanently Delete Case"
+          confirmButtonText="Permanently Delete Ticket"
           isDeleting={!!deletingId}
         />
       </main>

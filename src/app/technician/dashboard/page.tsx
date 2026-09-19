@@ -12,6 +12,11 @@ import {
 import AdvancedDataRecoveryReportModal, {
   AdvancedReportData,
 } from "@/components/AdvancedDataRecoveryReportModal";
+import {
+  fetchReportsFromSupabase,
+  deleteReportFromSupabase,
+  DiagnosisReport,
+} from "@/lib/reportData";
 
 export interface CaseItem {
   id: string;
@@ -357,6 +362,7 @@ type PortalNavView =
   | "my_tickets"
   | "assigned_to_me"
   | "unassigned"
+  | "diagnosis_report"
   | "all_tickets"
   | "ticket_details"
   | "knowledge_base"
@@ -400,6 +406,14 @@ export default function TechnicianWorkbenchPage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportModalInitialData, setReportModalInitialData] = useState<Partial<AdvancedReportData> | undefined>(undefined);
+
+  // Diagnosis Reports State (Supabase Connected)
+  const [diagnosisReports, setDiagnosisReports] = useState<DiagnosisReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportSearchQuery, setReportSearchQuery] = useState("");
+  const [reportStatusFilter, setReportStatusFilter] = useState("ALL");
+  const [reportToDelete, setReportToDelete] = useState<DiagnosisReport | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
 
   // Tickets & Cases State
   const [cases, setCases] = useState<CaseItem[]>([]);
@@ -600,6 +614,62 @@ export default function TechnicianWorkbenchPage() {
     };
   }, []);
 
+  // Load Diagnosis Reports from Supabase
+  const loadReportsFromSupabase = async () => {
+    try {
+      const data = await fetchReportsFromSupabase();
+      if (data) {
+        setDiagnosisReports(data);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch reports:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadReportsFromSupabase();
+    const handleRepUpdate = () => loadReportsFromSupabase();
+    window.addEventListener("reports-updated", handleRepUpdate);
+    return () => window.removeEventListener("reports-updated", handleRepUpdate);
+  }, []);
+
+  const handleDeleteReport = async (reportId: string) => {
+    setIsDeletingReport(true);
+    try {
+      await deleteReportFromSupabase(reportId);
+      setDiagnosisReports((prev) => prev.filter((r) => r.id !== reportId && r.jobId !== reportId));
+      setNotification("Diagnosis report deleted permanently from Supabase.");
+      setTimeout(() => setNotification(""), 3500);
+      setReportToDelete(null);
+    } catch (err) {
+      console.error("Delete report error:", err);
+      setNotification("Failed to delete report.");
+      setTimeout(() => setNotification(""), 3500);
+    } finally {
+      setIsDeletingReport(false);
+    }
+  };
+
+  const filteredDiagnosisReports = useMemo(() => {
+    let list = [...diagnosisReports];
+    if (reportStatusFilter !== "ALL") {
+      list = list.filter((r) => r.recoveryStatus.toLowerCase().includes(reportStatusFilter.toLowerCase()));
+    }
+    if (reportSearchQuery.trim()) {
+      const q = reportSearchQuery.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          r.jobId.toLowerCase().includes(q) ||
+          r.clientName.toLowerCase().includes(q) ||
+          r.serialNumber.toLowerCase().includes(q) ||
+          r.brand.toLowerCase().includes(q) ||
+          r.model.toLowerCase().includes(q) ||
+          r.diagnosis.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [diagnosisReports, reportStatusFilter, reportSearchQuery]);
+
   // Filter Cases by Service Workbench Pod
   const workbenchFilteredCases = useMemo(() => {
     if (selectedServiceBench === "ALL") return cases;
@@ -706,24 +776,41 @@ export default function TechnicianWorkbenchPage() {
   }, [viewFilteredCases, workbenchFilteredCases, cases, selectedCaseId]);
 
   // Open Advanced Diagnostic Report Generator Modal
-  const handleOpenReportModal = (caseItem?: CaseItem) => {
-    const target = caseItem || activeCase;
-    if (target) {
-      const cleanNum = target.id?.replace(/[^0-9]/g, "") || "2003";
-      const isSsd = target.mediaType === "SSD" || target.device?.toLowerCase().includes("ssd");
-      const isNvme = target.device?.toLowerCase().includes("nvme") || target.device?.toLowerCase().includes("m.2");
-      const isFlash = target.mediaType === "FLASH" || target.device?.toLowerCase().includes("flash") || target.device?.toLowerCase().includes("usb");
+  const handleOpenReportModal = (targetItem?: CaseItem | DiagnosisReport) => {
+    if (targetItem && "brand" in targetItem) {
+      // Already a full DiagnosisReport
+      setReportModalInitialData(targetItem);
+    } else if (targetItem && "device" in targetItem) {
+      // CaseItem
+      const cleanNum = targetItem.id?.replace(/[^0-9]/g, "") || `${2000 + diagnosisReports.length + 1}`;
+      const isSsd = targetItem.mediaType === "SSD" || targetItem.device?.toLowerCase().includes("ssd");
+      const isNvme = targetItem.device?.toLowerCase().includes("nvme") || targetItem.device?.toLowerCase().includes("m.2");
+      const isFlash = targetItem.mediaType === "FLASH" || targetItem.device?.toLowerCase().includes("flash") || targetItem.device?.toLowerCase().includes("usb");
       const devType: "HDD" | "SSD" | "NVMe" | "FLASH" = isNvme ? "NVMe" : isSsd ? "SSD" : isFlash ? "FLASH" : "HDD";
 
       setReportModalInitialData({
-        jobId: cleanNum || "2003",
-        clientName: target.customerName || target.client || "Client",
-        serialNumber: target.serial || "ABC123456",
+        jobId: cleanNum,
+        clientName: targetItem.customerName || targetItem.client || "Client",
+        serialNumber: targetItem.serial || "ABC123456",
         deviceType: devType,
-        symptoms: target.symptoms || target.notes || "Clicking sound, drive not detecting",
+        symptoms: targetItem.symptoms || targetItem.notes || "Clicking sound, drive not detecting",
       });
     } else {
-      setReportModalInitialData(undefined);
+      // New fresh report
+      const nextId = `${2000 + diagnosisReports.length + 1}`;
+      setReportModalInitialData({
+        jobId: nextId,
+        clientName: "",
+        serialNumber: "",
+        brand: "Seagate",
+        model: "Barracuda",
+        deviceType: "HDD",
+        capacity: "1TB",
+        iface: "SATA",
+        fileSystem: "NTFS",
+        diagnosis: "Head failure",
+        symptoms: "Clicking sound, drive not detecting",
+      });
     }
     setIsReportModalOpen(true);
   };
@@ -1589,7 +1676,7 @@ export default function TechnicianWorkbenchPage() {
               { id: "my_tickets", label: "My Tickets", icon: "🎫" },
               { id: "assigned_to_me", label: "Assigned to Me", icon: "👤" },
               { id: "unassigned", label: "Unassigned", icon: "📥", badge: cases.filter((c) => !c.leadTech || c.leadTech === "Unassigned").length },
-              { id: "diagnosis_report", label: "Diagnosis Report", icon: "📄" },
+              { id: "diagnosis_report", label: "Diagnosis Report", icon: "📄", badge: diagnosisReports.length },
               { id: "all_tickets", label: "All Tickets", icon: "📑" },
               { id: "knowledge_base", label: "Knowledge Base", icon: "📚" },
               { id: "reports", label: "Reports", icon: "📈" },
@@ -1601,13 +1688,8 @@ export default function TechnicianWorkbenchPage() {
                   key={item.id}
                   type="button"
                   onClick={() => {
-                    if (item.id === "diagnosis_report") {
-                      handleOpenReportModal();
-                      setSidebarOpen(false);
-                    } else {
-                      setActiveView(item.id as PortalNavView);
-                      setSidebarOpen(false);
-                    }
+                    setActiveView(item.id as PortalNavView);
+                    setSidebarOpen(false);
                   }}
                   className={`group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-medium transition cursor-pointer ${
                     isActive
@@ -2558,6 +2640,227 @@ export default function TechnicianWorkbenchPage() {
                         ›
                       </button>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW: DIAGNOSIS REPORTS HUB (Matches Tickets Layout) */}
+          {/* ========================================================= */}
+          {activeView === "diagnosis_report" && (
+            <div className="space-y-6">
+              {/* HEADER BANNER WITH + CREATE REPORT BUTTON */}
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                      Diagnosis Reports
+                    </h2>
+                    <span className="rounded-full bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-0.5 text-xs font-bold font-mono">
+                      {diagnosisReports.length} {diagnosisReports.length === 1 ? "Report" : "Reports"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Cleanroom diagnostic assessments, drive inspection records, and 1-page printable customer reports synced to Supabase.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReportModal()}
+                    className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 text-xs shadow-md shadow-blue-600/20 transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="text-sm font-black">+</span>
+                    <span>Create Report</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SEARCH & STATUS FILTER BAR */}
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                {/* STATUS TABS */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                  {[
+                    { id: "ALL", label: "All Reports", count: diagnosisReports.length },
+                    { id: "Pending", label: "Pending", count: diagnosisReports.filter(r => r.recoveryStatus?.toLowerCase().includes("pending")).length },
+                    { id: "In Progress", label: "In Progress", count: diagnosisReports.filter(r => r.recoveryStatus?.toLowerCase().includes("progress") || r.recoveryStatus?.toLowerCase().includes("diagnos")).length },
+                    { id: "Completed", label: "Completed", count: diagnosisReports.filter(r => r.recoveryStatus?.toLowerCase().includes("completed") || r.recoveryStatus?.toLowerCase().includes("resolved")).length },
+                  ].map((tab) => {
+                    const isTabActive = reportStatusFilter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setReportStatusFilter(tab.id)}
+                        className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                          isTabActive
+                            ? "bg-blue-600 text-white shadow-sm font-semibold"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isTabActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* SEARCH INPUT */}
+                <div className="w-full sm:w-72 relative">
+                  <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+                  <input
+                    type="text"
+                    value={reportSearchQuery}
+                    onChange={(e) => setReportSearchQuery(e.target.value)}
+                    placeholder="Search Job ID, client, SN, or brand..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                  {reportSearchQuery && (
+                    <button
+                      onClick={() => setReportSearchQuery("")}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* REPORTS TABLE */}
+              <div className="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden">
+                {filteredDiagnosisReports.length === 0 ? (
+                  <div className="p-12 text-center space-y-3">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 text-2xl border border-blue-100">
+                      📄
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-800">
+                      {reportSearchQuery ? "No matching reports found" : "No diagnosis reports created yet"}
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      {reportSearchQuery
+                        ? "Try adjusting your search criteria or filter tabs."
+                        : "Create and save official cleanroom intake reports, hardware assessments, and 1-page client PDFs."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenReportModal()}
+                      className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 text-xs shadow-md transition inline-flex items-center gap-2 cursor-pointer mt-2"
+                    >
+                      <span>+ Create Report</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-4 py-3.5">Job ID &amp; Date</th>
+                          <th className="px-4 py-3.5">Client Name</th>
+                          <th className="px-4 py-3.5">Device &amp; Media</th>
+                          <th className="px-4 py-3.5">Serial Number</th>
+                          <th className="px-4 py-3.5">Diagnosis / Symptoms</th>
+                          <th className="px-4 py-3.5">Status &amp; Cost</th>
+                          <th className="px-4 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredDiagnosisReports.map((report) => {
+                          const isPending = report.recoveryStatus?.toLowerCase().includes("pending");
+                          const isCompleted = report.recoveryStatus?.toLowerCase().includes("completed") || report.recoveryStatus?.toLowerCase().includes("resolved");
+                          return (
+                            <tr
+                              key={report.id || report.jobId}
+                              className="hover:bg-blue-50/40 transition group"
+                            >
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span className="font-mono font-bold text-blue-700 block">
+                                  #{report.jobId}
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  {report.reportDateIso}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 font-semibold text-slate-800 whitespace-nowrap">
+                                {report.clientName}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className="font-medium text-slate-800">
+                                  <span className="font-bold text-slate-900">{report.deviceType}</span> • {report.brand} {report.model}
+                                </div>
+                                <span className="text-[10.5px] text-slate-500 block">
+                                  Cap: {report.capacity} ({report.iface})
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap font-mono text-[11px] font-bold text-slate-700">
+                                <span className="rounded bg-slate-100 px-2 py-0.5 border border-slate-200">
+                                  {report.serialNumber}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 max-w-[200px]">
+                                <span className="font-semibold text-slate-800 block truncate" title={report.diagnosis}>
+                                  {report.diagnosis}
+                                </span>
+                                <span className="text-[10px] text-slate-400 block truncate" title={report.symptoms}>
+                                  {report.symptoms}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span
+                                  className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    isCompleted
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : isPending
+                                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                                  }`}
+                                >
+                                  {report.recoveryStatus}
+                                </span>
+                                <span className="text-[11px] font-mono font-bold text-slate-800 block mt-0.5">
+                                  {report.finalRecoveryCost}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReportModal(report)}
+                                    className="rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="View & Print 1-Page Report"
+                                  >
+                                    <span>🖨️</span>
+                                    <span>Print / View</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReportModal(report)}
+                                    className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-1 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                                    title="Edit this report"
+                                  >
+                                    <span>✏️</span>
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setReportToDelete(report)}
+                                    className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2 py-1 text-xs font-semibold transition cursor-pointer"
+                                    title="Delete report from Supabase"
+                                  >
+                                    <span>🗑️</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -3940,11 +4243,52 @@ export default function TechnicianWorkbenchPage() {
         aria-label="Upload ticket attachment"
       />
 
+      {/* DELETE REPORT CONFIRMATION MODAL */}
+      {reportToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-2xl space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-2xl">
+              🗑️
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Delete Diagnosis Report</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Are you sure you want to permanently delete Diagnosis Report{" "}
+              <strong className="text-slate-900 font-mono font-bold">
+                #{reportToDelete.jobId}
+              </strong>{" "}
+              for <strong className="text-slate-800">{reportToDelete.clientName}</strong>? This will remove the report from Supabase database.
+            </p>
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingReport}
+                onClick={() => handleDeleteReport(reportToDelete.id || `DR-${reportToDelete.jobId}`)}
+                className="w-full rounded-xl bg-rose-600 py-2.5 text-xs font-bold text-white hover:bg-rose-500 transition shadow-md shadow-rose-600/25 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <span>{isDeletingReport ? "Deleting from Supabase..." : "Delete Report Permanently"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportToDelete(null)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ADVANCED DATA RECOVERY DIAGNOSTIC REPORT GENERATOR MODAL */}
       <AdvancedDataRecoveryReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         initialData={reportModalInitialData}
+        onSaved={() => {
+          loadReportsFromSupabase();
+          setNotification("Diagnosis Report saved successfully to Supabase!");
+          setTimeout(() => setNotification(""), 4000);
+        }}
       />
     </div>
   );

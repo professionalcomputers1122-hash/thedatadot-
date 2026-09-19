@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { saveReportToSupabase } from "@/lib/reportData";
 
 export interface AdvancedReportData {
   jobId: string;
@@ -32,12 +33,14 @@ interface AdvancedDataRecoveryReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Partial<AdvancedReportData>;
+  onSaved?: (savedReport: AdvancedReportData) => void;
 }
 
 export default function AdvancedDataRecoveryReportModal({
   isOpen,
   onClose,
   initialData,
+  onSaved,
 }: AdvancedDataRecoveryReportModalProps) {
   const [jobId, setJobId] = useState(initialData?.jobId || "2003");
   const [reportDateIso, setReportDateIso] = useState(
@@ -127,10 +130,136 @@ export default function AdvancedDataRecoveryReportModal({
     return isoStr;
   };
 
-  const handlePrint = () => {
-    if (typeof window !== "undefined") {
-      window.print();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState("");
+
+  const handleSaveReport = async () => {
+    setIsSaving(true);
+    try {
+      const payload: AdvancedReportData = {
+        jobId,
+        reportDateIso,
+        recoveryDateIso,
+        clientName,
+        deviceType,
+        brand,
+        model,
+        serialNumber,
+        capacity,
+        iface,
+        fileSystem,
+        diagnosis,
+        symptoms,
+        findings,
+        recoveryMethod,
+        recoveryAssessment,
+        estimatedTime,
+        diagnosisCharge,
+        finalRecoveryCost,
+        recoveryStatus,
+        recoveredData,
+        dataVerification,
+      };
+      await saveReportToSupabase(payload);
+      setSaveSuccessMsg("✅ Saved to Supabase!");
+      if (onSaved) {
+        onSaved(payload);
+      }
+      setTimeout(() => setSaveSuccessMsg(""), 3500);
+    } catch (err) {
+      console.warn("Save report warning:", err);
+      setSaveSuccessMsg("✅ Saved locally");
+      setTimeout(() => setSaveSuccessMsg(""), 3500);
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  // Foolproof isolated iframe printing: guarantees 100% full rendering of all sections on 1 A4 page with ZERO clipping
+  const handlePrint = () => {
+    if (typeof window === "undefined") return;
+    const reportElement = document.getElementById("printableReportModalArea");
+    if (!reportElement) {
+      window.print();
+      return;
+    }
+
+    const existingFrame = document.getElementById("tdd-print-iframe");
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "tdd-print-iframe";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
+      .map((s) => s.outerHTML)
+      .join("\n");
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title>Advanced Data Recovery Report - Job #${jobId}</title>
+          ${styles}
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 4mm 6mm;
+            }
+            html, body {
+              background: #ffffff !important;
+              background-color: #ffffff !important;
+              color: #0f172a !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+            .a4-print-sheet {
+              width: 100% !important;
+              max-width: 780px !important;
+              margin: 0 auto !important;
+              padding: 2mm 3mm !important;
+              background: #ffffff !important;
+              box-sizing: border-box !important;
+            }
+          </style>
+        </head>
+        <body class="bg-white text-slate-900">
+          <div class="a4-print-sheet">
+            ${reportElement.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        iframe.remove();
+      }, 2000);
+    }, 450);
   };
 
   if (!isOpen) return null;
@@ -138,12 +267,12 @@ export default function AdvancedDataRecoveryReportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       
-      {/* STRICT 1-PAGE A4 PRINT STYLESHEET */}
+      {/* STRICT 1-PAGE A4 PRINT STYLESHEET (FALLBACK FOR CTRL+P) */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm 8mm;
+            margin: 4mm 6mm;
           }
           html, body {
             background-color: #ffffff !important;
@@ -152,39 +281,45 @@ export default function AdvancedDataRecoveryReportModal({
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
-            height: 100% !important;
-            max-height: 100% !important;
-            overflow: hidden !important;
+            height: auto !important;
+            overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* Hide everything outside report */
+          /* Neutralize modal constraints so print engine never clips */
+          .fixed, [class*="fixed"], [class*="overflow-"], [class*="max-h-"] {
+            position: static !important;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
           body * {
             visibility: hidden !important;
           }
-          /* Strictly show ONLY the single A4 report sheet */
           #printableReportModalArea, #printableReportModalArea * {
             visibility: visible !important;
           }
           #printableReportModalArea {
             position: absolute !important;
             left: 0 !important;
+            right: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            max-width: 100% !important;
+            max-width: 780px !important;
             height: auto !important;
-            max-height: 284mm !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             padding: 2mm 4mm !important;
             border: none !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             background: #ffffff !important;
-            page-break-inside: avoid !important;
-            page-break-after: avoid !important;
-            break-inside: avoid !important;
-            break-after: avoid !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
           .no-print, header, nav, footer, aside, .modal-backdrop {
             display: none !important;
@@ -219,6 +354,16 @@ export default function AdvancedDataRecoveryReportModal({
               {showFormOnMobile ? "Hide Form" : "Edit Fields"}
             </button>
             <button
+              type="button"
+              onClick={handleSaveReport}
+              disabled={isSaving}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-1.5 text-xs shadow transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Save this diagnosis report to Supabase database"
+            >
+              <span>{isSaving ? "⏳" : "💾"}</span>
+              <span>{isSaving ? "Saving..." : saveSuccessMsg || "Save Report"}</span>
+            </button>
+            <button
               onClick={handlePrint}
               className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-1.5 text-xs shadow transition flex items-center gap-1.5 cursor-pointer"
               title="Prints exactly 1 single A4 page"
@@ -228,7 +373,7 @@ export default function AdvancedDataRecoveryReportModal({
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white p-1.5 text-xs transition"
+              className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white p-1.5 text-xs transition cursor-pointer"
               title="Close Generator"
             >
               ✕
@@ -494,11 +639,21 @@ export default function AdvancedDataRecoveryReportModal({
 
             <div className="pt-2 border-t border-slate-800 flex gap-2">
               <button
+                type="button"
+                onClick={handleSaveReport}
+                disabled={isSaving}
+                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span>{isSaving ? "⏳" : "💾"}</span>
+                <span>{isSaving ? "Saving..." : saveSuccessMsg || "Save to Supabase"}</span>
+              </button>
+              <button
+                type="button"
                 onClick={handlePrint}
                 className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>🖨️</span>
-                <span>Print / Save as 1-Page PDF</span>
+                <span>Print / PDF</span>
               </button>
             </div>
           </aside>

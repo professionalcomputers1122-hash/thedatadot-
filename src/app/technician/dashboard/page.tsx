@@ -8,6 +8,10 @@ import {
   updateTicketInSupabase,
   sendMessageToSupabase,
   fetchMessagesFromSupabase,
+  fetchTicketAttachments,
+  uploadTicketAttachment,
+  deleteTicketAttachment,
+  getTicketAttachments,
 } from "@/lib/portalData";
 import AdvancedDataRecoveryReportModal, {
   AdvancedReportData,
@@ -777,12 +781,51 @@ export default function TechnicianWorkbenchPage() {
     window.addEventListener("tickets-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
 
+    const handleAttachmentsUpdate = () => {
+      const activeId = selectedCaseIdRef.current || selectedCaseId;
+      if (activeId) {
+        fetchTicketAttachments(activeId).then((serverAtts) => {
+          setAttachments((prev) => ({
+            ...prev,
+            [activeId]: serverAtts,
+          }));
+        });
+      }
+    };
+    window.addEventListener("attachments-updated", handleAttachmentsUpdate);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (ev.data?.type === "ATTACHMENTS_UPDATED" && ev.data.ticketId) {
+            const tId = ev.data.ticketId;
+            fetchTicketAttachments(tId).then((serverAtts) => {
+              setAttachments((prev) => ({
+                ...prev,
+                [tId]: serverAtts,
+              }));
+            });
+          } else if (ev.data?.type === "TICKET_UPDATED" || ev.data?.type === "TICKET_CREATED") {
+            loadSupabaseData();
+          }
+        };
+      } catch (e) {}
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("tickets-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("attachments-updated", handleAttachmentsUpdate);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
     };
-  }, []);
+  }, [selectedCaseId]);
 
   // Load Diagnosis Reports from Supabase
   const loadReportsFromSupabase = async () => {
@@ -1071,37 +1114,22 @@ export default function TechnicianWorkbenchPage() {
       }
       loadChat();
 
-      // Load attachments for active case (empty by default - no automatic dummy reports)
+      // Load attachments for active case
       if (typeof window !== "undefined") {
         try {
-          const storedAtts = localStorage.getItem(`tdd_attachments_${activeCase.id}`);
-          if (storedAtts) {
-            const parsed = JSON.parse(storedAtts);
-            const filtered = Array.isArray(parsed)
-              ? parsed.filter(
-                  (a: any) =>
-                    a &&
-                    !a.name?.toLowerCase().includes("diagnostic_telemetry") &&
-                    !a.name?.toLowerCase().includes("telemetry.pdf") &&
-                    !a.uploadedBy?.toLowerCase().includes("lab diagnostics hub")
-                )
-              : [];
-            if (Array.isArray(parsed) && filtered.length !== parsed.length) {
-              const json = JSON.stringify(filtered);
-              localStorage.setItem(`tdd_attachments_${activeCase.id}`, json);
-              localStorage.setItem(`tdd_attachments_${activeCase.id.toUpperCase()}`, json);
-              localStorage.setItem(`tdd_attachments_${activeCase.id.toLowerCase()}`, json);
-            }
+          const local = getTicketAttachments(activeCase.id);
+          if (local && local.length > 0) {
             setAttachments((prev) => ({
               ...prev,
-              [activeCase.id]: filtered,
-            }));
-          } else {
-            setAttachments((prev) => ({
-              ...prev,
-              [activeCase.id]: [],
+              [activeCase.id]: local,
             }));
           }
+          fetchTicketAttachments(activeCase.id).then((serverAtts) => {
+            setAttachments((prev) => ({
+              ...prev,
+              [activeCase.id]: serverAtts,
+            }));
+          });
         } catch (e) {
           console.warn("Could not load stored attachments:", e);
         }
@@ -1581,88 +1609,31 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  // Real File Attachment Handler (Persistent & Auto-Switching)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real File Attachment Handler (Server Persistent & Realtime Synced)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeCase) return;
 
-    const targetId = selectedCaseIdRef.current || selectedCaseId || activeCase.id;
+    const targetId = (selectedCaseIdRef.current || selectedCaseId || activeCase.id).trim().toUpperCase();
     const fileList = Array.from(files);
 
-    fileList.forEach((file, index) => {
-      const bytes = file.size;
-      let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
-      if (bytes > 1024 * 1024) {
-        sizeStr = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-      }
-
-      let fileType = "generic";
-      const nameLower = file.name.toLowerCase();
-      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
-      else if (file.type.includes("image") || nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) fileType = "image";
-      else if (nameLower.endsWith(".zip") || nameLower.endsWith(".tar") || nameLower.endsWith(".gz") || nameLower.endsWith(".7z")) fileType = "archive";
-      else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
-      else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
-
-      if (bytes < 4 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const newAtt: TicketAttachment = {
-            id: `att-${Date.now()}-${index}`,
-            name: file.name,
-            size: sizeStr,
-            type: fileType,
-            url: dataUrl,
-            uploadedAt: "Just now",
-            uploadedBy: techUser.name,
-          };
-          setAttachments((prev) => {
-            const updated = [...(prev[targetId] || []), newAtt];
-            try {
-              const json = JSON.stringify(updated);
-              localStorage.setItem(`tdd_attachments_${targetId}`, json);
-              localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
-              localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
-              window.dispatchEvent(new Event("attachments-updated"));
-              window.dispatchEvent(new Event("storage"));
-            } catch (err) {
-              console.warn("Storage warning for attachments:", err);
-            }
-            return { ...prev, [targetId]: updated };
-          });
-        };
-        reader.readAsDataURL(file);
-      } else {
-        const objectUrl = URL.createObjectURL(file);
-        const newAtt: TicketAttachment = {
-          id: `att-${Date.now()}-${index}`,
-          name: file.name,
-          size: sizeStr,
-          type: fileType,
-          url: objectUrl,
-          uploadedAt: "Just now",
-          uploadedBy: techUser.name,
-        };
-        setAttachments((prev) => {
-          const updated = [...(prev[targetId] || []), newAtt];
-          try {
-            const json = JSON.stringify(updated);
-            localStorage.setItem(`tdd_attachments_${targetId}`, json);
-            localStorage.setItem(`tdd_attachments_${targetId.toUpperCase()}`, json);
-            localStorage.setItem(`tdd_attachments_${targetId.toLowerCase()}`, json);
-            window.dispatchEvent(new Event("attachments-updated"));
-            window.dispatchEvent(new Event("storage"));
-          } catch (err) {
-            console.warn("Storage warning for attachments:", err);
-          }
-          return { ...prev, [targetId]: updated };
-        });
-      }
-    });
-
-    setNotification(`${fileList.length} file(s) attached to Case #${targetId}!`);
+    setNotification(`Uploading ${fileList.length} file(s) to Case #${targetId}...`);
     setTicketDetailTab("attachments");
+
+    try {
+      for (const file of fileList) {
+        await uploadTicketAttachment(targetId, file, techUser.name);
+      }
+      const updated = await fetchTicketAttachments(targetId);
+      setAttachments((prev) => ({
+        ...prev,
+        [targetId]: updated,
+      }));
+      setNotification(`${fileList.length} file(s) attached and synced to Case #${targetId}!`);
+    } catch (uploadErr) {
+      console.error("Upload error:", uploadErr);
+      setNotification("Failed to upload attachment to server.");
+    }
 
     setActivityFeed((prev) => [
       {
@@ -1680,28 +1651,20 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  const handleDeleteAttachment = (ticketId: string, attId: string) => {
-    const current = attachments[ticketId] || [];
-    const updated = current.filter((a) => a.id !== attId);
-    setAttachments((prev) => ({
-      ...prev,
-      [ticketId]: updated,
-    }));
-
-    if (typeof window !== "undefined") {
-      try {
-        const json = JSON.stringify(updated);
-        localStorage.setItem(`tdd_attachments_${ticketId}`, json);
-        localStorage.setItem(`tdd_attachments_${ticketId.toUpperCase()}`, json);
-        localStorage.setItem(`tdd_attachments_${ticketId.toLowerCase()}`, json);
-        window.dispatchEvent(new Event("attachments-updated"));
-        window.dispatchEvent(new Event("storage"));
-      } catch (err) {
-        console.warn("Failed to update attachments storage:", err);
-      }
+  const handleDeleteAttachment = async (ticketId: string, attId: string) => {
+    const cleanId = ticketId.trim().toUpperCase();
+    try {
+      await deleteTicketAttachment(cleanId, attId);
+      const updated = await fetchTicketAttachments(cleanId);
+      setAttachments((prev) => ({
+        ...prev,
+        [cleanId]: updated,
+      }));
+      setNotification("Attachment removed.");
+    } catch (err) {
+      console.error("Delete attachment error:", err);
+      setNotification("Failed to remove attachment.");
     }
-
-    setNotification("Attachment removed.");
     setTimeout(() => setNotification(""), 3000);
   };
 

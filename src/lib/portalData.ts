@@ -49,7 +49,7 @@ export function getTicketAttachments(ticketId: string): TicketAttachment[] {
             !a.uploadedBy?.toLowerCase().includes("lab diagnostics hub")
         );
         if (filtered.length !== parsed.length) {
-          saveTicketAttachments(ticketId, filtered);
+          saveTicketAttachments(ticketId, filtered, false);
         }
         return filtered;
       }
@@ -60,17 +60,113 @@ export function getTicketAttachments(ticketId: string): TicketAttachment[] {
   return [];
 }
 
-export function saveTicketAttachments(ticketId: string, atts: TicketAttachment[]): void {
+export function saveTicketAttachments(ticketId: string, atts: TicketAttachment[], broadcast: boolean = true): void {
   if (typeof window === "undefined" || !ticketId) return;
+  const cleanId = ticketId.trim().toUpperCase();
   try {
     const json = JSON.stringify(atts);
+    localStorage.setItem(`tdd_attachments_${cleanId}`, json);
     localStorage.setItem(`tdd_attachments_${ticketId}`, json);
-    localStorage.setItem(`tdd_attachments_${ticketId.toUpperCase()}`, json);
     localStorage.setItem(`tdd_attachments_${ticketId.toLowerCase()}`, json);
     window.dispatchEvent(new Event("attachments-updated"));
     window.dispatchEvent(new Event("storage"));
+
+    if (broadcast && typeof BroadcastChannel !== "undefined") {
+      try {
+        const bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.postMessage({
+          type: "ATTACHMENTS_UPDATED",
+          ticketId: cleanId,
+          timestamp: Date.now(),
+        });
+        bc.close();
+      } catch (e) {}
+    }
   } catch (e) {
     console.warn("Could not save attachments:", e);
+  }
+}
+
+export async function fetchTicketAttachments(ticketId: string): Promise<TicketAttachment[]> {
+  const cleanId = (ticketId || "").trim().toUpperCase();
+  if (!cleanId) return [];
+
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/api/tickets/${cleanId}/attachments?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Pragma": "no-cache", "Cache-Control": "no-cache" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json?.attachments)) {
+          const list: TicketAttachment[] = json.attachments;
+          saveTicketAttachments(cleanId, list, false);
+          return list;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[portalData] Failed to fetch server attachments for ${cleanId}:`, err);
+  }
+
+  return getTicketAttachments(cleanId);
+}
+
+export async function uploadTicketAttachment(
+  ticketId: string,
+  file: File,
+  uploader: string = "Technician"
+): Promise<TicketAttachment | null> {
+  const cleanId = (ticketId || "").trim().toUpperCase();
+  if (!cleanId || !file) return null;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("uploader", uploader);
+
+    const res = await fetch(`/api/tickets/${cleanId}/attachments`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json?.attachment) {
+        const current = getTicketAttachments(cleanId);
+        const updated = [...current.filter((a) => a.id !== json.attachment.id), json.attachment];
+        saveTicketAttachments(cleanId, updated, true);
+        return json.attachment;
+      }
+    }
+  } catch (err) {
+    console.error(`[portalData] Failed to upload attachment for ${cleanId}:`, err);
+  }
+  return null;
+}
+
+export async function deleteTicketAttachment(
+  ticketId: string,
+  attachmentId: string
+): Promise<boolean> {
+  const cleanId = (ticketId || "").trim().toUpperCase();
+  if (!cleanId || !attachmentId) return false;
+
+  // Optimistic local update
+  const current = getTicketAttachments(cleanId);
+  const updated = current.filter((a) => a.id !== attachmentId);
+  saveTicketAttachments(cleanId, updated, true);
+
+  try {
+    const res = await fetch(
+      `/api/tickets/${cleanId}/attachments?attachmentId=${encodeURIComponent(attachmentId)}`,
+      { method: "DELETE" }
+    );
+    return res.ok;
+  } catch (err) {
+    console.error(`[portalData] Failed to delete attachment ${attachmentId}:`, err);
+    return false;
   }
 }
 

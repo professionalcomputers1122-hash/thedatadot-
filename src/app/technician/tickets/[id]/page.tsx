@@ -13,6 +13,9 @@ import {
   TicketAttachment,
   getTicketAttachments,
   saveTicketAttachments,
+  fetchTicketAttachments,
+  uploadTicketAttachment,
+  deleteTicketAttachment,
 } from "@/lib/portalData";
 
 interface Message {
@@ -158,19 +161,16 @@ export default function TechnicianTicketDetailPage({
             setMessages(initialThread);
           }
 
-          // Load attachments for this ticket (empty by default - no automatic dummy reports)
+          // Load attachments for this ticket
           if (typeof window !== "undefined") {
             try {
               const storedAtts = getTicketAttachments(ticketId);
               if (storedAtts && storedAtts.length > 0) {
-                const filtered = storedAtts.filter((a) => !a.name.includes("_diagnostic_telemetry.pdf"));
-                if (filtered.length !== storedAtts.length) {
-                  saveTicketAttachments(ticketId, filtered);
-                }
-                setAttachments(filtered);
-              } else {
-                setAttachments([]);
+                setAttachments(storedAtts);
               }
+              fetchTicketAttachments(ticketId).then((serverAtts) => {
+                setAttachments(serverAtts);
+              });
             } catch (attErr) {
               console.warn("Could not load stored attachments:", attErr);
             }
@@ -184,6 +184,43 @@ export default function TechnicianTicketDetailPage({
     }
 
     loadData();
+  }, [ticketId]);
+
+  // Synchronize attachments across tabs and devices
+  useEffect(() => {
+    if (!ticketId) return;
+
+    const refreshAtts = () => {
+      fetchTicketAttachments(ticketId).then(setAttachments);
+    };
+
+    window.addEventListener("attachments-updated", refreshAtts);
+    window.addEventListener("storage", refreshAtts);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (
+            ev.data?.type === "ATTACHMENTS_UPDATED" &&
+            (!ev.data.ticketId || ev.data.ticketId.toUpperCase() === ticketId.toUpperCase())
+          ) {
+            refreshAtts();
+          }
+        };
+      } catch (e) {}
+    }
+
+    return () => {
+      window.removeEventListener("attachments-updated", refreshAtts);
+      window.removeEventListener("storage", refreshAtts);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
+    };
   }, [ticketId]);
 
   // Dedicated Internal Workbench Status Update (Button Only - No Automatic Customer Chat Broadcast)
@@ -238,78 +275,47 @@ export default function TechnicianTicketDetailPage({
     }
   };
 
-  // Real File Attachment Upload Handler
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real File Attachment Upload Handler (Server Persistent & Realtime Synced)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !ticket) return;
 
     const fileList = Array.from(files);
-    fileList.forEach((file, index) => {
-      const bytes = file.size;
-      let sizeStr = `${(bytes / 1024).toFixed(1)} KB`;
-      if (bytes > 1024 * 1024) {
-        sizeStr = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    const uploader =
+      ticket.assignedTech && ticket.assignedTech !== "Unassigned"
+        ? ticket.assignedTech
+        : "Bench Specialist";
+
+    setNotification(`Uploading ${fileList.length} file(s)...`);
+
+    try {
+      for (const file of fileList) {
+        await uploadTicketAttachment(ticketId, file, uploader);
       }
+      const updated = await fetchTicketAttachments(ticketId);
+      setAttachments(updated);
+      setNotification(`${fileList.length} file(s) attached and synced successfully!`);
+    } catch (err) {
+      console.error("Failed to upload attachment:", err);
+      setNotification("Failed to upload attachment to server.");
+    }
 
-      let fileType = "generic";
-      const nameLower = file.name.toLowerCase();
-      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
-      else if (file.type.includes("image") || nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) fileType = "image";
-      else if (nameLower.endsWith(".zip") || nameLower.endsWith(".tar") || nameLower.endsWith(".gz") || nameLower.endsWith(".7z")) fileType = "archive";
-      else if (nameLower.endsWith(".bin") || nameLower.endsWith(".hex") || nameLower.endsWith(".img") || nameLower.endsWith(".dd") || nameLower.endsWith(".mdf")) fileType = "binary";
-      else if (file.type.includes("text") || nameLower.endsWith(".log") || nameLower.endsWith(".txt") || nameLower.endsWith(".json")) fileType = "text";
-
-      if (bytes < 4 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const newAtt: TicketAttachment = {
-            id: `att-${Date.now()}-${index}`,
-            name: file.name,
-            size: sizeStr,
-            type: fileType,
-            url: dataUrl,
-            uploadedAt: "Just now",
-            uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
-          };
-          setAttachments((prev) => {
-            const updated = [...prev, newAtt];
-            saveTicketAttachments(ticketId, updated);
-            return updated;
-          });
-        };
-        reader.readAsDataURL(file);
-      } else {
-        const objectUrl = URL.createObjectURL(file);
-        const newAtt: TicketAttachment = {
-          id: `att-${Date.now()}-${index}`,
-          name: file.name,
-          size: sizeStr,
-          type: fileType,
-          url: objectUrl,
-          uploadedAt: "Just now",
-          uploadedBy: ticket.assignedTech && ticket.assignedTech !== "Unassigned" ? ticket.assignedTech : "Bench Specialist",
-        };
-        setAttachments((prev) => {
-          const updated = [...prev, newAtt];
-          saveTicketAttachments(ticketId, updated);
-          return updated;
-        });
-      }
-    });
-
-    setNotification(`${fileList.length} file(s) attached successfully!`);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
     setTimeout(() => setNotification(""), 4000);
   };
 
-  const handleDeleteAttachment = (attId: string) => {
-    const updated = attachments.filter((a) => a.id !== attId);
-    setAttachments(updated);
-    saveTicketAttachments(ticketId, updated);
-    setNotification("Attachment removed.");
+  const handleDeleteAttachment = async (attId: string) => {
+    try {
+      await deleteTicketAttachment(ticketId, attId);
+      const updated = await fetchTicketAttachments(ticketId);
+      setAttachments(updated);
+      setNotification("Attachment removed.");
+    } catch (err) {
+      console.error("Failed to remove attachment:", err);
+      setNotification("Failed to remove attachment.");
+    }
     setTimeout(() => setNotification(""), 3000);
   };
 

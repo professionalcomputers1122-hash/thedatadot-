@@ -16,6 +16,7 @@ import {
   applyTicketOverrides,
   TicketAttachment,
   getTicketAttachments,
+  fetchTicketAttachments,
   supabase,
   isSupabaseConfigured,
   TimelineStage,
@@ -198,6 +199,10 @@ export default function CustomerTicketDetailPage({
             if (ev.data.id?.toUpperCase() === ticketId.toUpperCase()) {
               loadData(true);
             }
+          } else if (ev.data?.type === "ATTACHMENTS_UPDATED") {
+            if (!ev.data.ticketId || ev.data.ticketId.toUpperCase() === ticketId.toUpperCase()) {
+              window.dispatchEvent(new Event("attachments-updated"));
+            }
           }
         };
       } catch (e) {}
@@ -230,6 +235,9 @@ export default function CustomerTicketDetailPage({
                 payload.old?.ticket_id?.toUpperCase() === ticketId.toUpperCase()
               ) {
                 loadData(true);
+                if (payload.new?.text?.includes("[LAB_ATTACHMENT]")) {
+                  window.dispatchEvent(new Event("attachments-updated"));
+                }
               }
             }
           )
@@ -258,20 +266,52 @@ export default function CustomerTicketDetailPage({
   useEffect(() => {
     if (!ticketId) return;
 
-    const refreshAttachments = () => {
-      const atts = getTicketAttachments(ticketId);
-      const filtered = Array.isArray(atts)
-        ? atts.filter((a) => !a.name.includes("_diagnostic_telemetry.pdf"))
-        : [];
-      setAttachments(filtered);
+    let isMounted = true;
+    const cleanId = ticketId.trim().toUpperCase();
+
+    const refreshAttachments = async () => {
+      const local = getTicketAttachments(cleanId);
+      if (isMounted && local.length > 0) {
+        setAttachments(local);
+      }
+      try {
+        const serverAtts = await fetchTicketAttachments(cleanId);
+        if (isMounted) {
+          setAttachments(serverAtts);
+        }
+      } catch (err) {
+        console.warn("Could not sync server attachments:", err);
+      }
     };
 
     refreshAttachments();
     window.addEventListener("attachments-updated", refreshAttachments);
     window.addEventListener("storage", refreshAttachments);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("tdd-ticket-sync");
+        bc.onmessage = (ev) => {
+          if (
+            ev.data?.type === "ATTACHMENTS_UPDATED" &&
+            (!ev.data.ticketId || ev.data.ticketId.toUpperCase() === cleanId)
+          ) {
+            refreshAttachments();
+          }
+        };
+      } catch (e) {}
+    }
+
     return () => {
+      isMounted = false;
       window.removeEventListener("attachments-updated", refreshAttachments);
       window.removeEventListener("storage", refreshAttachments);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (e) {}
+      }
     };
   }, [ticketId]);
 

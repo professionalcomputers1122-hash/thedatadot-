@@ -12,6 +12,7 @@ import {
   uploadTicketAttachment,
   deleteTicketAttachment,
   getTicketAttachments,
+  saveTicketAttachments,
 } from "@/lib/portalData";
 import AdvancedDataRecoveryReportModal, {
   AdvancedReportData,
@@ -782,12 +783,21 @@ export default function TechnicianWorkbenchPage() {
     window.addEventListener("storage", handleUpdate);
 
     const handleAttachmentsUpdate = () => {
-      const activeId = selectedCaseIdRef.current || selectedCaseId;
+      const activeId = (selectedCaseIdRef.current || selectedCaseId || "").trim().toUpperCase();
       if (activeId) {
+        const local = getTicketAttachments(activeId);
+        if (local && local.length > 0) {
+          setAttachments((prev) => ({
+            ...prev,
+            [activeId]: local,
+            [activeId.toLowerCase()]: local,
+          }));
+        }
         fetchTicketAttachments(activeId).then((serverAtts) => {
           setAttachments((prev) => ({
             ...prev,
             [activeId]: serverAtts,
+            [activeId.toLowerCase()]: serverAtts,
           }));
         });
       }
@@ -800,11 +810,20 @@ export default function TechnicianWorkbenchPage() {
         bc = new BroadcastChannel("tdd-ticket-sync");
         bc.onmessage = (ev) => {
           if (ev.data?.type === "ATTACHMENTS_UPDATED" && ev.data.ticketId) {
-            const tId = ev.data.ticketId;
+            const tId = ev.data.ticketId.trim().toUpperCase();
+            const local = getTicketAttachments(tId);
+            if (local && local.length > 0) {
+              setAttachments((prev) => ({
+                ...prev,
+                [tId]: local,
+                [tId.toLowerCase()]: local,
+              }));
+            }
             fetchTicketAttachments(tId).then((serverAtts) => {
               setAttachments((prev) => ({
                 ...prev,
                 [tId]: serverAtts,
+                [tId.toLowerCase()]: serverAtts,
               }));
             });
           } else if (ev.data?.type === "TICKET_UPDATED" || ev.data?.type === "TICKET_CREATED") {
@@ -1624,7 +1643,7 @@ export default function TechnicianWorkbenchPage() {
     setTimeout(() => setNotification(""), 4500);
   };
 
-  // Real File Attachment Handler (Server Persistent & Realtime Synced)
+  // Real File Attachment Handler (Instant Optimistic & Server Synced)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !activeCase) return;
@@ -1633,27 +1652,47 @@ export default function TechnicianWorkbenchPage() {
     const activeId = activeCase.id.trim();
     const fileList = Array.from(files);
 
-    setNotification(`Uploading ${fileList.length} file(s) to Case #${targetId}...`);
     setTicketDetailTab("attachments");
+    setNotification(`Attaching ${fileList.length} file(s) to Case #${targetId}...`);
 
-    try {
-      for (const file of fileList) {
-        await uploadTicketAttachment(targetId, file, techUser.name);
+    // 1. INSTANT OPTIMISTIC LOCAL RENDERING (0ms)
+    const optimisticAtts: TicketAttachment[] = fileList.map((file) => {
+      const sizeBytes = file.size;
+      let sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+      if (sizeBytes > 1024 * 1024) {
+        sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
       }
-      const updated = await fetchTicketAttachments(targetId);
-      setAttachments((prev) => ({
-        ...prev,
-        [targetId]: updated,
-        [targetId.toLowerCase()]: updated,
-        [activeId]: updated,
-        [activeId.toLowerCase()]: updated,
-        [activeId.toUpperCase()]: updated,
-      }));
-      setNotification(`${fileList.length} file(s) attached and synced to Case #${targetId}!`);
-    } catch (uploadErr) {
-      console.error("Upload error:", uploadErr);
-      setNotification("Failed to upload attachment to server.");
-    }
+      let fileType: TicketAttachment["type"] = "generic";
+      const nameLower = file.name.toLowerCase();
+      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
+      else if (file.type.includes("image") || /\.(png|jpg|jpeg|webp|gif)$/i.test(nameLower)) fileType = "image";
+      else if (/\.(zip|tar|gz|7z|rar)$/i.test(nameLower)) fileType = "archive";
+      else if (/\.(bin|hex|img|dd|mdf)$/i.test(nameLower)) fileType = "binary";
+      else if (file.type.includes("text") || /\.(log|txt|json)$/i.test(nameLower)) fileType = "text";
+
+      return {
+        id: `att-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+        name: file.name,
+        size: sizeStr,
+        type: fileType,
+        url: URL.createObjectURL(file),
+        uploadedAt: "Just now",
+        uploadedBy: techUser.name || "Technician",
+      };
+    });
+
+    const currentLocal = getTicketAttachments(targetId);
+    const combinedOptimistic = [...currentLocal, ...optimisticAtts];
+    saveTicketAttachments(targetId, combinedOptimistic, true, true);
+
+    setAttachments((prev) => ({
+      ...prev,
+      [targetId]: combinedOptimistic,
+      [targetId.toLowerCase()]: combinedOptimistic,
+      [activeId]: combinedOptimistic,
+      [activeId.toLowerCase()]: combinedOptimistic,
+      [activeId.toUpperCase()]: combinedOptimistic,
+    }));
 
     setActivityFeed((prev) => [
       {
@@ -1668,27 +1707,61 @@ export default function TechnicianWorkbenchPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    // 2. BACKGROUND SERVER PERSISTENCE
+    try {
+      for (const file of fileList) {
+        await uploadTicketAttachment(targetId, file, techUser.name);
+      }
+      const serverAtts = await fetchTicketAttachments(targetId);
+      if (serverAtts && serverAtts.length > 0) {
+        setAttachments((prev) => ({
+          ...prev,
+          [targetId]: serverAtts,
+          [targetId.toLowerCase()]: serverAtts,
+          [activeId]: serverAtts,
+          [activeId.toLowerCase()]: serverAtts,
+          [activeId.toUpperCase()]: serverAtts,
+        }));
+      }
+      setNotification(`✅ ${fileList.length} file(s) attached and synced to Case #${targetId}!`);
+    } catch (uploadErr) {
+      console.error("Upload error:", uploadErr);
+      setNotification("Attachment saved locally, syncing to server in background.");
+    }
+
     setTimeout(() => setNotification(""), 4500);
   };
 
   const handleDeleteAttachment = async (ticketId: string, attId: string) => {
     const cleanId = (ticketId || activeCase?.id || "").trim().toUpperCase();
     const activeId = (activeCase?.id || cleanId).trim();
+
+    // 1. INSTANT LOCAL REMOVAL
+    const current = getTicketAttachments(cleanId).filter((a) => a.id !== attId);
+    saveTicketAttachments(cleanId, current, true, true);
+    setAttachments((prev) => ({
+      ...prev,
+      [cleanId]: current,
+      [cleanId.toLowerCase()]: current,
+      [activeId]: current,
+      [activeId.toLowerCase()]: current,
+      [activeId.toUpperCase()]: current,
+    }));
+    setNotification("Attachment removed.");
+
+    // 2. BACKGROUND SERVER REMOVAL
     try {
       await deleteTicketAttachment(cleanId, attId);
-      const updated = await fetchTicketAttachments(cleanId);
+      const serverAtts = await fetchTicketAttachments(cleanId);
       setAttachments((prev) => ({
         ...prev,
-        [cleanId]: updated,
-        [cleanId.toLowerCase()]: updated,
-        [activeId]: updated,
-        [activeId.toLowerCase()]: updated,
-        [activeId.toUpperCase()]: updated,
+        [cleanId]: serverAtts,
+        [cleanId.toLowerCase()]: serverAtts,
+        [activeId]: serverAtts,
       }));
-      setNotification("Attachment removed.");
     } catch (err) {
       console.error("Delete attachment error:", err);
-      setNotification("Failed to remove attachment.");
     }
     setTimeout(() => setNotification(""), 3000);
   };

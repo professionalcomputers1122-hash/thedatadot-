@@ -240,11 +240,21 @@ export default function CustomerDashboardPage() {
       try {
         bc = new BroadcastChannel("tdd-ticket-sync");
         bc.onmessage = (ev) => {
-          if (
-            ev.data?.type === "ATTACHMENTS_UPDATED" &&
-            (!ev.data.ticketId || ev.data.ticketId.toUpperCase() === ticketId.toUpperCase())
-          ) {
-            refreshAttachments();
+          if (ev.data?.type === "ATTACHMENTS_UPDATED") {
+            const updatedTicketId = (ev.data.ticketId || "").trim().toUpperCase();
+            if (!updatedTicketId || updatedTicketId === cleanId) {
+              refreshAttachments();
+            } else {
+              fetchTicketAttachments(updatedTicketId).then((atts) => {
+                if (atts && atts.length > 0) {
+                  // If current active ticket has no attachments, spotlight this updated ticket
+                  const currentLocal = getTicketAttachments(cleanId);
+                  if (currentLocal.length === 0) {
+                    setSelectedTicketId(updatedTicketId);
+                  }
+                }
+              });
+            }
           }
         };
       } catch (e) {}
@@ -707,7 +717,20 @@ export default function CustomerDashboardPage() {
                 <tbody className="divide-y divide-slate-100">
                   {tickets.map((t) => (
                     <tr key={t.id} className="transition hover:bg-slate-50/60">
-                      <td className="px-4 py-3.5 font-bold text-blue-600">#{t.id}</td>
+                      <td className="px-4 py-3.5 font-bold text-blue-600">
+                        <div>#{t.id}</div>
+                        {(() => {
+                          const fileCount = (getTicketAttachments(t.id) || []).length;
+                          if (fileCount > 0) {
+                            return (
+                              <span className="inline-flex items-center gap-1 mt-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
+                                📎 {fileCount} {fileCount === 1 ? "File" : "Files"}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </td>
                       <td className="px-4 py-3.5 font-semibold text-slate-900">
                         {t.category}
                       </td>

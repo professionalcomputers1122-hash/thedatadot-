@@ -60,7 +60,12 @@ export function getTicketAttachments(ticketId: string): TicketAttachment[] {
   return [];
 }
 
-export function saveTicketAttachments(ticketId: string, atts: TicketAttachment[], broadcast: boolean = true): void {
+export function saveTicketAttachments(
+  ticketId: string,
+  atts: TicketAttachment[],
+  broadcast: boolean = true,
+  dispatchLocalEvents: boolean = true
+): void {
   if (typeof window === "undefined" || !ticketId) return;
   const cleanId = ticketId.trim().toUpperCase();
   try {
@@ -68,8 +73,10 @@ export function saveTicketAttachments(ticketId: string, atts: TicketAttachment[]
     localStorage.setItem(`tdd_attachments_${cleanId}`, json);
     localStorage.setItem(`tdd_attachments_${ticketId}`, json);
     localStorage.setItem(`tdd_attachments_${ticketId.toLowerCase()}`, json);
-    window.dispatchEvent(new Event("attachments-updated"));
-    window.dispatchEvent(new Event("storage"));
+
+    if (dispatchLocalEvents) {
+      window.dispatchEvent(new Event("attachments-updated"));
+    }
 
     if (broadcast && typeof BroadcastChannel !== "undefined") {
       try {
@@ -101,7 +108,7 @@ export async function fetchTicketAttachments(ticketId: string): Promise<TicketAt
         const json = await res.json();
         if (Array.isArray(json?.attachments)) {
           const list: TicketAttachment[] = json.attachments;
-          saveTicketAttachments(cleanId, list, false);
+          saveTicketAttachments(cleanId, list, false, false);
           return list;
         }
       }
@@ -135,8 +142,16 @@ export async function uploadTicketAttachment(
       const json = await res.json();
       if (json?.attachment) {
         const current = getTicketAttachments(cleanId);
-        const updated = [...current.filter((a) => a.id !== json.attachment.id), json.attachment];
-        saveTicketAttachments(cleanId, updated, true);
+        // Replace any temporary blob URL placeholder for the same filename
+        const updated = [
+          ...current.filter(
+            (a) =>
+              a.id !== json.attachment.id &&
+              !(a.name === json.attachment.name && (a.url?.startsWith("blob:") || !a.url?.startsWith("/uploads/")))
+          ),
+          json.attachment,
+        ];
+        saveTicketAttachments(cleanId, updated, true, true);
         return json.attachment;
       }
     }
@@ -156,7 +171,7 @@ export async function deleteTicketAttachment(
   // Optimistic local update
   const current = getTicketAttachments(cleanId);
   const updated = current.filter((a) => a.id !== attachmentId);
-  saveTicketAttachments(cleanId, updated, true);
+  saveTicketAttachments(cleanId, updated, true, true);
 
   try {
     const res = await fetch(

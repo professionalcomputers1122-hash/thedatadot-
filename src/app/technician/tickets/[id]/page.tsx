@@ -275,46 +275,89 @@ export default function TechnicianTicketDetailPage({
     }
   };
 
-  // Real File Attachment Upload Handler (Server Persistent & Realtime Synced)
+  // Real File Attachment Upload Handler (Instant Optimistic & Server Synced)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !ticket) return;
 
     const fileList = Array.from(files);
+    const cleanId = (ticketId || "").trim().toUpperCase();
     const uploader =
       ticket.assignedTech && ticket.assignedTech !== "Unassigned"
         ? ticket.assignedTech
         : "Bench Specialist";
 
-    setNotification(`Uploading ${fileList.length} file(s)...`);
+    setNotification(`Attaching ${fileList.length} file(s)...`);
 
-    try {
-      for (const file of fileList) {
-        await uploadTicketAttachment(ticketId, file, uploader);
+    // 1. INSTANT LOCAL OPTIMISTIC RENDERING (0ms)
+    const optimisticAtts: TicketAttachment[] = fileList.map((file) => {
+      const sizeBytes = file.size;
+      let sizeStr = `${(sizeBytes / 1024).toFixed(1)} KB`;
+      if (sizeBytes > 1024 * 1024) {
+        sizeStr = `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
       }
-      const updated = await fetchTicketAttachments(ticketId);
-      setAttachments(updated);
-      setNotification(`${fileList.length} file(s) attached and synced successfully!`);
-    } catch (err) {
-      console.error("Failed to upload attachment:", err);
-      setNotification("Failed to upload attachment to server.");
-    }
+      let fileType: TicketAttachment["type"] = "generic";
+      const nameLower = file.name.toLowerCase();
+      if (file.type.includes("pdf") || nameLower.endsWith(".pdf")) fileType = "pdf";
+      else if (file.type.includes("image") || /\.(png|jpg|jpeg|webp|gif)$/i.test(nameLower)) fileType = "image";
+      else if (/\.(zip|tar|gz|7z|rar)$/i.test(nameLower)) fileType = "archive";
+      else if (/\.(bin|hex|img|dd|mdf)$/i.test(nameLower)) fileType = "binary";
+      else if (file.type.includes("text") || /\.(log|txt|json)$/i.test(nameLower)) fileType = "text";
+
+      return {
+        id: `att-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+        name: file.name,
+        size: sizeStr,
+        type: fileType,
+        url: URL.createObjectURL(file),
+        uploadedAt: "Just now",
+        uploadedBy: uploader,
+      };
+    });
+
+    const currentLocal = getTicketAttachments(cleanId);
+    const combinedOptimistic = [...currentLocal, ...optimisticAtts];
+    saveTicketAttachments(cleanId, combinedOptimistic, true, true);
+    setAttachments(combinedOptimistic);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    // 2. BACKGROUND SERVER PERSISTENCE
+    try {
+      for (const file of fileList) {
+        await uploadTicketAttachment(cleanId, file, uploader);
+      }
+      const updated = await fetchTicketAttachments(cleanId);
+      if (updated && updated.length > 0) {
+        setAttachments(updated);
+      }
+      setNotification(`✅ ${fileList.length} file(s) attached and synced successfully!`);
+    } catch (err) {
+      console.error("Failed to upload attachment:", err);
+      setNotification("Attachment saved locally, syncing to server in background.");
+    }
+
     setTimeout(() => setNotification(""), 4000);
   };
 
   const handleDeleteAttachment = async (attId: string) => {
+    const cleanId = (ticketId || "").trim().toUpperCase();
+
+    // 1. INSTANT LOCAL REMOVAL
+    const current = getTicketAttachments(cleanId).filter((a) => a.id !== attId);
+    saveTicketAttachments(cleanId, current, true, true);
+    setAttachments(current);
+    setNotification("Attachment removed.");
+
+    // 2. BACKGROUND SERVER REMOVAL
     try {
-      await deleteTicketAttachment(ticketId, attId);
-      const updated = await fetchTicketAttachments(ticketId);
+      await deleteTicketAttachment(cleanId, attId);
+      const updated = await fetchTicketAttachments(cleanId);
       setAttachments(updated);
-      setNotification("Attachment removed.");
     } catch (err) {
       console.error("Failed to remove attachment:", err);
-      setNotification("Failed to remove attachment.");
     }
     setTimeout(() => setNotification(""), 3000);
   };

@@ -147,32 +147,35 @@ export async function POST(
     const updatedList = [...currentList, newAttachment];
     await writeManifest(cleanId, updatedList);
 
-    // Broadcast Realtime update via Supabase ticket_messages
-    try {
-      const supabase = createAdminClient();
-      await supabase.from("ticket_messages").insert([
-        {
-          ticket_id: cleanId,
-          sender: "Technician",
-          author: uploader,
-          text: `Attached file to laboratory records: "${file.name}" (${sizeStr})`,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-
-      await supabase.from("audit_logs").insert([
-        {
-          id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
-          actor: uploader,
-          action: "UPLOAD_ATTACHMENT",
-          target: `Ticket #${cleanId} (${file.name})`,
-          ip: req.headers.get("x-forwarded-for") || "127.0.0.1",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } catch (realtimeErr) {
-      console.warn("[Attachments API] Supabase broadcast note:", realtimeErr);
-    }
+    // Background non-blocking broadcast via Supabase ticket_messages & audit log
+    (async () => {
+      try {
+        const supabase = createAdminClient();
+        await Promise.allSettled([
+          supabase.from("ticket_messages").insert([
+            {
+              ticket_id: cleanId,
+              sender: "Technician",
+              author: uploader,
+              text: `Attached file to laboratory records: "${file.name}" (${sizeStr}) [LAB_ATTACHMENT]`,
+              created_at: new Date().toISOString(),
+            },
+          ]),
+          supabase.from("audit_logs").insert([
+            {
+              id: `LOG-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+              actor: uploader,
+              action: "UPLOAD_ATTACHMENT",
+              target: `Ticket #${cleanId} (${file.name})`,
+              ip: req.headers.get("x-forwarded-for") || "127.0.0.1",
+              created_at: new Date().toISOString(),
+            },
+          ]),
+        ]);
+      } catch (realtimeErr) {
+        console.warn("[Attachments API] Supabase broadcast note:", realtimeErr);
+      }
+    })().catch(() => {});
 
     return NextResponse.json(
       { success: true, attachment: newAttachment },

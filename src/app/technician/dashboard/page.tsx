@@ -9,6 +9,9 @@ import {
   sendMessageToSupabase,
   fetchMessagesFromSupabase,
 } from "@/lib/portalData";
+import AdvancedDataRecoveryReportModal, {
+  AdvancedReportData,
+} from "@/components/AdvancedDataRecoveryReportModal";
 
 export interface CaseItem {
   id: string;
@@ -395,6 +398,8 @@ export default function TechnicianWorkbenchPage() {
   };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportModalInitialData, setReportModalInitialData] = useState<Partial<AdvancedReportData> | undefined>(undefined);
 
   // Tickets & Cases State
   const [cases, setCases] = useState<CaseItem[]>([]);
@@ -699,6 +704,29 @@ export default function TechnicianWorkbenchPage() {
       cases[0]
     );
   }, [viewFilteredCases, workbenchFilteredCases, cases, selectedCaseId]);
+
+  // Open Advanced Diagnostic Report Generator Modal
+  const handleOpenReportModal = (caseItem?: CaseItem) => {
+    const target = caseItem || activeCase;
+    if (target) {
+      const cleanNum = target.id?.replace(/[^0-9]/g, "") || "2003";
+      const isSsd = target.mediaType === "SSD" || target.device?.toLowerCase().includes("ssd");
+      const isNvme = target.device?.toLowerCase().includes("nvme") || target.device?.toLowerCase().includes("m.2");
+      const isFlash = target.mediaType === "FLASH" || target.device?.toLowerCase().includes("flash") || target.device?.toLowerCase().includes("usb");
+      const devType: "HDD" | "SSD" | "NVMe" | "FLASH" = isNvme ? "NVMe" : isSsd ? "SSD" : isFlash ? "FLASH" : "HDD";
+
+      setReportModalInitialData({
+        jobId: cleanNum || "2003",
+        clientName: target.customerName || target.client || "Client",
+        serialNumber: target.serial || "ABC123456",
+        deviceType: devType,
+        symptoms: target.symptoms || target.notes || "Clicking sound, drive not detecting",
+      });
+    } else {
+      setReportModalInitialData(undefined);
+    }
+    setIsReportModalOpen(true);
+  };
 
   // Switch Bench Helper
   const handleSwitchBench = (
@@ -1568,32 +1596,54 @@ export default function TechnicianWorkbenchPage() {
             ].map((item) => {
               const isActive = activeView === item.id || (item.id === "my_tickets" && activeView === "ticket_details");
               return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveView(item.id as PortalNavView);
-                    setSidebarOpen(false);
-                  }}
-                  className={`group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-medium transition ${
-                    isActive
-                      ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30"
-                      : "text-slate-300 hover:bg-[#132238] hover:text-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm opacity-90">{item.icon}</span>
-                    <span className="text-[13px]">{item.label}</span>
-                  </div>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
-                        isActive ? "bg-white text-blue-600" : "bg-blue-500/30 text-blue-200"
-                      }`}
+                <div key={item.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setActiveView(item.id as PortalNavView);
+                      setSidebarOpen(false);
+                    }}
+                    className={`group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-medium transition ${
+                      isActive
+                        ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30"
+                        : "text-slate-300 hover:bg-[#132238] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm opacity-90">{item.icon}</span>
+                      <span className="text-[13px]">{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
+                          isActive ? "bg-white text-blue-600" : "bg-blue-500/30 text-blue-200"
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* CREATE DIAGNOSTIC REPORT BUTTON (BELOW UNASSIGNED) */}
+                  {item.id === "unassigned" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleOpenReportModal();
+                        setSidebarOpen(false);
+                      }}
+                      className="group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 font-semibold transition bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-900/30 border border-blue-400/20 my-1 cursor-pointer"
+                      title="Open Advanced Data Recovery Diagnostic Report Generator"
                     >
-                      {item.badge}
-                    </span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm">📄</span>
+                        <span className="text-[12.5px] font-bold tracking-tight">Create Diagnostic Report</span>
+                      </div>
+                      <span className="rounded bg-white/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+                        A4
+                      </span>
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -2542,10 +2592,21 @@ export default function TechnicianWorkbenchPage() {
                 >
                   ← Back to My Tickets
                 </button>
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                  <span>Created: {activeCase.createdAt || "4 Aug 2025, 10:24 AM"}</span>
-                  <span>•</span>
-                  <span>Last updated: {activeCase.updatedAt || "4 Aug 2025, 2:15 PM"}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReportModal(activeCase)}
+                    className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    title="Generate Advanced Diagnostic Report PDF for this ticket"
+                  >
+                    <span>📄</span>
+                    <span>Generate Diagnostic Report</span>
+                  </button>
+                  <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
+                    <span>Created: {activeCase.createdAt || "4 Aug 2025, 10:24 AM"}</span>
+                    <span>•</span>
+                    <span>Last updated: {activeCase.updatedAt || "4 Aug 2025, 2:15 PM"}</span>
+                  </div>
                 </div>
               </div>
 
@@ -3892,6 +3953,13 @@ export default function TechnicianWorkbenchPage() {
         multiple
         className="hidden"
         aria-label="Upload ticket attachment"
+      />
+
+      {/* ADVANCED DATA RECOVERY DIAGNOSTIC REPORT GENERATOR MODAL */}
+      <AdvancedDataRecoveryReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        initialData={reportModalInitialData}
       />
     </div>
   );

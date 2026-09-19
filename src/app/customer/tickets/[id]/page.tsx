@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
@@ -18,6 +18,8 @@ import {
   getTicketAttachments,
   supabase,
   isSupabaseConfigured,
+  TimelineStage,
+  getTimelineStages,
 } from "@/lib/portalData";
 import { getCustomerSession, CustomerUser } from "@/lib/clientAuth";
 
@@ -52,19 +54,19 @@ export default function CustomerTicketDetailPage({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Sync ticket details and perform authorization boundary check
-  useEffect(() => {
-    const currentCustomer = getCustomerSession();
-    if (!currentCustomer) {
-      router.push("/customer/login");
-      return;
-    }
-    setCustomer(currentCustomer);
+  const loadData = useCallback(
+    async (silent: boolean = false) => {
+      const currentCustomer = getCustomerSession();
+      if (!currentCustomer) {
+        router.push("/customer/login");
+        return;
+      }
+      setCustomer(currentCustomer);
 
-    const activeCust = currentCustomer;
-    const custEmail = activeCust.email.toLowerCase();
-    const custCompany = activeCust.company.toLowerCase();
+      const activeCust = currentCustomer;
+      const custEmail = activeCust.email.toLowerCase();
+      const custCompany = activeCust.company.toLowerCase();
 
-    async function loadData(silent: boolean = false) {
       if (!silent) setLoading(true);
       else setIsSyncing(true);
 
@@ -75,7 +77,7 @@ export default function CustomerTicketDetailPage({
         try {
           const res = await fetch(`/api/tickets/${ticketId}?_t=${Date.now()}`, {
             cache: "no-store",
-            headers: { "Pragma": "no-cache", "Cache-Control": "no-cache" },
+            headers: { Pragma: "no-cache", "Cache-Control": "no-cache" },
           });
           if (res.ok) {
             const data = await res.json();
@@ -172,8 +174,11 @@ export default function CustomerTicketDetailPage({
         setLoading(false);
         setIsSyncing(false);
       }
-    }
+    },
+    [ticketId, router]
+  );
 
+  useEffect(() => {
     loadData();
 
     // Auto-poll live ticket telemetry from technician every 2 seconds & instant event sync
@@ -394,6 +399,10 @@ export default function CustomerTicketDetailPage({
     );
   }
 
+  const stages = ticket
+    ? getTimelineStages(ticket.category, ticket.status, ticket.clonedPercent || 0)
+    : [];
+
   return (
     <div className="min-h-screen bg-[#fafbfd] text-slate-900 flex flex-col antialiased">
       <CustomerNav />
@@ -436,18 +445,7 @@ export default function CustomerTicketDetailPage({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                const activeCust = customer;
-                if (!activeCust) return;
-                setIsSyncing(true);
-                fetch(`/api/tickets/${ticket.id}`)
-                  .then((r) => r.json())
-                  .then((d) => {
-                    if (d?.ticket) setTicket(parseTicketRow(d.ticket));
-                  })
-                  .catch(() => {})
-                  .finally(() => setIsSyncing(false));
-              }}
+              onClick={() => loadData(true)}
               disabled={isSyncing}
               className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               title="Sync live status and technician telemetry"
@@ -481,6 +479,56 @@ export default function CustomerTicketDetailPage({
               <span>Hotline: +91 6380488373</span>
             </a>
           </div>
+        </div>
+
+        {/* DYNAMIC 4-STAGE VISUAL TIMELINE STEPPER (100% Client Portal & Technician Synced) */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 mb-6">
+          {stages.map((stg, sIdx) => {
+            if (stg.state === "done") {
+              return (
+                <div
+                  key={sIdx}
+                  className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900 transition shadow-xs"
+                >
+                  <span className="text-xs font-bold flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>{stg.title}</span>
+                  </span>
+                  <p className="text-[11px] text-emerald-800/80 mt-1">{stg.description}</p>
+                  <span className="text-[10px] text-emerald-600 block mt-2 font-bold">Done</span>
+                </div>
+              );
+            }
+            if (stg.state === "active") {
+              return (
+                <div
+                  key={sIdx}
+                  className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4 text-blue-950 ring-2 ring-blue-500/20 shadow-xs relative overflow-hidden transition"
+                >
+                  <span className="text-xs font-bold flex items-center gap-1.5 text-blue-700">
+                    <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping shrink-0" />
+                    <span>{stg.title}</span>
+                  </span>
+                  <p className="text-[11px] text-blue-900/90 mt-1">{stg.description}</p>
+                  <span className="text-[10px] text-blue-700 block mt-2 font-extrabold">
+                    Active In Progress
+                  </span>
+                </div>
+              );
+            }
+            return (
+              <div
+                key={sIdx}
+                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-slate-500 transition opacity-80"
+              >
+                <span className="text-xs font-bold">○ {stg.title}</span>
+                <p className="text-[11px] opacity-80 mt-1">{stg.description}</p>
+                <span className="text-[10px] opacity-60 block mt-2">Pending</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* TICKET DETAILS GRID */}

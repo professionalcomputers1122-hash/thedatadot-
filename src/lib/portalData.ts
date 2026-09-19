@@ -1141,3 +1141,386 @@ export async function deleteInquiryFromSupabase(id: string): Promise<boolean> {
   return false;
 }
 
+export interface TimelineStage {
+  title: string;
+  description: string;
+  state: "done" | "active" | "pending";
+}
+
+export function getTimelineStages(
+  category: string = "Data Recovery",
+  status: string = "Intake & Diagnostics",
+  clonedPercent: number = 0
+): TimelineStage[] {
+  const norm = (status || "").toLowerCase();
+
+  const isResolved =
+    norm.includes("resolved") ||
+    norm.includes("completed") ||
+    norm.includes("closed") ||
+    (norm.includes("return") && norm.includes("resolved"));
+  const isFinalStage =
+    isResolved ||
+    norm.includes("verification") ||
+    norm.includes("return") ||
+    norm.includes("handover") ||
+    norm.includes("hardening") ||
+    norm.includes("quality") ||
+    clonedPercent >= 100;
+  const isMidStage =
+    isFinalStage ||
+    norm.includes("imaging") ||
+    norm.includes("clon") ||
+    norm.includes("pc-3000") ||
+    norm.includes("mirror") ||
+    norm.includes("containment") ||
+    norm.includes("remediation") ||
+    norm.includes("deployment") ||
+    norm.includes("migration") ||
+    norm.includes("rollout") ||
+    norm.includes("resolution") ||
+    clonedPercent >= 75;
+  const isDiagStage =
+    isMidStage ||
+    norm.includes("diagnosis") ||
+    norm.includes("diagnostic") ||
+    norm.includes("cleanroom") ||
+    norm.includes("bench") ||
+    norm.includes("threat") ||
+    norm.includes("forensic") ||
+    norm.includes("architecture") ||
+    clonedPercent >= 50;
+
+  if (category === "Cybersecurity") {
+    const s1State =
+      isDiagStage && !norm.includes("intake") && !norm.includes("new")
+        ? "done"
+        : "active";
+
+    let s2State: "done" | "active" | "pending" = "pending";
+    if (
+      isMidStage &&
+      !norm.includes("analysis") &&
+      !norm.includes("diagnos") &&
+      !norm.includes("forensic")
+    )
+      s2State = "done";
+    else if (
+      norm.includes("analysis") ||
+      norm.includes("diagnos") ||
+      norm.includes("forensic")
+    )
+      s2State = "active";
+
+    let s3State: "done" | "active" | "pending" = "pending";
+    if (
+      isFinalStage &&
+      !norm.includes("contain") &&
+      !norm.includes("remediat")
+    )
+      s3State = "done";
+    else if (norm.includes("contain") || norm.includes("remediat"))
+      s3State = "active";
+
+    let s4State: "done" | "active" | "pending" = "pending";
+    if (isResolved) s4State = "done";
+    else if (norm.includes("harden") || norm.includes("sign-off"))
+      s4State = "active";
+
+    return [
+      {
+        title: "1. Incident Intake",
+        description:
+          s1State === "done"
+            ? "SOC alert verified."
+            : "Alert intake & triage in progress.",
+        state: isResolved ? "done" : s1State,
+      },
+      {
+        title: "2. Security Forensics",
+        description:
+          s2State === "done"
+            ? "Breach surface fully audited."
+            : s2State === "active"
+            ? "Analyzing attack vector & logs."
+            : "Forensic analysis queued.",
+        state: isResolved ? "done" : s2State,
+      },
+      {
+        title: "3. Containment & Remediation",
+        description:
+          s3State === "done"
+            ? "Compromised vectors neutralized."
+            : s3State === "active"
+            ? "Containment protocol & vector neutralization in progress."
+            : "Remediation protocol queued.",
+        state: isResolved ? "done" : s3State,
+      },
+      {
+        title: "4. Policy Hardening",
+        description: isResolved
+          ? "Zero breach confirmed & signed off."
+          : s4State === "active"
+          ? "Policy verification & final hardening."
+          : "Audit & sign-off pending.",
+        state: isResolved ? "done" : s4State,
+      },
+    ];
+  }
+
+  if (category === "Cloud Solutions") {
+    const s1State =
+      isDiagStage && !norm.includes("intake") && !norm.includes("new")
+        ? "done"
+        : "active";
+
+    let s2State: "done" | "active" | "pending" = "pending";
+    if (
+      isMidStage &&
+      !norm.includes("review") &&
+      !norm.includes("architect") &&
+      !norm.includes("diagnos")
+    )
+      s2State = "done";
+    else if (
+      norm.includes("review") ||
+      norm.includes("architect") ||
+      norm.includes("diagnos")
+    )
+      s2State = "active";
+
+    let s3State: "done" | "active" | "pending" = "pending";
+    if (
+      isFinalStage &&
+      !norm.includes("migrat") &&
+      !norm.includes("deploy")
+    )
+      s3State = "done";
+    else if (norm.includes("migrat") || norm.includes("deploy"))
+      s3State = "active";
+
+    let s4State: "done" | "active" | "pending" = "pending";
+    if (isResolved) s4State = "done";
+    else if (norm.includes("handover") || norm.includes("quality"))
+      s4State = "active";
+
+    return [
+      {
+        title: "1. Scope & Telemetry Intake",
+        description:
+          s1State === "done"
+            ? "Workload specifications verified."
+            : "Requirement telemetry under review.",
+        state: isResolved ? "done" : s1State,
+      },
+      {
+        title: "2. Cloud Architecture Review",
+        description:
+          s2State === "done"
+            ? "Tenant topology calibrated."
+            : s2State === "active"
+            ? "Cloud blueprint calibration underway."
+            : "Architecture blueprint queued.",
+        state: isResolved ? "done" : s2State,
+      },
+      {
+        title: "3. Deployment & Migration",
+        description:
+          s3State === "done"
+            ? "Instances provisioned & verified."
+            : s3State === "active"
+            ? "Automated infrastructure rollout in progress."
+            : "Deployment pipeline queued.",
+        state: isResolved ? "done" : s3State,
+      },
+      {
+        title: "4. Quality Verification",
+        description: isResolved
+          ? "Production sign-off complete."
+          : s4State === "active"
+          ? "Load verification & client handover in progress."
+          : "Sign-off & monitoring pending.",
+        state: isResolved ? "done" : s4State,
+      },
+    ];
+  }
+
+  if (category === "Managed IT") {
+    const s1State =
+      isDiagStage && !norm.includes("intake") && !norm.includes("new")
+        ? "done"
+        : "active";
+
+    let s2State: "done" | "active" | "pending" = "pending";
+    if (
+      isMidStage &&
+      !norm.includes("triage") &&
+      !norm.includes("assess") &&
+      !norm.includes("diagnos")
+    )
+      s2State = "done";
+    else if (
+      norm.includes("triage") ||
+      norm.includes("assess") ||
+      norm.includes("diagnos")
+    )
+      s2State = "active";
+
+    let s3State: "done" | "active" | "pending" = "pending";
+    if (
+      isFinalStage &&
+      !norm.includes("rollout") &&
+      !norm.includes("deploy")
+    )
+      s3State = "done";
+    else if (
+      norm.includes("rollout") ||
+      norm.includes("deploy") ||
+      norm.includes("repair")
+    )
+      s3State = "active";
+
+    let s4State: "done" | "active" | "pending" = "pending";
+    if (isResolved) s4State = "done";
+    else if (norm.includes("verification") || norm.includes("handover"))
+      s4State = "active";
+
+    return [
+      {
+        title: "1. Ticket Intake",
+        description:
+          s1State === "done"
+            ? "Equipment issue registered."
+            : "Workstation triage in progress.",
+        state: isResolved ? "done" : s1State,
+      },
+      {
+        title: "2. Technical Assessment",
+        description:
+          s2State === "done"
+            ? "Hardware/OS issue identified."
+            : s2State === "active"
+            ? "Diagnostics & bench triage."
+            : "Bench assessment queued.",
+        state: isResolved ? "done" : s2State,
+      },
+      {
+        title: "3. Resolution & Rollout",
+        description:
+          s3State === "done"
+            ? "Configuration / repair completed."
+            : s3State === "active"
+            ? "System configuration, patching and rollout underway."
+            : "Rollout pending.",
+        state: isResolved ? "done" : s3State,
+      },
+      {
+        title: "4. User Verification",
+        description: isResolved
+          ? "Incident resolution confirmed."
+          : s4State === "active"
+          ? "User validation & sign-off."
+          : "Validation pending.",
+        state: isResolved ? "done" : s4State,
+      },
+    ];
+  }
+
+  // DEFAULT: DATA RECOVERY
+  let s1: "done" | "active" | "pending" = "pending";
+  let s2: "done" | "active" | "pending" = "pending";
+  let s3: "done" | "active" | "pending" = "pending";
+  let s4: "done" | "active" | "pending" = "pending";
+
+  const isResolvedDR =
+    isResolved ||
+    (norm.includes("return") && norm.includes("resolved"));
+  const isVerif =
+    isResolvedDR ||
+    norm.includes("verification") ||
+    norm.includes("return") ||
+    norm.includes("deliver") ||
+    norm.includes("audit") ||
+    clonedPercent >= 90;
+  const isImaging =
+    norm.includes("imaging") ||
+    norm.includes("clon") ||
+    norm.includes("pc-3000") ||
+    norm.includes("mirror") ||
+    norm.includes("sector") ||
+    clonedPercent >= 75;
+  const isDiag =
+    norm.includes("diagnosis") ||
+    norm.includes("diagnostic") ||
+    norm.includes("cleanroom") ||
+    clonedPercent >= 50;
+
+  if (isResolvedDR) {
+    s1 = "done";
+    s2 = "done";
+    s3 = "done";
+    s4 = "done";
+  } else if (isVerif) {
+    s1 = "done";
+    s2 = "done";
+    s3 = "done";
+    s4 = "active";
+  } else if (isImaging) {
+    s1 = "done";
+    s2 = "done";
+    s3 = "active";
+    s4 = "pending";
+  } else if (isDiag) {
+    s1 = "done";
+    s2 = "active";
+    s3 = "pending";
+    s4 = "pending";
+  } else {
+    s1 = "active";
+    s2 = "pending";
+    s3 = "pending";
+    s4 = "pending";
+  }
+
+  return [
+    {
+      title: "1. Media Intake",
+      description:
+        s1 === "done"
+          ? "Barcoded & logged in secure vault."
+          : "Logged in secure queue & awaiting cleanroom triage.",
+      state: s1,
+    },
+    {
+      title: "2. Cleanroom Diagnostics",
+      description:
+        s2 === "done"
+          ? "ISO Class-5 clean bench calibrated."
+          : s2 === "active"
+          ? "Donor head & platter micro-inspection in progress."
+          : "Cleanroom bench queued.",
+      state: s2,
+    },
+    {
+      title: "3. PC-3000 Imaging",
+      description:
+        s3 === "done"
+          ? "Raw platter sector mirror complete."
+          : s3 === "active"
+          ? "Raw platter sector mirror extraction in progress."
+          : "Mirror cloning queued.",
+      state: s3,
+    },
+    {
+      title: "4. Verification & Return",
+      description:
+        s4 === "done"
+          ? "Data integrity confirmed & delivered."
+          : s4 === "active"
+          ? "Client file audit & secure courier return."
+          : "Integrity audit pending.",
+      state: s4,
+    },
+  ];
+}
+

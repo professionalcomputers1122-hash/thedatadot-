@@ -69,7 +69,6 @@ export default function CustomerTicketDetailPage({
       const custCompany = activeCust.company.toLowerCase();
 
       if (!silent) setLoading(true);
-      else setIsSyncing(true);
 
       try {
         let found: any = null;
@@ -449,7 +448,7 @@ export default function CustomerTicketDetailPage({
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">
         {/* HEADER BAR */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-6 space-y-3.5">
           <div>
             <Link
               href="/customer/tickets"
@@ -483,11 +482,14 @@ export default function CustomerTicketDetailPage({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
             <button
-              onClick={() => loadData(true)}
+              onClick={() => {
+                setIsSyncing(true);
+                loadData(true);
+              }}
               disabled={isSyncing}
-              className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
               title="Sync live status and technician telemetry"
             >
               <svg className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -499,7 +501,7 @@ export default function CustomerTicketDetailPage({
             <button
               onClick={() => setShowDeleteModal(true)}
               disabled={isDeleting}
-              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
               title="Permanently remove this ticket"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -52,7 +52,10 @@ export async function POST(req: Request) {
     } = body;
 
     const supportMailbox = process.env.SUPPORT_EMAIL || "support@thedatadot.com";
-    const apiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "support@thedatadot.com";
+    const rawApiKey = process.env.RESEND_API_KEY || "";
+    const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
+    const technicianEmail = body.technicianEmail || body.technician_email || body.assignedTechEmail;
 
     const refId =
       inquiryId ||
@@ -318,22 +321,30 @@ ${targetMessage}
     if (apiKey) {
       const resend = new Resend(apiKey);
 
-      // 1. Send Admin Alert Email
+      const adminRecipients: string[] = [supportMailbox];
+      if (technicianEmail && technicianEmail.includes("@") && !adminRecipients.includes(technicianEmail.trim().toLowerCase())) {
+        adminRecipients.push(technicianEmail.trim());
+      }
+
+      const fromAlertSender = fromEmail ? `The Data Dot Alert <${fromEmail}>` : "The Data Dot Alert <onboarding@resend.dev>";
+      const fromSupportSender = fromEmail ? `The Data Dot Support <${fromEmail}>` : "The Data Dot Support <onboarding@resend.dev>";
+
+      // 1. Send Admin / Technician Alert Email
       try {
         const adminRes = await resend.emails.send({
-          from: "The Data Dot Alert <onboarding@resend.dev>",
-          to: supportMailbox,
+          from: fromAlertSender,
+          to: adminRecipients,
           subject: adminSubject,
           html: adminHtml,
         });
 
         if (adminRes.error) {
           adminError = adminRes.error.message || JSON.stringify(adminRes.error);
-          console.error("Resend dispatch error to admin mailbox:", adminRes.error);
+          console.error("Resend dispatch error to admin/technician mailbox:", adminRes.error);
         } else {
           adminMailSent = true;
           resendMessageId = adminRes.data?.id || null;
-          console.log(`[EMAIL DISPATCH] Admin alert #${refId} delivered to ${supportMailbox}`);
+          console.log(`[EMAIL DISPATCH] Admin/Technician alert #${refId} delivered to ${adminRecipients.join(", ")}`);
         }
       } catch (err: any) {
         adminError = err.message || "Admin email send failed";
@@ -344,7 +355,7 @@ ${targetMessage}
       if (customerEmail && customerEmail.includes("@")) {
         try {
           const clientRes = await resend.emails.send({
-            from: "The Data Dot Support <onboarding@resend.dev>",
+            from: fromSupportSender,
             to: customerEmail,
             subject: clientSubject,
             html: clientHtml,

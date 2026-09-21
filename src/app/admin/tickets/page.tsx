@@ -273,6 +273,34 @@ export default function AdminTicketsPage() {
         console.warn("Assignment notification chat warning:", msgErr);
       }
 
+      // 3. Dispatch automated email alert directly to the receiving technician
+      const matchedTech = technicians.find(
+        (t) => t.name.toLowerCase().trim() === assignedName.toLowerCase().trim()
+      );
+      if (matchedTech?.email) {
+        try {
+          await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "ticket",
+              ticketId,
+              customerName: assignModalTicket.customerName,
+              customerEmail: assignModalTicket.customerEmail,
+              companyName: assignModalTicket.companyName,
+              service: assignModalTicket.category,
+              deviceOrSubject: assignModalTicket.deviceOrSubject,
+              serialNumber: assignModalTicket.serialNumber,
+              urgency: assignModalTicket.priority,
+              technicianEmail: matchedTech.email,
+              message: `Case allocated to you by Super Admin. Workstation: ${selectedStation}. Directive: ${techDirective || "Commence standard diagnostics."}`,
+            }),
+          });
+        } catch (emailErr) {
+          console.warn("Technician dispatch email warning:", emailErr);
+        }
+      }
+
       // 3. Update local state
       setTickets((prev) =>
         prev.map((t) =>

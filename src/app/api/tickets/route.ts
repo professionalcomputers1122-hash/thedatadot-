@@ -196,16 +196,27 @@ export async function POST(req: Request) {
     }
 
     // 3. Dispatch SLA Notification via Resend (if configured)
-    const apiKey = process.env.RESEND_API_KEY;
+    const rawApiKey = process.env.RESEND_API_KEY || "";
+    const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
     const supportMailbox = process.env.SUPPORT_EMAIL || "support@thedatadot.com";
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "support@thedatadot.com";
+    const techEmail = body.assignedTechEmail || body.assigned_tech_email || body.technicianEmail;
+
+    const adminRecipients: string[] = [supportMailbox];
+    if (techEmail && techEmail.includes("@") && !adminRecipients.includes(techEmail.trim().toLowerCase())) {
+      adminRecipients.push(techEmail.trim());
+    }
+
+    const fromAlertSender = fromEmail ? `The Data Dot Alert <${fromEmail}>` : "The Data Dot Alert <onboarding@resend.dev>";
+    const fromSupportSender = fromEmail ? `The Data Dot Support <${fromEmail}>` : "The Data Dot Support <onboarding@resend.dev>";
 
     if (apiKey) {
       try {
         const resend = new Resend(apiKey);
-        // Alert to engineering desk
+        // Alert to engineering desk & assigned technician
         await resend.emails.send({
-          from: "The Data Dot Alert <onboarding@resend.dev>",
-          to: supportMailbox,
+          from: fromAlertSender,
+          to: adminRecipients,
           subject: `[TICKET ALERT: ${urgency.toUpperCase()}] #${ticketId} - ${companyName}`,
           html: `
             <div style="font-family: sans-serif; background: #070e17; color: #f1f5f9; padding: 24px; border-radius: 12px;">
@@ -214,8 +225,9 @@ export async function POST(req: Request) {
               <p><strong>Email:</strong> ${customerEmail}</p>
               <p><strong>Device:</strong> ${deviceOrSubject} (SN: ${serialNumber})</p>
               <p><strong>Urgency:</strong> ${urgency}</p>
+              <p><strong>Assigned Tech:</strong> ${assignedTech}</p>
               <p><strong>Symptoms:</strong> ${symptoms || "None provided"}</p>
-              <p><a href="http://localhost:3000/technician/dashboard" style="display:inline-block;background:#2563eb;color:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;margin-top:12px;">Open Cleanroom Workbench</a></p>
+              <p><a href="https://thedatadot.vercel.app/technician/dashboard" style="display:inline-block;background:#2563eb;color:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;margin-top:12px;">Open Cleanroom Workbench</a></p>
             </div>
           `,
         });
@@ -223,7 +235,7 @@ export async function POST(req: Request) {
         // Receipt to customer
         if (customerEmail.includes("@")) {
           await resend.emails.send({
-            from: "The Data Dot Support <onboarding@resend.dev>",
+            from: fromSupportSender,
             to: customerEmail,
             subject: `Case Registered: #${ticketId} - The Data Dot Cleanroom Lab`,
             html: `

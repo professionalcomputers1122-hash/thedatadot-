@@ -416,21 +416,30 @@ export function getStoredTechnicians(): TechnicianRecord[] {
   const deletedSet = getDeletedTechnicianEmails();
   try {
     const raw = localStorage.getItem(TECHNICIANS_STORAGE_KEY);
+    let list: TechnicianRecord[] = initialTechnicians;
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const filtered = parsed.filter(
-          (t: TechnicianRecord) => !deletedSet.has(t.email.toLowerCase().trim()) && !deletedSet.has(t.id.toLowerCase().trim())
-        );
-        const hasAdmin = filtered.some(
-          (t: TechnicianRecord) => t.email?.toLowerCase().trim() === "ebinezer@thedatadot.com"
-        );
-        if (!hasAdmin && !deletedSet.has("ebinezer@thedatadot.com") && !deletedSet.has("tech-admin")) {
-          return [initialTechnicians[0], ...filtered];
-        }
-        return filtered;
+        list = [...parsed, ...initialTechnicians];
       }
     }
+    const seen = new Set<string>();
+    const result: TechnicianRecord[] = [];
+    for (const t of list) {
+      const emailKey = (t.email || "").toLowerCase().trim();
+      const idKey = (t.id || "").toLowerCase().trim();
+      const nameKey = (t.name || "").toLowerCase().trim();
+
+      if (deletedSet.has(emailKey) || deletedSet.has(idKey)) continue;
+      if (nameKey.includes("murugan") || emailKey.includes("murugan")) continue;
+
+      const dedupeKey = nameKey || emailKey || idKey;
+      if (!seen.has(dedupeKey)) {
+        seen.add(dedupeKey);
+        result.push(t);
+      }
+    }
+    return result;
   } catch (e) {
     console.warn("Failed loading technicians from storage:", e);
   }

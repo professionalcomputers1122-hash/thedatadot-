@@ -13,6 +13,7 @@ import {
   deleteTicketFromSupabase,
   createTicketInSupabase,
   TechnicianRecord,
+  getDeletedTechnicianEmails,
 } from "@/lib/portalData";
 
 export default function AdminTicketsPage() {
@@ -152,9 +153,27 @@ export default function AdminTicketsPage() {
 
       try {
         const storedTechs = getStoredTechnicians();
-        if (storedTechs && storedTechs.length > 0) {
-          setTechnicians([...storedTechs, ...initialTechnicians]);
+        const combined = [...(storedTechs || []), ...initialTechnicians];
+        const deletedSet = getDeletedTechnicianEmails();
+        const seen = new Set<string>();
+        const uniqueTechs: TechnicianRecord[] = [];
+
+        for (const t of combined) {
+          const emailKey = (t.email || "").toLowerCase().trim();
+          const idKey = (t.id || "").toLowerCase().trim();
+          const nameKey = (t.name || "").toLowerCase().trim();
+
+          if (deletedSet.has(emailKey) || deletedSet.has(idKey)) continue;
+          if (nameKey.includes("murugan") || emailKey.includes("murugan")) continue;
+
+          const dedupeKey = nameKey || emailKey || idKey;
+          if (!seen.has(dedupeKey)) {
+            seen.add(dedupeKey);
+            uniqueTechs.push(t);
+          }
         }
+
+        setTechnicians(uniqueTechs);
       } catch (e) {}
     }
     loadData();
@@ -599,13 +618,20 @@ export default function AdminTicketsPage() {
                   </label>
                   <select
                     value={selectedTech}
-                    onChange={(e) => setSelectedTech(e.target.value)}
+                    onChange={(e) => {
+                      const chosen = e.target.value;
+                      setSelectedTech(chosen);
+                      const matched = technicians.find((t) => t.name === chosen);
+                      if (matched?.station) {
+                        setSelectedStation(matched.station);
+                      }
+                    }}
                     required
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-medium"
                   >
                     {technicians.map((tech) => (
                       <option key={tech.id} value={tech.name}>
-                        {tech.name} — {tech.role} ({tech.station})
+                        {tech.name}
                       </option>
                     ))}
                   </select>
@@ -876,15 +902,21 @@ export default function AdminTicketsPage() {
                     </label>
                     <select
                       value={newTicketData.assignedTech}
-                      onChange={(e) =>
-                        setNewTicketData({ ...newTicketData, assignedTech: e.target.value })
-                      }
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      onChange={(e) => {
+                        const chosen = e.target.value;
+                        const matched = technicians.find((t) => t.name === chosen);
+                        setNewTicketData({
+                          ...newTicketData,
+                          assignedTech: chosen,
+                          ...(matched?.station ? { assignedBench: matched.station } : {}),
+                        });
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-medium"
                     >
                       <option value="">Unassigned (Awaiting Queue)</option>
                       {technicians.map((t) => (
-                        <option key={t.id + t.email} value={t.name}>
-                          {t.name} — {t.role} ({t.station})
+                        <option key={t.id || t.email} value={t.name}>
+                          {t.name}
                         </option>
                       ))}
                     </select>

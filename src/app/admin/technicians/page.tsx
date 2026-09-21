@@ -10,6 +10,7 @@ import {
   getStoredTechnicians,
   saveStoredTechnicians,
   markTechnicianAsDeleted,
+  getDeletedTechnicianEmails,
 } from "@/lib/portalData";
 
 export default function AdminTechniciansPage() {
@@ -52,23 +53,35 @@ export default function AdminTechniciansPage() {
   useEffect(() => {
     const loadData = () => {
       const stored = getStoredTechnicians();
-      if (stored && stored.length > 0) {
-        // Sanitize: ensure no legacy dummy names
-        const filtered = stored.filter(
-          (t: TechnicianRecord) =>
-            !t.name?.toLowerCase().includes("murugan") &&
-            !t.email?.toLowerCase().includes("murugan")
-        );
-        const hasAdmin = filtered.some((t: TechnicianRecord) => t.email?.toLowerCase() === "ebinezer@thedatadot.com");
-        const listToNormalize = hasAdmin ? filtered : [initialTechnicians[0], ...filtered];
-        // Ensure every tech has at least a default PIN
-        const normalized = listToNormalize.map((t, index) => ({
-          ...t,
-          pin: t.pin || ["8942", "7103", "5519"][index % 3] || "8942",
-          password: t.password || `Tech@DataDot${index + 1}!`,
-        }));
-        setTechnicians(normalized);
+      const combined = [...(stored || []), ...initialTechnicians];
+      const deletedSet = getDeletedTechnicianEmails();
+
+      const seen = new Set<string>();
+      const uniqueList: TechnicianRecord[] = [];
+
+      for (const t of combined) {
+        const emailKey = (t.email || "").toLowerCase().trim();
+        const idKey = (t.id || "").toLowerCase().trim();
+        const nameKey = (t.name || "").toLowerCase().trim();
+
+        if (deletedSet.has(emailKey) || deletedSet.has(idKey)) continue;
+        if (nameKey.includes("murugan") || emailKey.includes("murugan")) continue;
+
+        const dedupeKey = emailKey || idKey || nameKey;
+        if (!seen.has(dedupeKey)) {
+          seen.add(dedupeKey);
+          uniqueList.push(t);
+        }
       }
+
+      // Ensure every tech has PIN and password
+      const normalized = uniqueList.map((t, index) => ({
+        ...t,
+        pin: t.pin || ["2005", "8942", "7103", "5519"][index % 4] || "8942",
+        password: t.password || `Tech@DataDot${index + 1}!`,
+      }));
+
+      setTechnicians(normalized);
     };
 
     loadData();
@@ -263,85 +276,6 @@ export default function AdminTechniciansPage() {
             </button>
           </div>
         )}
-
-        {/* DIRECT WORKBENCH ACCESS / INSTANT BENCH LIST */}
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>⚡ Laboratory Technician Benches</span>
-                <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-mono font-bold">
-                  Direct 1-Click Access Active
-                </span>
-              </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Select any technician below and click &quot;Open Bench&quot; to immediately launch their active hardware workbench without typing a PIN or password.
-              </p>
-            </div>
-            <span className="text-[11px] text-slate-400 font-mono">
-              {technicians.length} Dedicated Workbenches
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {technicians.map((tech) => (
-              <div
-                key={tech.id + tech.email}
-                className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 hover:border-blue-300 hover:bg-white transition flex flex-col justify-between gap-3 group shadow-2xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] font-bold text-blue-600">
-                      {tech.id}
-                    </span>
-                    <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold">
-                      {tech.status}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mt-1.5 group-hover:text-blue-600 transition">
-                    {tech.name}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                    {tech.role}
-                  </p>
-                  <p className="text-[10px] text-blue-700 font-mono mt-1 font-semibold">
-                    📍 {tech.station}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("tdd_tech_user", JSON.stringify(tech));
-                        window.location.href = "/technician/dashboard";
-                      }
-                    }}
-                    className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>⚡ Open Bench</span>
-                    <span>→</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("tdd_tech_user", JSON.stringify(tech));
-                        window.open("/technician/dashboard", "_blank");
-                      }
-                    }}
-                    className="rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 p-2 text-xs transition cursor-pointer shadow-2xs"
-                    title="Open bench in new tab"
-                  >
-                    <span>↗</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">

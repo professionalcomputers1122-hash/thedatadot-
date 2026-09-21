@@ -68,7 +68,8 @@ export function verifyAdminLogin(email: string, password: string): { success: bo
 
   const emailMatches =
     cleanEmail === creds.email.toLowerCase() ||
-    cleanEmail === DEFAULT_ADMIN_CREDENTIALS.email.toLowerCase();
+    cleanEmail === DEFAULT_ADMIN_CREDENTIALS.email.toLowerCase() ||
+    cleanEmail === "admin@thedatadot.com";
 
   if (!emailMatches) {
     return {

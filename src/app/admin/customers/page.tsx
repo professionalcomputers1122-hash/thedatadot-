@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
-import { registerCustomerAccount, deleteCustomerAccount, getDeletedEmails } from "@/lib/clientAuth";
+import { registerCustomerAccount, deleteCustomerAccount, getDeletedEmails, getAuthorizedAccounts } from "@/lib/clientAuth";
 
 interface CustomerRecord {
   id: string;
@@ -47,28 +47,58 @@ export default function AdminCustomersPage() {
     async function loadCustomers() {
       setLoading(true);
       const deletedSet = getDeletedEmails();
+      const accountsMap = new Map<string, CustomerRecord>();
+
+      // 1. Local authorized accounts
+      try {
+        const localAccounts = getAuthorizedAccounts();
+        for (const [emailKey, accVal] of Object.entries(localAccounts)) {
+          const acc = accVal as any;
+          const norm = emailKey.toLowerCase().trim();
+          if (deletedSet.has(norm)) continue;
+          accountsMap.set(norm, {
+            id: acc.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+            name: acc.name || "Client Executive",
+            company: acc.company || "Enterprise Client",
+            email: acc.email,
+            phone: acc.phone || "+91 6380488373",
+            sla: acc.slaTier || "Enterprise 15-Min 24/7 SLA",
+            password: acc.password,
+            activeTickets: 0,
+            status: acc.status || "Active",
+          });
+        }
+      } catch (e) {
+        console.warn("Local customer accounts load warning:", e);
+      }
+
+      // 2. Server API accounts
       try {
         const res = await fetch("/api/customers");
         const json = await res.json();
         if (json?.success && Array.isArray(json.customers)) {
-          const formatted: CustomerRecord[] = json.customers
-            .filter((c: any) => c.email && !deletedSet.has(c.email.toLowerCase().trim()))
-            .map((c: any) => ({
-              id: c.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-              name: c.name || "Client Executive",
-              company: c.company || "Enterprise Client",
+          for (const c of json.customers) {
+            if (!c.email) continue;
+            const norm = c.email.toLowerCase().trim();
+            if (deletedSet.has(norm)) continue;
+            const existing = accountsMap.get(norm);
+            accountsMap.set(norm, {
+              id: c.id || existing?.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+              name: c.name || existing?.name || "Client Executive",
+              company: c.company || existing?.company || "Enterprise Client",
               email: c.email,
-              phone: c.phone || "+91 6380488373",
-              sla: c.slaTier || c.sla || "Enterprise 15-Min 24/7 SLA",
-              password: c.password,
-              activeTickets: c.activeTickets || 0,
-              status: c.status || "Active",
-            }));
-          setCustomers(formatted);
+              phone: c.phone || existing?.phone || "+91 6380488373",
+              sla: c.slaTier || c.sla || existing?.sla || "Enterprise 15-Min 24/7 SLA",
+              password: c.password || existing?.password,
+              activeTickets: c.activeTickets || existing?.activeTickets || 0,
+              status: c.status || existing?.status || "Active",
+            });
+          }
         }
       } catch (err) {
         console.warn("API load error, falling back to local storage:", err);
       } finally {
+        setCustomers(Array.from(accountsMap.values()));
         setLoading(false);
       }
     }

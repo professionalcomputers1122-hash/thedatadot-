@@ -110,14 +110,10 @@ export async function POST(req: Request) {
       "127.0.0.1";
 
     const body = await req.json();
+    const finalName = (body.customerName || body.name || body.contactName || body.fullName || "").trim();
+    const finalEmail = (body.customerEmail || body.email || "").trim();
+    const finalCompany = (body.companyName || body.company || "Direct Client Inquiry").trim();
     const {
-      name,
-      contactName,
-      customerName = name || contactName,
-      email,
-      customerEmail = email,
-      company,
-      companyName = company || "Direct Client Inquiry",
       phone = "",
       teamSize = "11 - 50 employees",
       service,
@@ -140,7 +136,7 @@ export async function POST(req: Request) {
       : "Standard";
     const finalMessage = message || requirements || "No additional message provided.";
 
-    if (!customerName || !customerEmail) {
+    if (!finalName || !finalEmail) {
       return NextResponse.json(
         { success: false, error: "Name and email are required to submit an inquiry." },
         { status: 400 }
@@ -158,9 +154,9 @@ export async function POST(req: Request) {
 
     const record = {
       id: inquiryId,
-      company_name: companyName,
-      customer_name: customerName,
-      customer_email: customerEmail,
+      company_name: finalCompany,
+      customer_name: finalName,
+      customer_email: finalEmail,
       device_or_subject: finalService,
       media_type: "GENERAL",
       serial_number: phone || "N/A",
@@ -197,7 +193,7 @@ export async function POST(req: Request) {
       await supabase.from("audit_logs").insert([
         {
           id: `LOG-INQ-${Date.now().toString(36).toUpperCase()}`,
-          actor: `${customerName} (${customerEmail})`,
+          actor: `${finalName} (${finalEmail})`,
           action: "NEW_CLIENT_INQUIRY",
           target: `Inquiry #${inquiryId}`,
           ip: clientIp,
@@ -213,9 +209,9 @@ export async function POST(req: Request) {
       inquiryId,
       inquiry: {
         id: inquiryId,
-        customerName,
-        customerEmail,
-        companyName,
+        customerName: finalName,
+        customerEmail: finalEmail,
+        companyName: finalCompany,
         phone,
         teamSize,
         service: finalService,

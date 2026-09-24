@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import CustomerNav from "@/components/CustomerNav";
 import Footer from "@/components/Footer";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
-import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket } from "@/lib/portalData";
+import { fetchTicketsFromSupabase, deleteTicketFromSupabase, Ticket, formatTicketDateTime } from "@/lib/portalData";
 import { getCustomerSession } from "@/lib/clientAuth";
 
 export default function CustomerTicketsPage() {
@@ -17,6 +17,12 @@ export default function CustomerTicketsPage() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Date Range Filter State
+  const [datePreset, setDatePreset] = useState<"ALL" | "TODAY" | "7DAYS" | "30DAYS" | "CUSTOM">("ALL");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [showCustomDateInputs, setShowCustomDateInputs] = useState(false);
 
   useEffect(() => {
     const cust = getCustomerSession();
@@ -120,7 +126,42 @@ export default function CustomerTicketsPage() {
       statusFilter === "ALL" ||
       (statusFilter === "ACTIVE" && t.status !== "Resolved") ||
       (statusFilter === "RESOLVED" && t.status === "Resolved");
-    return matchesSearch && matchesCategory && matchesStatus;
+
+    if (!matchesSearch || !matchesCategory || !matchesStatus) return false;
+
+    // Date range filter
+    if (datePreset === "ALL" && !startDate && !endDate) return true;
+
+    const { timestamp } = formatTicketDateTime(t);
+    const now = new Date();
+
+    if (datePreset === "TODAY") {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+      return timestamp >= todayStart && timestamp <= todayEnd;
+    }
+
+    if (datePreset === "7DAYS") {
+      const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+      return timestamp >= sevenDaysAgo;
+    }
+
+    if (datePreset === "30DAYS") {
+      const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+      return timestamp >= thirtyDaysAgo;
+    }
+
+    if (startDate) {
+      const startMs = new Date(startDate + "T00:00:00").getTime();
+      if (!isNaN(startMs) && timestamp < startMs) return false;
+    }
+
+    if (endDate) {
+      const endMs = new Date(endDate + "T23:59:59.999").getTime();
+      if (!isNaN(endMs) && timestamp > endMs) return false;
+    }
+
+    return true;
   });
 
   const getCategoryBadge = (cat?: string) => {
@@ -259,6 +300,185 @@ export default function CustomerTicketsPage() {
           </div>
         </div>
 
+        {/* DATE RANGE FILTER BAR */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 mb-6 shadow-xs">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span>Filter By Date:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("ALL");
+                  setStartDate("");
+                  setEndDate("");
+                  setShowCustomDateInputs(false);
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  datePreset === "ALL" && !startDate && !endDate
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                All Dates
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("TODAY");
+                  setStartDate("");
+                  setEndDate("");
+                  setShowCustomDateInputs(false);
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  datePreset === "TODAY"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("7DAYS");
+                  setStartDate("");
+                  setEndDate("");
+                  setShowCustomDateInputs(false);
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  datePreset === "7DAYS"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("30DAYS");
+                  setStartDate("");
+                  setEndDate("");
+                  setShowCustomDateInputs(false);
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  datePreset === "30DAYS"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Last 30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("CUSTOM");
+                  setShowCustomDateInputs(true);
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  datePreset === "CUSTOM" || showCustomDateInputs
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <span>Custom Range</span>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Custom Range Inputs */}
+            {(showCustomDateInputs || datePreset === "CUSTOM" || startDate || endDate) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[11px] font-semibold text-slate-600">From:</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDatePreset("CUSTOM");
+                    }}
+                    className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[11px] font-semibold text-slate-600">To:</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDatePreset("CUSTOM");
+                    }}
+                    className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                {(startDate || endDate || datePreset !== "ALL") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDatePreset("ALL");
+                      setStartDate("");
+                      setEndDate("");
+                      setShowCustomDateInputs(false);
+                    }}
+                    className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Active Range Summary */}
+          {(datePreset !== "ALL" || startDate || endDate) && (
+            <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-600">
+                Showing <strong>{filtered.length}</strong> of <strong>{tickets.length}</strong> tickets for{" "}
+                <span className="font-semibold text-blue-700">
+                  {datePreset === "TODAY"
+                    ? "Today"
+                    : datePreset === "7DAYS"
+                    ? "Last 7 Days"
+                    : datePreset === "30DAYS"
+                    ? "Last 30 Days"
+                    : startDate && endDate
+                    ? `${startDate} to ${endDate}`
+                    : startDate
+                    ? `from ${startDate}`
+                    : endDate
+                    ? `up to ${endDate}`
+                    : "Selected Range"}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDatePreset("ALL");
+                  setStartDate("");
+                  setEndDate("");
+                  setShowCustomDateInputs(false);
+                }}
+                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+              >
+                Clear Date Filter ×
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* TICKETS TABLE */}
         <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
           {loading ? (
@@ -272,8 +492,27 @@ export default function CustomerTicketsPage() {
             <div className="p-12 text-center text-slate-500">
               <p className="font-semibold text-slate-700">No tickets found</p>
               <p className="text-xs text-slate-400 mt-1">
-                {search ? "No cases match your search criteria." : "You have no active support tickets in this view."}
+                {search || datePreset !== "ALL" || startDate || endDate
+                  ? "No cases match your filter criteria."
+                  : "You have no active support tickets in this view."}
               </p>
+              {(datePreset !== "ALL" || startDate || endDate || search) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("ALL");
+                    setStartDate("");
+                    setEndDate("");
+                    setSearch("");
+                    setCategoryFilter("ALL");
+                    setStatusFilter("ALL");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -283,6 +522,7 @@ export default function CustomerTicketsPage() {
                     <th className="px-5 py-3.5">Ticket ID</th>
                     <th className="px-5 py-3.5">Service Category</th>
                     <th className="px-5 py-3.5">Target / Subject</th>
+                    <th className="px-5 py-3.5">Date &amp; Time</th>
                     <th className="px-5 py-3.5">Urgency</th>
                     <th className="px-5 py-3.5">Current Status</th>
                     <th className="px-5 py-3.5">Lead Specialist</th>
@@ -311,6 +551,23 @@ export default function CustomerTicketsPage() {
                               ID: {t.serialNumber}
                             </span>
                           )}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          {(() => {
+                            const dt = formatTicketDateTime(t);
+                            return (
+                              <div>
+                                <p className="font-semibold text-slate-900">{dt.date}</p>
+                                <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                  <svg className="w-3 h-3 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                  </svg>
+                                  <span>{dt.time || "Logged"}</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-4">
                           <span

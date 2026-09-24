@@ -21,6 +21,7 @@ import {
   isSupabaseConfigured,
   TimelineStage,
   getTimelineStages,
+  formatTicketDateTime,
 } from "@/lib/portalData";
 
 export default function CustomerDashboardPage() {
@@ -33,6 +34,12 @@ export default function CustomerDashboardPage() {
   const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [previewFile, setPreviewFile] = useState<TicketAttachment | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // Date Range Filter State
+  const [datePreset, setDatePreset] = useState<"ALL" | "TODAY" | "7DAYS" | "30DAYS" | "CUSTOM">("ALL");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [showCustomDateInputs, setShowCustomDateInputs] = useState(false);
 
   useEffect(() => {
     const currentCustomer = getCustomerSession();
@@ -200,6 +207,41 @@ export default function CustomerDashboardPage() {
   const activeCount = tickets.filter(
     (t) => t.status !== "Resolved" && t.status !== "Closed"
   ).length;
+
+  const filteredDashboardTickets = tickets.filter((t) => {
+    if (datePreset === "ALL" && !startDate && !endDate) return true;
+
+    const { timestamp } = formatTicketDateTime(t);
+    const now = new Date();
+
+    if (datePreset === "TODAY") {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+      return timestamp >= todayStart && timestamp <= todayEnd;
+    }
+
+    if (datePreset === "7DAYS") {
+      const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+      return timestamp >= sevenDaysAgo;
+    }
+
+    if (datePreset === "30DAYS") {
+      const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+      return timestamp >= thirtyDaysAgo;
+    }
+
+    if (startDate) {
+      const startMs = new Date(startDate + "T00:00:00").getTime();
+      if (!isNaN(startMs) && timestamp < startMs) return false;
+    }
+
+    if (endDate) {
+      const endMs = new Date(endDate + "T23:59:59.999").getTime();
+      if (!isNaN(endMs) && timestamp > endMs) return false;
+    }
+
+    return true;
+  });
 
   const stages = activeTicket
     ? getTimelineStages(activeTicket.category, activeTicket.status, activeTicket.clonedPercent || 0)
@@ -410,20 +452,30 @@ export default function CustomerDashboardPage() {
           <div className="rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/20 p-6 sm:p-8 shadow-xs mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5 mb-6">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-2 border border-blue-200 bg-blue-50 text-blue-700">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
-                  </span>
-                  <span>
-                    {activeTicket.category === "Cybersecurity"
-                      ? "Cybersecurity Response Target"
-                      : activeTicket.category === "Cloud Solutions"
-                      ? "Cloud Infrastructure Target"
-                      : activeTicket.category === "Managed IT"
-                      ? "Managed IT Workstation"
-                      : "Forensic Hardware Target"}{" "}
-                    • Case #{activeTicket.id}
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold border border-blue-200 bg-blue-50 text-blue-700">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                    </span>
+                    <span>
+                      {activeTicket.category === "Cybersecurity"
+                        ? "Cybersecurity Response Target"
+                        : activeTicket.category === "Cloud Solutions"
+                        ? "Cloud Infrastructure Target"
+                        : activeTicket.category === "Managed IT"
+                        ? "Managed IT Workstation"
+                        : "Forensic Hardware Target"}{" "}
+                      • Case #{activeTicket.id}
+                    </span>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-white border border-slate-200 text-slate-700 shadow-2xs">
+                    <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>Logged: <strong className="text-slate-900">{formatTicketDateTime(activeTicket).full}</strong></span>
                   </span>
                 </div>
 
@@ -690,37 +742,248 @@ export default function CustomerDashboardPage() {
 
         {/* RECENT TICKETS TABLE */}
         <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
             <div>
               <h3 className="text-lg font-bold text-slate-950">
                 Your Tickets
               </h3>
               <p className="text-xs text-slate-500">
-                Active and recent support requests
+                Active and recent support requests with live telemetry
               </p>
             </div>
             <Link
               href="/customer/tickets"
-              className="text-xs font-bold text-blue-600 hover:underline"
+              className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
             >
-              View All Tickets ({tickets.length}) →
+              <span>View All Tickets ({tickets.length})</span>
+              <span>→</span>
             </Link>
           </div>
 
+          {/* DATE RANGE FILTER CONTROLS */}
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <span>Date Range:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("ALL");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    datePreset === "ALL" && !startDate && !endDate
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  All Dates
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("TODAY");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    datePreset === "TODAY"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("7DAYS");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    datePreset === "7DAYS"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  Last 7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("30DAYS");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    datePreset === "30DAYS"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  Last 30 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("CUSTOM");
+                    setShowCustomDateInputs(true);
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                    datePreset === "CUSTOM" || showCustomDateInputs
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>Custom Range</span>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Custom Date Pickers */}
+              {(showCustomDateInputs || datePreset === "CUSTOM" || startDate || endDate) && (
+                <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] font-semibold text-slate-600">From:</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setDatePreset("CUSTOM");
+                      }}
+                      className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] font-semibold text-slate-600">To:</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setDatePreset("CUSTOM");
+                      }}
+                      className="rounded-xl border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  {(startDate || endDate || datePreset !== "ALL") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDatePreset("ALL");
+                        setStartDate("");
+                        setEndDate("");
+                        setShowCustomDateInputs(false);
+                      }}
+                      className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                      title="Reset Date Range"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Filter Summary Badge */}
+            {(datePreset !== "ALL" || startDate || endDate) && (
+              <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                <span className="text-slate-600">
+                  Showing <strong>{filteredDashboardTickets.length}</strong> of <strong>{tickets.length}</strong> cases for{" "}
+                  <span className="font-semibold text-blue-700">
+                    {datePreset === "TODAY"
+                      ? "Today"
+                      : datePreset === "7DAYS"
+                      ? "the Last 7 Days"
+                      : datePreset === "30DAYS"
+                      ? "the Last 30 Days"
+                      : startDate && endDate
+                      ? `${startDate} to ${endDate}`
+                      : startDate
+                      ? `from ${startDate}`
+                      : endDate
+                      ? `up to ${endDate}`
+                      : "Selected Range"}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("ALL");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                >
+                  Clear Date Filter ×
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="overflow-x-auto">
-            {tickets.length > 0 ? (
+            {tickets.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500">
+                You have no active support tickets in this account.
+              </div>
+            ) : filteredDashboardTickets.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 mb-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-slate-700">No tickets match the selected date range</p>
+                <p className="text-xs text-slate-400 mt-1">Try selecting a broader date range or clearing the filter.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDatePreset("ALL");
+                    setStartDate("");
+                    setEndDate("");
+                    setShowCustomDateInputs(false);
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+                >
+                  Reset Date Filter
+                </button>
+              </div>
+            ) : (
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="text-[10px] font-bold uppercase border-b border-slate-200 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Ticket ID</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Subject</th>
+                    <th className="px-4 py-3">Date &amp; Time</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {tickets.map((t) => (
+                  {filteredDashboardTickets.map((t) => (
                     <tr key={t.id} className="transition hover:bg-slate-50/60">
                       <td className="px-4 py-3.5 font-bold text-blue-600">
                         <div>#{t.id}</div>
@@ -741,6 +1004,23 @@ export default function CustomerDashboardPage() {
                       </td>
                       <td className="px-4 py-3.5 font-medium text-slate-900">
                         {t.deviceOrSubject}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        {(() => {
+                          const dt = formatTicketDateTime(t);
+                          return (
+                            <div>
+                              <div className="font-semibold text-slate-900">{dt.date}</div>
+                              <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                <svg className="w-3 h-3 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <span>{dt.time || "Logged"}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3.5">
                         <span
@@ -794,10 +1074,6 @@ export default function CustomerDashboardPage() {
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <div className="py-8 text-center text-xs text-slate-400">
-                No tickets currently registered.
-              </div>
             )}
           </div>
         </div>

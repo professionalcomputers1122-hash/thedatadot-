@@ -16,6 +16,9 @@ export interface Ticket {
   clonedPercent?: number;
   recoveredSize?: string;
   createdAt: string;
+  createdAtRaw?: string;
+  createdDate?: string;
+  createdTime?: string;
   lastUpdated: string;
   symptoms: string;
   techNotes: string;
@@ -537,15 +540,82 @@ export function parseTicketRow(row: any): Ticket {
     clonedPercent,
     recoveredSize,
     createdAt: row.created_at
+      ? new Date(row.created_at).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Today",
+    createdAtRaw: row.created_at || "",
+    createdDate: row.created_at
       ? new Date(row.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
         })
       : "Today",
+    createdTime: row.created_at
+      ? new Date(row.created_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "",
     lastUpdated: "Live from Supabase",
     symptoms: row.symptoms || "",
     techNotes: row.tech_notes || "",
+  };
+}
+
+export function formatTicketDateTime(t: Ticket | any): {
+  date: string;
+  time: string;
+  full: string;
+  timestamp: number;
+} {
+  if (!t) return { date: "Today", time: "", full: "Today", timestamp: Date.now() };
+
+  if (t.createdDate && t.createdTime) {
+    const raw = t.createdAtRaw || t.createdAt;
+    const d = raw ? new Date(raw) : new Date();
+    const timestamp = !isNaN(d.getTime()) ? d.getTime() : Date.now();
+    return {
+      date: t.createdDate,
+      time: t.createdTime,
+      full: `${t.createdDate}, ${t.createdTime}`,
+      timestamp,
+    };
+  }
+
+  const str = t.createdAtRaw || t.created_at || t.createdAt;
+  if (!str || str === "Today") {
+    return { date: "Today", time: "", full: "Today", timestamp: Date.now() };
+  }
+
+  const d = new Date(str);
+  if (isNaN(d.getTime())) {
+    return { date: str, time: "", full: str, timestamp: Date.now() };
+  }
+
+  const date = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return {
+    date,
+    time,
+    full: `${date}, ${time}`,
+    timestamp: d.getTime(),
   };
 }
 

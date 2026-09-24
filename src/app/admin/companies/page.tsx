@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import AdminLayoutShell from "@/components/AdminLayoutShell";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
+import ITManagementContractModal from "@/components/ITManagementContractModal";
 import {
   initialCompanies,
   CompanyRecord,
@@ -17,6 +18,8 @@ export default function AdminCompaniesPage() {
   const [notification, setNotification] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [selectedContractCompany, setSelectedContractCompany] = useState<CompanyRecord | null>(null);
 
   // New Organization Form
   const [newOrg, setNewOrg] = useState({
@@ -176,12 +179,23 @@ export default function AdminCompaniesPage() {
       title="Client Organizations &amp; Companies"
       subtitle="B2B institutional client portfolios, recovery history, and assigned account executives"
       actions={
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5"
-        >
-          <span>+</span> Register Organization
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedContractCompany(null);
+              setShowContractModal(true);
+            }}
+            className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-3.5 py-2 text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>📄</span> Create IT Contract
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>+</span> Register Organization
+          </button>
+        </div>
       }
     >
       <div className="space-y-6 text-xs">
@@ -255,16 +269,30 @@ export default function AdminCompaniesPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => setDeleteModalTarget(c)}
-                          disabled={deletingId === c.id}
-                          className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 ml-auto disabled:opacity-50 cursor-pointer shadow-2xs"
-                          title={`Permanently delete organization "${c.name}"`}
-                        >
-                          <span>🗑️</span>
-                          <span>Delete</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedContractCompany(c);
+                              setShowContractModal(true);
+                            }}
+                            className="rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title={`Generate Master IT Management Contract for ${c.name}`}
+                          >
+                            <span>📄</span>
+                            <span>SLA Contract</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteModalTarget(c)}
+                            disabled={deletingId === c.id}
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold transition flex items-center gap-1 disabled:opacity-50 cursor-pointer shadow-2xs"
+                            title={`Permanently delete organization "${c.name}"`}
+                          >
+                            <span>🗑️</span>
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -399,6 +427,20 @@ export default function AdminCompaniesPage() {
               : ""
           }
           isDeleting={!!deletingId}
+        />
+
+        {/* MASTER IT MANAGEMENT CONTRACT CREATOR MODAL */}
+        <ITManagementContractModal
+          isOpen={showContractModal}
+          onClose={() => {
+            setShowContractModal(false);
+            setSelectedContractCompany(null);
+          }}
+          initialCompany={selectedContractCompany}
+          onSaved={(saved) => {
+            setNotification(`✓ Contract #${saved.contractId} successfully generated for ${saved.clientCompany}!`);
+            setTimeout(() => setNotification(""), 6000);
+          }}
         />
       </div>
     </AdminLayoutShell>

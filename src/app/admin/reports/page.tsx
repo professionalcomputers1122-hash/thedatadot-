@@ -5,6 +5,7 @@ import AdminLayoutShell from "@/components/AdminLayoutShell";
 import AdvancedDataRecoveryReportModal, {
   AdvancedReportData,
 } from "@/components/AdvancedDataRecoveryReportModal";
+import ITManagementContractModal from "@/components/ITManagementContractModal";
 import ModernDeleteModal from "@/components/ModernDeleteModal";
 import {
   fetchReportsFromSupabase,
@@ -19,6 +20,7 @@ export default function AdminReportsPage() {
   const [filterMedia, setFilterMedia] = useState("ALL");
   const [selectedReport, setSelectedReport] = useState<Partial<AdvancedReportData> | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<DiagnosisReport | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [notification, setNotification] = useState("");
@@ -133,6 +135,15 @@ export default function AdminReportsPage() {
             >
               <span className="text-blue-600 font-bold">↻</span>
               <span>Sync Live</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsContractModalOpen(true)}
+              className="rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <span>📄</span>
+              <span>New IT SLA Contract</span>
             </button>
 
             <button
@@ -481,8 +492,19 @@ export default function AdminReportsPage() {
             loadReports();
             setIsReportModalOpen(false);
             setSelectedReport(null);
-            setNotification("✓ Forensic Diagnosis Report saved &amp; synchronized!");
+            setNotification("✓ Forensic Diagnosis Report saved & synchronized!");
             setTimeout(() => setNotification(""), 4000);
+          }}
+        />
+
+        {/* MASTER IT MANAGEMENT CONTRACT MODAL */}
+        <ITManagementContractModal
+          isOpen={isContractModalOpen}
+          onClose={() => setIsContractModalOpen(false)}
+          onSaved={(saved) => {
+            setIsContractModalOpen(false);
+            setNotification(`✓ IT Management Contract #${saved.contractId} created for ${saved.clientCompany}!`);
+            setTimeout(() => setNotification(""), 6000);
           }}
         />
       </div>

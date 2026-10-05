@@ -236,27 +236,6 @@ export async function POST(req: Request) {
             </div>
           `,
         });
-
-        // Receipt to customer
-        if (customerEmail.includes("@")) {
-          await resend.emails.send({
-            from: fromSupportSender,
-            to: customerEmail,
-            subject: `Case Registered: #${ticketId} - The Data Dot Cleanroom Lab`,
-            html: `
-              <div style="font-family: sans-serif; padding: 20px; color: #1e293b;">
-                <h2 style="color: #2563eb;">Hardware Intake Confirmed</h2>
-                <p>Hello ${customerName},</p>
-                <p>Your case <strong>#${ticketId}</strong> has been logged in our secure cleanroom facility.</p>
-                <p><strong>Target Hardware:</strong> ${deviceOrSubject}</p>
-                <p><strong>Priority SLA:</strong> ${urgency}</p>
-                <p>You can track the live PC-3000 sector imaging progress anytime in our Customer Portal.</p>
-                <br>
-                <p>Best regards,<br><strong>The Data Dot Engineering Desk</strong><br>Hotline: +91 6380488373</p>
-              </div>
-            `,
-          });
-        }
       } catch (emailErr) {
         console.warn("[API /api/tickets POST Resend dispatch warn]:", emailErr);
       }

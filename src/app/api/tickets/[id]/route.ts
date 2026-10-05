@@ -234,15 +234,8 @@ export async function PATCH(
       const newTech = updatedTicket?.assigned_tech || updates.assigned_tech || oldTech || "Specialist Assigned";
       const techChanged = Boolean(oldTech && newTech && oldTech !== newTech);
 
-      // Only notify if something actually changed and we have a valid client email
-      const hasMeaningfulUpdate =
-        statusChanged ||
-        notesChanged ||
-        benchChanged ||
-        techChanged ||
-        (progressChanged && (newProgress === 100 || newProgress % 20 === 0));
-
-      if (hasMeaningfulUpdate && customerEmail && customerEmail.includes("@")) {
+      // Only notify client when the ticket STATUS actually changes (e.g. Intake -> Diagnostics -> Cloning -> Resolved)
+      if (statusChanged && customerEmail && customerEmail.includes("@")) {
         const FALLBACK_KEY = Buffer.from("cmVfWDhzcndoN1pfQW9RbVd1dnVtYllwQnZwZFE4THFQcmNw", "base64").toString("utf-8");
         const rawApiKey = process.env.RESEND_API_KEY || FALLBACK_KEY;
         const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
@@ -251,9 +244,7 @@ export async function PATCH(
 
         if (apiKey) {
           const resend = new Resend(apiKey);
-          const emailSubject = statusChanged
-            ? `Update: Ticket #${cleanId} Status Changed to "${newStatus}" - The Data Dot`
-            : `Engineering Update on Ticket #${cleanId} - The Data Dot`;
+          const emailSubject = `Update: Ticket #${cleanId} Status Changed to "${newStatus}" - The Data Dot`;
 
           const clientHtml = `
 <!DOCTYPE html>

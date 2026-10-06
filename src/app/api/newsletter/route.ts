@@ -183,6 +183,18 @@ export async function POST(req: Request) {
       border-top: 1px solid #1e293b;
       line-height: 1.6;
     }
+    .btn-unsubscribe {
+      display: inline-block;
+      color: #94a3b8 !important;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background-color: #1e293b;
+      margin-top: 10px;
+    }
     .footer a {
       color: #60a5fa;
       text-decoration: none;
@@ -238,7 +250,10 @@ export async function POST(req: Request) {
     <div class="footer">
       The Data Dot &bull; Professional IT Services &bull; ISO 27001 &amp; SOC 2 Type II Compliance Standards<br>
       You are receiving this communication because your address was registered at <a href="https://www.thedatadot.com">thedatadot.com</a>.<br>
-      Sender: newsletter@news.thedatadot.com &bull; To manage subscription preferences or unsubscribe, reply to this email.
+      Sender: newsletter@news.thedatadot.com<br>
+      <div style="margin-top: 14px;">
+        <a href="https://www.thedatadot.com/api/newsletter/unsubscribe?email=${encodeURIComponent(email)}" class="btn-unsubscribe">Unsubscribe from this newsletter</a>
+      </div>
     </div>
   </div>
 </body>
@@ -251,6 +266,10 @@ export async function POST(req: Request) {
           to: email,
           subject: "Subscription Confirmed: The Data Dot Technical Advisory",
           html: corporateHtml,
+          headers: {
+            "List-Unsubscribe": `<https://www.thedatadot.com/api/newsletter/unsubscribe?email=${encodeURIComponent(email)}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         });
 
         if (!res.error) {

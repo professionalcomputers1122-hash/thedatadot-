@@ -141,6 +141,35 @@ export default function BlogPage() {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [shareToast, setShareToast] = useState("");
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [newsletterError, setNewsletterError] = useState("");
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail || !newsletterEmail.includes("@")) return;
+    setNewsletterLoading(true);
+    setNewsletterError("");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewsletterSuccess(true);
+        setNewsletterEmail("");
+      } else {
+        setNewsletterError(data.error || "Subscription failed. Please try again.");
+      }
+    } catch {
+      setNewsletterError("Service unavailable. Please try again later.");
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
 
   const loadLive = async () => {
     const delSet = getDeletedBlogIds();
@@ -597,23 +626,42 @@ export default function BlogPage() {
             Actionable cybersecurity alerts, cloud advice, and business tech tips without spam or marketing fluff.
           </p>
 
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto"
-          >
-            <input
-              type="email"
-              placeholder="Enter your work email address"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full sm:w-auto shrink-0 rounded-xl bg-blue-600 px-7 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 shadow-sm cursor-pointer"
+          {newsletterSuccess ? (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-5 max-w-md mx-auto text-emerald-900 shadow-sm animate-fade-in">
+              <div className="flex items-center justify-center gap-2 font-bold text-sm text-emerald-800">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">✓</span>
+                <span>You&apos;re Subscribed!</span>
+              </div>
+              <p className="mt-1 text-xs text-emerald-700 leading-relaxed">
+                A welcome briefing has been delivered to your inbox from <strong>newsletter@news.thedatadot.com</strong>.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleNewsletterSubmit}
+              className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto"
             >
-              Subscribe
-            </button>
-          </form>
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your work email address"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20"
+                required
+                disabled={newsletterLoading}
+              />
+              <button
+                type="submit"
+                disabled={newsletterLoading}
+                className="w-full sm:w-auto shrink-0 rounded-xl bg-blue-600 px-7 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {newsletterLoading ? "Connecting..." : "Subscribe"}
+              </button>
+            </form>
+          )}
+          {newsletterError && (
+            <p className="mt-2 text-xs font-semibold text-rose-600">{newsletterError}</p>
+          )}
         </div>
       </section>
 

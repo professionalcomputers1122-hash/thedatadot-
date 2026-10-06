@@ -146,26 +146,34 @@ export default function BlogPage() {
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
   const [newsletterError, setNewsletterError] = useState("");
 
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newsletterEmail || !newsletterEmail.includes("@")) return;
+  const handleNewsletterSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanEmail = (newsletterEmail || "").trim();
+    if (!cleanEmail) {
+      setNewsletterError("Please enter your work email address.");
+      return;
+    }
+    if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setNewsletterError("Please enter a valid corporate email address.");
+      return;
+    }
     setNewsletterLoading(true);
     setNewsletterError("");
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newsletterEmail }),
+        body: JSON.stringify({ email: cleanEmail }),
       });
       const data = await res.json();
       if (data.success) {
         setNewsletterSuccess(true);
         setNewsletterEmail("");
       } else {
-        setNewsletterError(data.error || "Subscription failed. Please try again.");
+        setNewsletterError(data.error || "Subscription request could not be processed. Please try again.");
       }
     } catch {
-      setNewsletterError("Service unavailable. Please try again later.");
+      setNewsletterError("Service temporarily unavailable. Please try again later.");
     } finally {
       setNewsletterLoading(false);
     }
@@ -652,6 +660,7 @@ export default function BlogPage() {
               />
               <button
                 type="submit"
+                onClick={(e) => handleNewsletterSubmit(e)}
                 disabled={newsletterLoading}
                 className="w-full sm:w-auto shrink-0 rounded-xl bg-blue-600 px-7 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 shadow-sm cursor-pointer disabled:opacity-50"
               >

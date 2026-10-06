@@ -4,6 +4,16 @@ import { Resend } from "resend";
 
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -11,8 +21,8 @@ export async function POST(req: Request) {
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
-        { success: false, error: "Valid email address is required" },
-        { status: 400 }
+        { success: false, error: "Please provide a valid corporate email address." },
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
@@ -34,10 +44,10 @@ export async function POST(req: Request) {
           company_name: "Newsletter Subscriber",
           customer_name: email.split("@")[0],
           customer_email: email,
-          device_or_subject: "Daily Tech Digest & Cyber Briefing",
+          device_or_subject: "Daily Technical Advisory & Insights",
           status: "Subscribed",
           urgency: "Standard",
-          tech_notes: "Subscribed via website newsletter intake.",
+          tech_notes: "Registered via website technical advisory subscription intake.",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -46,71 +56,189 @@ export async function POST(req: Request) {
       console.warn("Newsletter DB save warning:", dbErr);
     }
 
-    // 2. Dispatch Welcome Email via Resend from newsletter@news.thedatadot.com
+    // 2. Dispatch Professional Corporate Greeting Email via Resend
     let clientMailSent = false;
     let resendMessageId = null;
 
     if (apiKey) {
       const resend = new Resend(apiKey);
 
-      const welcomeHtml = `
+      const corporateHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <title>The Data Dot - Technical Advisory Subscription Confirmation</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #070e17; color: #f1f5f9; margin: 0; padding: 24px; }
-    .card { max-width: 600px; margin: 0 auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
-    .header { background: linear-gradient(135deg, #092244, #1e3a8a, #2563eb); padding: 32px 32px 28px; text-align: left; }
-    .brand { font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-    .tagline { font-size: 12px; color: #93c5fd; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-    .content { padding: 32px; }
-    .greeting { font-size: 20px; font-weight: 800; color: #ffffff; margin: 0 0 12px 0; }
-    .subtext { font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 24px 0; }
-    .section-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
-    .section-title { font-size: 14px; font-weight: 700; color: #38bdf8; margin-bottom: 4px; }
-    .section-body { font-size: 13px; color: #cbd5e1; line-height: 1.5; }
-    .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 13px; text-align: center; margin-top: 8px; }
-    .footer { background-color: #0b1120; padding: 20px 32px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; line-height: 1.6; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      margin: 0;
+      padding: 32px 16px;
+      line-height: 1.6;
+    }
+    .wrapper {
+      max-width: 620px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+    .header {
+      background-color: #0b1626;
+      border-bottom: 3px solid #2563eb;
+      padding: 32px 36px 28px;
+    }
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 6px;
+    }
+    .content {
+      padding: 36px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 16px 0;
+    }
+    .lead {
+      font-size: 14px;
+      color: #334155;
+      margin: 0 0 24px 0;
+      line-height: 1.65;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin: 28px 0 14px 0;
+    }
+    .pillar-card {
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #2563eb;
+      background-color: #f8fafc;
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+    .pillar-heading {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+    }
+    .pillar-desc {
+      font-size: 13px;
+      color: #475569;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .action-container {
+      text-align: center;
+      margin: 32px 0 12px 0;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #2563eb;
+      color: #ffffff !important;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .contact-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 28px;
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .footer {
+      background-color: #0f172a;
+      padding: 24px 36px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      border-top: 1px solid #1e293b;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="wrapper">
     <div class="header">
-      <div class="brand">THE DATA DOT</div>
-      <div class="tagline">Daily Enterprise Tech Digest &amp; Threat Intelligence</div>
+      <div class="brand-title">THE DATA DOT</div>
+      <div class="brand-subtitle">Enterprise IT Advisory &bull; Cleanroom Data Recovery</div>
     </div>
 
     <div class="content">
-      <h2 class="greeting">Welcome to The Data Dot Digest! 🚀</h2>
-      <p class="subtext">
-        Thank you for subscribing with <strong>${email}</strong>. You're now on the priority distribution list for our daily engineering briefings, cleanroom forensic research, and zero-day cybersecurity advisories.
+      <h1 class="greeting">Subscription Confirmed</h1>
+      <p class="lead">
+        Thank you for subscribing to The Data Dot Technical Advisory Digest. Your corporate email address (<strong>${email}</strong>) has been registered to receive our periodic technology insights, cybersecurity bulletins, and infrastructure advisories.
       </p>
 
-      <div class="section-card">
-        <div class="section-title">🔒 Daily Cybersecurity &amp; Threat Bulletins</div>
-        <div class="section-body">Real-time alerts on zero-day vulnerabilities, active ransomware strains, and hardened server configurations.</div>
+      <div class="section-title">Key Advisory Focus Areas</div>
+
+      <div class="pillar-card">
+        <div class="pillar-heading">Cybersecurity &amp; Threat Intelligence</div>
+        <div class="pillar-desc">
+          Timely technical advisories covering zero-day vulnerability mitigations, enterprise ransomware defense, and access management hardening.
+        </div>
       </div>
 
-      <div class="section-card">
-        <div class="section-title">💾 Cleanroom &amp; Forensic Case Studies</div>
-        <div class="section-body">Inside our Class-100 cleanroom: NAND flash degradation curves, PC-3000 drive firmware recoveries, and RAID rebuilds.</div>
+      <div class="pillar-card">
+        <div class="pillar-heading">Cleanroom &amp; Forensic Data Recovery</div>
+        <div class="pillar-desc">
+          Case studies and diagnostics from our Class-100 cleanroom laboratory, spanning NAND flash forensics, SAS/SATA hardware arrays, and enterprise RAID recovery.
+        </div>
       </div>
 
-      <div class="section-card">
-        <div class="section-title">☁️ Cloud Infrastructure &amp; IT Optimization</div>
-        <div class="section-body">Practical Microsoft 365, AWS, and enterprise backup disaster recovery architectures for modern IT operations.</div>
+      <div class="pillar-card">
+        <div class="pillar-heading">Cloud Solutions &amp; Infrastructure Optimization</div>
+        <div class="pillar-desc">
+          Architectural best practices for Microsoft 365 migrations, hybrid cloud resilience, and continuous disaster recovery planning.
+        </div>
       </div>
 
-      <div style="text-align: center; margin-top: 24px;">
-        <a href="https://www.thedatadot.com/blog" class="btn">Explore All Engineering Articles →</a>
+      <div class="action-container">
+        <a href="https://www.thedatadot.com/blog" class="btn">Access Technical Knowledge Base</a>
+      </div>
+
+      <div class="contact-box">
+        <strong>Need Immediate Technical Consultation?</strong><br>
+        24/7 Operations Desk: <a href="tel:+916380488373" style="color: #2563eb; text-decoration: none; font-weight: 700;">+91 6380488373</a> | Direct Email: <a href="mailto:support@thedatadot.com" style="color: #2563eb; text-decoration: none;">support@thedatadot.com</a>
       </div>
     </div>
 
     <div class="footer">
-      The Data Dot • Enterprise IT &amp; Cleanroom Data Recovery<br>
-      You received this because you subscribed at <a href="https://www.thedatadot.com" style="color: #60a5fa; text-decoration: none;">thedatadot.com</a>.<br>
-      Sender: newsletter@news.thedatadot.com • Dispatch Desk: +91 6380488373
+      The Data Dot &bull; Professional IT Services &bull; ISO 27001 &amp; SOC 2 Type II Compliance Standards<br>
+      You are receiving this communication because your address was registered at <a href="https://www.thedatadot.com">thedatadot.com</a>.<br>
+      Sender: newsletter@news.thedatadot.com &bull; To manage subscription preferences or unsubscribe, reply to this email.
     </div>
   </div>
 </body>
@@ -121,14 +249,14 @@ export async function POST(req: Request) {
         const res = await resend.emails.send({
           from: `The Data Dot Newsletter <${fromEmail}>`,
           to: email,
-          subject: "Welcome to The Data Dot Daily Tech Digest! 🚀",
-          html: welcomeHtml,
+          subject: "Subscription Confirmed: The Data Dot Technical Advisory",
+          html: corporateHtml,
         });
 
         if (!res.error) {
           clientMailSent = true;
           resendMessageId = res.data?.id || null;
-          console.log(`[NEWSLETTER DISPATCH] Sent welcome email to ${email} via ${fromEmail}`);
+          console.log(`[NEWSLETTER DISPATCH] Sent corporate welcome email to ${email} via ${fromEmail}`);
         } else {
           console.error("Newsletter send error:", res.error);
         }
@@ -141,25 +269,28 @@ export async function POST(req: Request) {
         await resend.emails.send({
           from: `The Data Dot Alert <support@thedatadot.com>`,
           to: [supportMailbox, adminEmail],
-          subject: `📰 [NEW SUBSCRIBER] Daily Tech Digest - ${email}`,
-          html: `<p>New subscriber joined The Data Dot Digest: <strong>${email}</strong></p><p>Reference ID: #${newsId}</p>`,
+          subject: `[NEW SUBSCRIBER] Daily Technical Advisory - ${email}`,
+          html: `<p>New subscriber registered for The Data Dot Advisory Digest: <strong>${email}</strong></p><p>Tracking ID: #${newsId}</p>`,
         });
       } catch (admErr) {
         console.warn("Admin newsletter notification warn:", admErr);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      email,
-      clientMailSent,
-      resendMessageId,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        email,
+        clientMailSent,
+        resendMessageId,
+      },
+      { headers: CORS_HEADERS }
+    );
   } catch (err: any) {
     console.error("Newsletter API route error:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Failed to process subscription" },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

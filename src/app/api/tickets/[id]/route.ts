@@ -243,75 +243,209 @@ export async function PATCH(
 
         if (apiKey) {
           const resend = new Resend(apiKey);
-          const emailSubject = `Update: Ticket #${cleanId} Status Changed to "${newStatus}" - The Data Dot`;
+          const emailSubject = `Operational Update: Case #${cleanId} Status changed to "${newStatus}" - The Data Dot`;
 
           const clientHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <title>The Data Dot - Case Telemetry Update</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px; }
-    .card { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
-    .header { background: #0f172a; padding: 24px 32px; text-align: left; }
-    .brand { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 8px; background-color: #2563eb; color: #ffffff; }
-    .content { padding: 32px; }
-    .greeting { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0; }
-    .subtext { font-size: 13px; line-height: 1.6; color: #475569; margin: 0 0 20px 0; }
-    .table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-    .table td { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-    .table td.label { width: 38%; color: #64748b; font-weight: 600; }
-    .table td.value { width: 62%; color: #0f172a; font-weight: 700; text-align: right; }
-    .notes-box { background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 14px 16px; border-radius: 8px; margin: 18px 0; font-size: 13px; line-height: 1.6; color: #334155; }
-    .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 13px; text-align: center; }
-    .hotline-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px; text-align: center; font-size: 12px; color: #1e3a8a; margin-top: 24px; }
-    .footer { background-color: #f8fafc; padding: 18px 32px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      margin: 0;
+      padding: 32px 16px;
+      line-height: 1.6;
+    }
+    .wrapper {
+      max-width: 620px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    }
+    .header {
+      background-color: #091321;
+      border-top: 3px solid #2563eb;
+      padding: 30px 36px 26px;
+    }
+    .brand-title {
+      font-size: 21px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 5px;
+    }
+    .content {
+      padding: 36px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 14px 0;
+    }
+    .lead {
+      font-size: 14px;
+      color: #334155;
+      margin: 0 0 24px 0;
+      line-height: 1.65;
+    }
+    .summary-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .summary-table td {
+      padding: 12px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .summary-table tr:last-child td {
+      border-bottom: none;
+    }
+    .summary-label {
+      width: 42%;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-value {
+      width: 58%;
+      color: #0f172a;
+      font-weight: 600;
+      text-align: right;
+    }
+    .notes-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #2563eb;
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #334155;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0 10px 0;
+    }
+    .btn-primary {
+      display: inline-block;
+      background-color: #2563eb;
+      color: #ffffff !important;
+      padding: 12px 30px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+    }
+    .escalation-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #2563eb;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-top: 26px;
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.6;
+    }
+    .footer {
+      background-color: #091321;
+      padding: 26px 36px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      border-top: 1px solid #1e293b;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    .legal-notice {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #1e293b;
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="wrapper">
     <div class="header">
-      <div class="brand">THE DATA DOT</div>
-      <span class="badge">TICKET #${cleanId} TELEMETRY UPDATE</span>
+      <div class="brand-title">THE DATA DOT</div>
+      <div class="brand-subtitle">Enterprise IT Solutions &bull; Cleanroom Data Recovery</div>
     </div>
 
     <div class="content">
-      <h2 class="greeting">Hello ${customerName},</h2>
-      <p class="subtext">
-        Our engineering desk has logged an update regarding your service case <strong>#${cleanId}</strong> (${deviceOrSubject}).
+      <h1 class="greeting">Dear ${customerName || "Valued Client"},</h1>
+      <p class="lead">
+        We are providing an official engineering telemetry update regarding your active service case <strong>#${cleanId}</strong> (${deviceOrSubject}).
       </p>
 
-      <table class="table">
-        <tr>
-          <td class="label">Current Status</td>
-          <td class="value">
-            ${
-              statusChanged
-                ? `<span style="color: #64748b; text-decoration: line-through; margin-right: 6px;">${oldStatus}</span><span style="color: #2563eb; font-weight: 800;">➔ ${newStatus}</span>`
-                : `<span style="color: #2563eb; font-weight: 800;">${newStatus}</span>`
-            }
-          </td>
-        </tr>
-        <tr>
-          <td class="label">Sector / Bench Progress</td>
-          <td class="value">${newProgress}% Completed</td>
-        </tr>
-        <tr>
-          <td class="label">Assigned Specialist</td>
-          <td class="value">${newTech}</td>
-        </tr>
-        <tr>
-          <td class="label">Assigned Workstation</td>
-          <td class="value">${newBench}</td>
-        </tr>
-      </table>
+      <div class="summary-card">
+        <table class="summary-table">
+          <tr>
+            <td class="summary-label">Case Reference #</td>
+            <td class="summary-value"><span style="color: #2563eb; font-family: monospace; font-size: 13px; font-weight: 700;">#${cleanId}</span></td>
+          </tr>
+          <tr>
+            <td class="summary-label">Operational Status</td>
+            <td class="summary-value">
+              ${
+                statusChanged
+                  ? `<span style="color: #64748b; text-decoration: line-through; margin-right: 6px;">${oldStatus}</span><span style="color: #2563eb; font-weight: 700;">&rarr; ${newStatus}</span>`
+                  : `<span style="color: #2563eb; font-weight: 700;">${newStatus}</span>`
+              }
+            </td>
+          </tr>
+          <tr>
+            <td class="summary-label">Diagnostic Telemetry</td>
+            <td class="summary-value">${newProgress}% Completed</td>
+          </tr>
+          <tr>
+            <td class="summary-label">Designated Lead Tech</td>
+            <td class="summary-value">${newTech}</td>
+          </tr>
+          <tr>
+            <td class="summary-label">Allocated Workstation</td>
+            <td class="summary-value">${newBench}</td>
+          </tr>
+        </table>
+      </div>
 
       ${
         newNotes
           ? `
-      <div style="font-weight: 700; font-size: 12px; color: #64748b; margin-top: 18px; margin-bottom: 6px;">
-        ENGINEERING &amp; DIAGNOSTIC NOTES:
+      <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 20px; margin-bottom: 6px;">
+        Engineering &amp; Diagnostic Protocol Notes
       </div>
       <div class="notes-box">
         ${newNotes}
@@ -320,26 +454,29 @@ export async function PATCH(
           : ""
       }
 
-      <div style="text-align: center; margin-top: 26px;">
-        <a href="https://www.thedatadot.com/customer/tickets/${cleanId}" class="btn">
-          View Live Ticket &amp; Logs in Portal →
+      <div class="cta-container">
+        <a href="https://www.thedatadot.com/customer/tickets/${cleanId}" class="btn-primary">
+          View Case Telemetry in Portal
         </a>
       </div>
 
-      <div class="hotline-box">
-        <strong>Need immediate technical consultation?</strong><br>
-        Direct Lab Escalation Line: <a href="tel:+916380488373" style="color: #2563eb; font-weight: 800; text-decoration: none;">+91 6380488373</a>
+      <div class="escalation-box">
+        <strong>Need Immediate Technical Consultation?</strong><br>
+        24/7 Operations Desk Hotline: <a href="tel:+916380488373" style="color: #2563eb; text-decoration: none; font-weight: 700;">+91 6380488373</a> &bull; Support Mailbox: <a href="mailto:support@thedatadot.com" style="color: #2563eb; text-decoration: none; font-weight: 700;">support@thedatadot.com</a>
       </div>
     </div>
 
     <div class="footer">
-      The Data Dot Enterprise Support • Automated Customer Telemetry Dispatch<br>
-      Ticket ID: #${cleanId} • Monitored 24/7
+      The Data Dot Enterprise Support &bull; Automated Telemetry Dispatch<br>
+      Incident Tracking ID: #${cleanId} &bull; ISO 27001 Certified Operations Desk
+      <div class="legal-notice">
+        CONFIDENTIALITY NOTICE: This transmission is intended strictly for the named recipient and may contain privileged or proprietary information. If you have received this message in error, please discard immediately.
+      </div>
     </div>
   </div>
 </body>
 </html>
-          `;
+`;
 
           await resend.emails.send({
             from: fromSupportSender,

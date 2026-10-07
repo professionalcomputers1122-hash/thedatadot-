@@ -71,81 +71,83 @@ export async function POST(req: Request) {
     const targetMessage = message || symptoms || "No specific details provided.";
 
     const adminSubject = isTicket
-      ? `🚨 [TICKET ALERT: ${cleanUrgency.toUpperCase()}] #${refId} - ${companyName || customerName}`
-      : `🔔 [NEW CLIENT INQUIRY: ${cleanUrgency.toUpperCase()}] #${refId} - ${companyName || customerName}`;
+      ? `[TICKET DISPATCH: ${cleanUrgency.toUpperCase()}] #${refId} - ${companyName || customerName}`
+      : `[CLIENT LEAD DISPATCH: ${cleanUrgency.toUpperCase()}] #${refId} - ${companyName || customerName}`;
 
     const adminPortalUrl = isTicket
-      ? "https://thedatadot.vercel.app/admin/tickets"
-      : "https://thedatadot.vercel.app/admin/inquiries";
+      ? "https://www.thedatadot.com/admin/tickets"
+      : "https://www.thedatadot.com/admin/inquiries";
 
     // -------------------------------------------------------------
-    // TEMPLATE 1: Admin / Team Dispatch Notification ("New Form Mail")
+    // TEMPLATE 1: Admin / Internal Engineering Dispatch
     // -------------------------------------------------------------
     const adminHtml = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <title>The Data Dot - Internal Operations Dispatch</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #070e17; color: #f1f5f9; margin: 0; padding: 24px; }
-    .card { max-width: 620px; margin: 0 auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
-    .header { background: linear-gradient(135deg, #1e3a8a, #2563eb); padding: 24px 32px; text-align: left; }
-    .brand { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 8px; }
-    .badge-critical { background-color: #ef4444; color: #ffffff; }
-    .badge-high { background-color: #f59e0b; color: #ffffff; }
-    .badge-standard { background-color: #3b82f6; color: #ffffff; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1120; color: #f1f5f9; margin: 0; padding: 28px 16px; line-height: 1.6; }
+    .card { max-width: 620px; margin: 0 auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .header { background-color: #070e1b; border-top: 3px solid #2563eb; border-bottom: 1px solid #1e293b; padding: 24px 32px; }
+    .brand-title { font-size: 19px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin: 0; }
+    .brand-sub { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px; }
+    .badge-critical { background-color: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+    .badge-high { background-color: #78350f; color: #fcd34d; border: 1px solid #92400e; }
+    .badge-standard { background-color: #1e3a8a; color: #93c5fd; border: 1px solid #1d4ed8; }
     .content { padding: 32px; }
-    .table { width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 24px; }
-    .table td { padding: 12px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
-    .table td.label { width: 35%; color: #94a3b8; font-weight: 600; }
-    .table td.value { width: 65%; color: #f8fafc; font-weight: 700; }
-    .message-box { background-color: #1e293b; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 8px; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; }
-    .btn { display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 13px; text-align: center; }
-    .footer { background-color: #0b1120; padding: 20px 32px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; }
+    .lead-title { margin: 0 0 6px 0; font-size: 17px; font-weight: 700; color: #ffffff; }
+    .lead-meta { margin: 0 0 20px 0; font-size: 12px; color: #94a3b8; }
+    .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; background-color: #141e33; border: 1px solid #1e293b; border-radius: 8px; overflow: hidden; }
+    .table td { padding: 10px 16px; border-bottom: 1px solid #1e293b; font-size: 13px; }
+    .table tr:last-child td { border-bottom: none; }
+    .table td.label { width: 35%; color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    .table td.value { width: 65%; color: #f8fafc; font-weight: 600; }
+    .message-box { background-color: #141e33; border: 1px solid #1e293b; border-left: 4px solid #2563eb; padding: 16px; border-radius: 6px; margin: 18px 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; }
+    .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 12px 28px; border-radius: 6px; font-weight: 700; text-decoration: none; font-size: 13px; text-align: center; }
+    .footer { background-color: #070e1b; padding: 20px 32px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <div class="brand">THE DATA DOT • ${isTicket ? "TICKET DISPATCH" : "CLIENT LEAD DISPATCH"}</div>
-      <span class="badge badge-${cleanUrgency.toLowerCase()}">${cleanUrgency.toUpperCase()} SLA ALERT</span>
+      <div class="brand-title">THE DATA DOT</div>
+      <div class="brand-sub">${isTicket ? "INTERNAL TICKET DISPATCH DESK" : "ENTERPRISE CLIENT INTAKE DESK"}</div>
+      <span class="badge badge-${cleanUrgency.toLowerCase()}">${cleanUrgency.toUpperCase()} PRIORITY &bull; SLA ACTIVATED</span>
     </div>
 
     <div class="content">
-      <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #ffffff;">
-        ${isTicket ? "New Ticket Submitted" : "New Website Form Submission"} #${refId}
-      </h2>
-      <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-        Submitted via Website • Captured for Team Coordination
-      </p>
+      <h2 class="lead-title">${isTicket ? "New Case Registered" : "New Client Consultation File"} #${refId}</h2>
+      <p class="lead-meta">Captured via Public Portal &bull; System Routing: Super Admin &amp; Solutions Engineering</p>
 
       <table class="table">
         <tr>
           <td class="label">Reference ID</td>
-          <td class="value"><span style="color: #60a5fa; font-family: monospace; font-size: 14px;">#${refId}</span></td>
+          <td class="value"><span style="color: #60a5fa; font-family: monospace; font-size: 13px;">#${refId}</span></td>
         </tr>
         <tr>
-          <td class="label">Client Name</td>
+          <td class="label">Contact Name</td>
           <td class="value">${customerName || "N/A"}</td>
         </tr>
         <tr>
-          <td class="label">Company / Org</td>
+          <td class="label">Organization</td>
           <td class="value">${companyName || "N/A"}</td>
         </tr>
         <tr>
-          <td class="label">Direct Email</td>
+          <td class="label">Corporate Email</td>
           <td class="value"><a href="mailto:${customerEmail}" style="color: #60a5fa; text-decoration: none;">${customerEmail || "N/A"}</a></td>
         </tr>
         ${phone ? `
         <tr>
-          <td class="label">Phone Contact</td>
-          <td class="value"><a href="tel:${phone}" style="color: #34d399; text-decoration: none; font-weight: bold;">${phone}</a></td>
+          <td class="label">Escalation Phone</td>
+          <td class="value">${phone}</td>
         </tr>
         ` : ""}
         ${teamSize ? `
         <tr>
-          <td class="label">Team / Company Size</td>
+          <td class="label">Organization Scale</td>
           <td class="value">${teamSize}</td>
         </tr>
         ` : ""}
@@ -154,13 +156,13 @@ export async function POST(req: Request) {
           <td class="value">${displayService}</td>
         </tr>
         <tr>
-          <td class="label">SLA Priority</td>
-          <td class="value"><strong style="color: ${cleanUrgency === "Critical" ? "#ef4444" : cleanUrgency === "High" ? "#f59e0b" : "#38bdf8"};">${cleanUrgency}</strong></td>
+          <td class="label">SLA Tier</td>
+          <td class="value">${cleanUrgency} Priority</td>
         </tr>
       </table>
 
-      <div style="font-weight: 700; font-size: 12px; color: #94a3b8; margin-bottom: 6px;">
-        REQUIREMENTS / CLIENT MESSAGE:
+      <div style="font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px;">
+        SCOPE SPECIFICATIONS &amp; CLIENT MESSAGE
       </div>
       <div class="message-box">
 ${targetMessage}
@@ -168,14 +170,14 @@ ${targetMessage}
 
       <div style="text-align: center; margin-top: 28px;">
         <a href="${adminPortalUrl}" class="btn">
-          ${isTicket ? "Open Ticket in Console →" : "Review & Coordinate in Inquiries Portal →"}
+          ${isTicket ? "Open Case in Admin Console" : "Review File in Inquiries Portal"}
         </a>
       </div>
     </div>
 
     <div class="footer">
-      The Data Dot Enterprise Support • 24/7 Rapid Response Desk<br>
-      Hotline: +91 6380488373 • Mailbox: ${supportMailbox}
+      The Data Dot Enterprise Support Operations Desk<br>
+      Hotline: +91 6380488373 &bull; Primary Mailbox: ${supportMailbox}
     </div>
   </div>
 </body>
@@ -183,11 +185,11 @@ ${targetMessage}
 `;
 
     // -------------------------------------------------------------
-    // TEMPLATE 2: Client Confirmation Receipt Email
+    // TEMPLATE 2: Client Confirmation Receipt (Executive Corporate)
     // -------------------------------------------------------------
     const clientSubject = isTicket
-      ? `Received: Ticket #${refId} - The Data Dot`
-      : `Confirmation: We Received Your Request #${refId} - The Data Dot`;
+      ? `Receipt: Service Case #${refId} Registered - The Data Dot`
+      : `Confirmation: Service Request #${refId} Received - The Data Dot`;
 
     const slaCommitmentText =
       cleanUrgency === "Critical"
@@ -201,109 +203,290 @@ ${targetMessage}
 <html>
 <head>
   <meta charset="utf-8">
+  <title>The Data Dot - Service Acknowledgement</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px; }
-    .card { max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
-    .header { background: #0f172a; padding: 28px 32px; text-align: left; }
-    .brand { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-    .tagline { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-    .content { padding: 32px; }
-    .greeting { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 12px 0; }
-    .subtext { font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0; }
-    .info-card { background-color: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { color: #64748b; font-weight: 600; }
-    .info-value { color: #0f172a; font-weight: 700; text-align: right; }
-    .steps-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; }
-    .step-item { display: flex; gap: 12px; margin-bottom: 14px; }
-    .step-item:last-child { margin-bottom: 0; }
-    .step-num { width: 24px; height: 24px; border-radius: 50%; background-color: #2563eb; color: #ffffff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .step-content h4 { margin: 0 0 2px 0; font-size: 13px; color: #0f172a; }
-    .step-content p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.4; }
-    .hotline-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; text-align: center; font-size: 13px; color: #1e3a8a; }
-    .footer { background-color: #f8fafc; padding: 20px 32px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      margin: 0;
+      padding: 32px 16px;
+      line-height: 1.6;
+    }
+    .wrapper {
+      max-width: 620px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    }
+    .header {
+      background-color: #091321;
+      border-top: 3px solid #2563eb;
+      padding: 30px 36px 26px;
+    }
+    .brand-title {
+      font-size: 21px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 5px;
+    }
+    .content {
+      padding: 36px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 14px 0;
+    }
+    .lead {
+      font-size: 14px;
+      color: #334155;
+      margin: 0 0 24px 0;
+      line-height: 1.65;
+    }
+    .summary-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 26px;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .summary-table td {
+      padding: 11px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+    .summary-table tr:last-child td {
+      border-bottom: none;
+    }
+    .summary-label {
+      width: 40%;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-value {
+      width: 60%;
+      color: #0f172a;
+      font-weight: 600;
+      text-align: right;
+    }
+    .timeline-container {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 22px;
+      margin: 26px 0;
+      background-color: #ffffff;
+    }
+    .timeline-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #475569;
+      margin-bottom: 16px;
+    }
+    .timeline-row {
+      display: table;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .timeline-row:last-child {
+      margin-bottom: 0;
+    }
+    .timeline-badge {
+      display: table-cell;
+      width: 26px;
+      vertical-align: top;
+    }
+    .timeline-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background-color: #2563eb;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 20px;
+    }
+    .timeline-body {
+      display: table-cell;
+      vertical-align: top;
+      padding-left: 10px;
+    }
+    .timeline-heading {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 2px 0;
+    }
+    .timeline-desc {
+      font-size: 12px;
+      color: #64748b;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 30px 0 10px 0;
+    }
+    .btn-primary {
+      display: inline-block;
+      background-color: #2563eb;
+      color: #ffffff !important;
+      padding: 12px 30px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+    }
+    .escalation-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #2563eb;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-top: 26px;
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.6;
+    }
+    .footer {
+      background-color: #091321;
+      padding: 26px 36px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      border-top: 1px solid #1e293b;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    .legal-notice {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #1e293b;
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="wrapper">
     <div class="header">
-      <div class="brand">THE DATA DOT</div>
-      <div class="tagline">Enterprise IT Infrastructure & Cleanroom Data Recovery</div>
+      <div class="brand-title">THE DATA DOT</div>
+      <div class="brand-subtitle">Enterprise IT Solutions &bull; Cleanroom Data Recovery</div>
     </div>
 
     <div class="content">
-      <h2 class="greeting">Thank you, ${customerName || "there"}!</h2>
-      <p class="subtext">
-        We have received your ${isTicket ? "service ticket" : "consultation and SLA request"}. Our engineering desk is currently reviewing your case details under our <strong>${slaCommitmentText}</strong> commitment.
+      <h1 class="greeting">Dear ${customerName || "Valued Client"},</h1>
+      <p class="lead">
+        ${
+          isTicket
+            ? `We acknowledge receipt of your service case submission. Your incident file has been assigned reference tracking number <strong>#${refId}</strong> and entered into our engineering triage queue under our <strong>${slaCommitmentText}</strong>.`
+            : `Thank you for contacting The Data Dot. We acknowledge receipt of your corporate IT consultation and Service Level Agreement (SLA) intake file. Your inquiry has been registered under reference tracking number <strong>#${refId}</strong> and routed to our solutions engineering desk under our <strong>${slaCommitmentText}</strong>.`
+        }
       </p>
 
-      <div class="info-card">
-        <table style="width: 100%; border-collapse: collapse;">
+      <div class="summary-card">
+        <table class="summary-table">
           <tr>
-            <td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Reference Tracking #</td>
-            <td style="padding: 6px 0; font-size: 14px; color: #2563eb; font-weight: 800; text-align: right; font-family: monospace;">#${refId}</td>
+            <td class="summary-label">Reference ID</td>
+            <td class="summary-value"><span style="color: #2563eb; font-family: monospace; font-size: 14px; font-weight: 700;">#${refId}</span></td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Requested Service</td>
-            <td style="padding: 6px 0; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right;">${displayService}</td>
+            <td class="summary-label">Service Focus</td>
+            <td class="summary-value">${displayService}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">SLA Urgency Level</td>
-            <td style="padding: 6px 0; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right;">${cleanUrgency} Priority</td>
+            <td class="summary-label">SLA Commitment</td>
+            <td class="summary-value">${cleanUrgency} Priority &bull; ${slaCommitmentText}</td>
           </tr>
           ${companyName ? `
           <tr>
-            <td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Company / Org</td>
-            <td style="padding: 6px 0; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right;">${companyName}</td>
+            <td class="summary-label">Organization</td>
+            <td class="summary-value">${companyName}</td>
+          </tr>
+          ` : ""}
+          ${customerEmail ? `
+          <tr>
+            <td class="summary-label">Registered Email</td>
+            <td class="summary-value">${customerEmail}</td>
           </tr>
           ` : ""}
         </table>
       </div>
 
-      <div class="steps-box">
-        <div style="font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 12px;">What happens next:</div>
-        
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="vertical-align: top; width: 32px; padding-bottom: 12px;">
-              <div style="width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 11px; font-weight: bold; text-align: center; line-height: 22px;">1</div>
-            </td>
-            <td style="padding-bottom: 12px;">
-              <strong style="font-size: 13px; color: #0f172a;">Technical Evaluation</strong>
-              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">A designated solutions architect reviews your infrastructure requirements and scope.</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="vertical-align: top; width: 32px; padding-bottom: 12px;">
-              <div style="width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 11px; font-weight: bold; text-align: center; line-height: 22px;">2</div>
-            </td>
-            <td style="padding-bottom: 12px;">
-              <strong style="font-size: 13px; color: #0f172a;">Coordination & Proposal</strong>
-              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Our team will connect via phone or email to align on SLA terms, NDA signing, and diagnostics.</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="vertical-align: top; width: 32px;">
-              <div style="width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 11px; font-weight: bold; text-align: center; line-height: 22px;">3</div>
-            </td>
-            <td>
-              <strong style="font-size: 13px; color: #0f172a;">Client Portal Provisioning</strong>
-              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">You'll receive personalized login access to track tickets, bench imaging, and forensic logs in real time.</div>
-            </td>
-          </tr>
-        </table>
+      <div class="timeline-container">
+        <div class="timeline-title">Operational Workflow &amp; Next Steps</div>
+
+        <div class="timeline-row">
+          <div class="timeline-badge"><div class="timeline-num">1</div></div>
+          <div class="timeline-body">
+            <div class="timeline-heading">Technical Triage &amp; Scoping</div>
+            <div class="timeline-desc">A senior solutions architect evaluates your infrastructure profile, hardware specifications, and required response window.</div>
+          </div>
+        </div>
+
+        <div class="timeline-row">
+          <div class="timeline-badge"><div class="timeline-num">2</div></div>
+          <div class="timeline-body">
+            <div class="timeline-heading">Dedicated Consultation &amp; Execution Proposal</div>
+            <div class="timeline-desc">Our engineering desk will coordinate directly via phone or corporate email to finalize technical deliverables, NDA terms, and diagnostic logistics.</div>
+          </div>
+        </div>
+
+        <div class="timeline-row">
+          <div class="timeline-badge"><div class="timeline-num">3</div></div>
+          <div class="timeline-body">
+            <div class="timeline-heading">Client Portal Provisioning</div>
+            <div class="timeline-desc">You can monitor live status progression, bench imaging telemetry, and technical reports through the secured client portal.</div>
+          </div>
+        </div>
       </div>
 
-      <div class="hotline-box">
+      <div class="cta-container">
+        <a href="https://www.thedatadot.com/portal" class="btn-primary">
+          Access Client Portal
+        </a>
+      </div>
+
+      <div class="escalation-box">
         <strong>Need Immediate Emergency Assistance?</strong><br>
-        Call our 24/7 Rapid Response Escalation Desk directly at <a href="tel:+916380488373" style="color: #2563eb; font-weight: 800; text-decoration: none;">+91 6380488373</a>.
+        24/7 Operations Desk Hotline: <a href="tel:+916380488373" style="color: #2563eb; text-decoration: none; font-weight: 700;">+91 6380488373</a> &bull; Support Mailbox: <a href="mailto:support@thedatadot.com" style="color: #2563eb; text-decoration: none; font-weight: 700;">support@thedatadot.com</a>
       </div>
     </div>
 
     <div class="footer">
-      The Data Dot Enterprise Support • ISO 27001 &amp; SOC 2 Type II Certified<br>
-      Automated dispatch confirmation. Please retain this email for your records.
+      The Data Dot Enterprise Support &bull; ISO 27001 &amp; SOC 2 Type II Aligned<br>
+      Operations Center: Plot 14B, Tech Park Road, Guindy, Chennai 600032
+      <div class="legal-notice">
+        CONFIDENTIALITY NOTICE: This transmission is intended strictly for the named recipient and may contain privileged or proprietary information. If you have received this message in error, please discard immediately.
+      </div>
     </div>
   </div>
 </body>

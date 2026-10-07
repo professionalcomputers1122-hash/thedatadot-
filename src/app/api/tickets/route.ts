@@ -217,24 +217,134 @@ export async function POST(req: Request) {
     if (apiKey) {
       try {
         const resend = new Resend(apiKey);
-        // Alert to engineering desk & assigned technician
+        // 1. Alert to engineering desk & assigned technician
         await resend.emails.send({
           from: fromAlertSender,
           to: adminRecipients,
-          subject: `[TICKET ALERT: ${urgency.toUpperCase()}] #${ticketId} - ${companyName}`,
+          subject: `[TICKET DISPATCH: ${urgency.toUpperCase()}] #${ticketId} - ${companyName || customerName}`,
           html: `
-            <div style="font-family: sans-serif; background: #070e17; color: #f1f5f9; padding: 24px; border-radius: 12px;">
-              <h2 style="color: #38bdf8;">New Hardware Case #${ticketId}</h2>
-              <p><strong>Customer:</strong> ${customerName} (${companyName})</p>
-              <p><strong>Email:</strong> ${customerEmail}</p>
-              <p><strong>Device:</strong> ${deviceOrSubject} (SN: ${serialNumber})</p>
-              <p><strong>Urgency:</strong> ${urgency}</p>
-              <p><strong>Assigned Tech:</strong> ${assignedTech}</p>
-              <p><strong>Symptoms:</strong> ${symptoms || "None provided"}</p>
-              <p><a href="https://thedatadot.vercel.app/technician/dashboard" style="display:inline-block;background:#2563eb;color:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;margin-top:12px;">Open Cleanroom Workbench</a></p>
-            </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1120; color: #f1f5f9; margin: 0; padding: 24px; }
+    .card { max-width: 600px; margin: 0 auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; }
+    .header { background-color: #070e1b; border-top: 3px solid #2563eb; padding: 20px 28px; }
+    .title { font-size: 18px; font-weight: 800; color: #ffffff; margin: 0; }
+    .content { padding: 28px; font-size: 13px; line-height: 1.6; }
+    .table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #141e33; border-radius: 8px; }
+    .table td { padding: 8px 14px; border-bottom: 1px solid #1e293b; }
+    .table td.label { color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 600; width: 35%; }
+    .table td.val { color: #f8fafc; font-weight: 600; }
+    .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 10px 22px; border-radius: 6px; font-weight: 700; text-decoration: none; font-size: 12px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="title">THE DATA DOT &bull; CASE DISPATCH #${ticketId}</div>
+    </div>
+    <div class="content">
+      <table class="table">
+        <tr><td class="label">Reference</td><td class="val">#${ticketId}</td></tr>
+        <tr><td class="label">Client</td><td class="val">${customerName} (${companyName})</td></tr>
+        <tr><td class="label">Email</td><td class="val">${customerEmail}</td></tr>
+        <tr><td class="label">Subject / Hardware</td><td class="val">${deviceOrSubject}</td></tr>
+        <tr><td class="label">Serial Number</td><td class="val">${serialNumber || "N/A"}</td></tr>
+        <tr><td class="label">SLA Urgency</td><td class="val">${urgency}</td></tr>
+        <tr><td class="label">Assigned Tech</td><td class="val">${assignedTech}</td></tr>
+      </table>
+      <p style="color: #94a3b8; margin: 12px 0 4px 0; font-size: 11px; text-transform: uppercase; font-weight: 700;">Diagnostic Notes / Symptoms:</p>
+      <div style="background: #141e33; padding: 12px; border-radius: 6px; color: #cbd5e1;">${symptoms || "None provided"}</div>
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="https://www.thedatadot.com/technician/dashboard" class="btn">Open Workbench Console</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
           `,
         });
+
+        // 2. Dispatch Executive Corporate Receipt to Client
+        if (customerEmail && customerEmail.includes("@")) {
+          const clientSubject = `Receipt: Service Case #${ticketId} Registered - The Data Dot`;
+          const clientHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The Data Dot - Service Acknowledgement</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 32px 16px; line-height: 1.6; }
+    .wrapper { max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05); }
+    .header { background-color: #091321; border-top: 3px solid #2563eb; padding: 30px 36px 26px; }
+    .brand-title { font-size: 21px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin: 0; }
+    .brand-subtitle { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; }
+    .content { padding: 36px; }
+    .greeting { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 14px 0; }
+    .lead { font-size: 14px; color: #334155; margin: 0 0 24px 0; line-height: 1.65; }
+    .summary-card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+    .summary-table { width: 100%; border-collapse: collapse; }
+    .summary-table td { padding: 12px 18px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+    .summary-table tr:last-child td { border-bottom: none; }
+    .summary-label { width: 40%; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .summary-value { width: 60%; color: #0f172a; font-weight: 600; text-align: right; }
+    .cta-container { text-align: center; margin: 30px 0 10px 0; }
+    .btn-primary { display: inline-block; background-color: #2563eb; color: #ffffff !important; padding: 12px 30px; border-radius: 6px; font-weight: 700; text-decoration: none; font-size: 13px; letter-spacing: 0.3px; }
+    .escalation-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 6px; padding: 16px 20px; margin-top: 26px; font-size: 12px; color: #334155; line-height: 1.6; }
+    .footer { background-color: #091321; padding: 26px 36px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #1e293b; line-height: 1.6; }
+    .legal-notice { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1e293b; font-size: 10px; color: #64748b; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="brand-title">THE DATA DOT</div>
+      <div class="brand-subtitle">Enterprise IT Solutions &bull; Cleanroom Data Recovery</div>
+    </div>
+    <div class="content">
+      <h1 class="greeting">Dear ${customerName || "Valued Client"},</h1>
+      <p class="lead">
+        We acknowledge receipt of your service case submission. Your incident file has been assigned reference tracking number <strong>#${ticketId}</strong> and entered into our engineering triage queue under our <strong>${urgency} SLA</strong> standard.
+      </p>
+      <div class="summary-card">
+        <table class="summary-table">
+          <tr><td class="summary-label">Reference ID</td><td class="summary-value"><span style="color: #2563eb; font-family: monospace; font-size: 13px; font-weight: 700;">#${ticketId}</span></td></tr>
+          <tr><td class="summary-label">Subject / Hardware</td><td class="summary-value">${deviceOrSubject}</td></tr>
+          <tr><td class="summary-label">SLA Tier</td><td class="summary-value">${urgency} Priority</td></tr>
+          <tr><td class="summary-label">Organization</td><td class="summary-value">${companyName}</td></tr>
+        </table>
+      </div>
+      <div class="cta-container">
+        <a href="https://www.thedatadot.com/customer/tickets/${ticketId}" class="btn-primary">
+          View Case Status in Client Portal
+        </a>
+      </div>
+      <div class="escalation-box">
+        <strong>Need Immediate Emergency Assistance?</strong><br>
+        24/7 Operations Desk Hotline: <a href="tel:+916380488373" style="color: #2563eb; text-decoration: none; font-weight: 700;">+91 6380488373</a> &bull; Support Mailbox: <a href="mailto:support@thedatadot.com" style="color: #2563eb; text-decoration: none; font-weight: 700;">support@thedatadot.com</a>
+      </div>
+    </div>
+    <div class="footer">
+      The Data Dot Enterprise Support &bull; ISO 27001 &amp; SOC 2 Type II Aligned
+      <div class="legal-notice">
+        CONFIDENTIALITY NOTICE: This transmission is intended strictly for the named recipient and may contain privileged or proprietary information. If you have received this message in error, please discard immediately.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+          `;
+
+          await resend.emails.send({
+            from: fromSupportSender,
+            to: customerEmail,
+            subject: clientSubject,
+            html: clientHtml,
+          });
+        }
       } catch (emailErr) {
         console.warn("[API /api/tickets POST Resend dispatch warn]:", emailErr);
       }

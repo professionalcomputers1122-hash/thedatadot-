@@ -738,6 +738,10 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
                 !t.id.toUpperCase().startsWith("INQ-") &&
                 !t.id.toUpperCase().startsWith("DR-") &&
                 !t.id.toUpperCase().startsWith("RPT-") &&
+                !t.id.toUpperCase().startsWith("NEWS-") &&
+                t.companyName !== "Newsletter Subscriber" &&
+                t.status !== "Subscribed" &&
+                t.status !== "Unsubscribed" &&
                 !inquiryStatuses.has(t.status)
             )
             .map(applyTicketOverrides);
@@ -762,6 +766,10 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
                       !t.id.toUpperCase().startsWith("INQ-") &&
                       !t.id.toUpperCase().startsWith("DR-") &&
                       !t.id.toUpperCase().startsWith("RPT-") &&
+                      !t.id.toUpperCase().startsWith("NEWS-") &&
+                      t.companyName !== "Newsletter Subscriber" &&
+                      t.status !== "Subscribed" &&
+                      t.status !== "Unsubscribed" &&
                       !inquiryStatuses.has(t.status)
                   )
                   .map(applyTicketOverrides);
@@ -815,6 +823,10 @@ export async function fetchTicketsFromSupabase(customerEmail?: string): Promise<
           !t.id.toUpperCase().startsWith("INQ-") &&
           !t.id.toUpperCase().startsWith("DR-") &&
           !t.id.toUpperCase().startsWith("RPT-") &&
+          !t.id.toUpperCase().startsWith("NEWS-") &&
+          t.companyName !== "Newsletter Subscriber" &&
+          t.status !== "Subscribed" &&
+          t.status !== "Unsubscribed" &&
           !inquiryStatuses.has(t.status)
       )
       .map(applyTicketOverrides);

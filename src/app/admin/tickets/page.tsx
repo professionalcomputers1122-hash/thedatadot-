@@ -144,7 +144,14 @@ export default function AdminTicketsPage() {
     async function loadData() {
       try {
         const liveTickets = await fetchTicketsFromSupabase();
-        setTickets(liveTickets || []);
+        const nonNewsletter = (liveTickets || []).filter(
+          (t) =>
+            !t.id.toUpperCase().startsWith("NEWS-") &&
+            t.companyName !== "Newsletter Subscriber" &&
+            t.status !== "Subscribed" &&
+            t.status !== "Unsubscribed"
+        );
+        setTickets(nonNewsletter);
       } catch (err) {
         console.warn("Failed to load tickets from Supabase:", err);
       } finally {
@@ -183,11 +190,18 @@ export default function AdminTicketsPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const isNewsletter = (t: Ticket) =>
+    t.id.toUpperCase().startsWith("NEWS-") ||
+    t.companyName === "Newsletter Subscriber" ||
+    t.status === "Subscribed" ||
+    t.status === "Unsubscribed";
+
   const unassignedCount = tickets.filter(
-    (t) => !t.assignedTech || t.assignedTech === "Unassigned"
+    (t) => !isNewsletter(t) && (!t.assignedTech || t.assignedTech === "Unassigned")
   ).length;
 
   const filtered = tickets.filter((t) => {
+    if (isNewsletter(t)) return false;
     const matchesSearch =
       t.id.toLowerCase().includes(search.toLowerCase()) ||
       t.companyName.toLowerCase().includes(search.toLowerCase()) ||

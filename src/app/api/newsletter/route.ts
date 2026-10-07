@@ -6,12 +6,123 @@ export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search")?.trim().toLowerCase();
+    const status = searchParams.get("status")?.trim();
+
+    const supabase = createAdminClient();
+    let query = supabase
+      .from("tickets")
+      .select("*")
+      .or("id.ilike.NEWS-%,company_name.eq.Newsletter Subscriber,device_or_subject.ilike.%Advisory%,status.eq.Subscribed,status.eq.Unsubscribed")
+      .order("created_at", { ascending: false });
+
+    if (status && status !== "ALL") {
+      query = query.eq("status", status);
+    }
+
+    if (search) {
+      query = query.or(
+        `customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,id.ilike.%${search}%`
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[API /api/newsletter GET error]:", error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500, headers: CORS_HEADERS });
+    }
+
+    const subscribers = (data || []).map((row) => ({
+      id: row.id,
+      email: row.customer_email,
+      name: row.customer_name || (row.customer_email ? row.customer_email.split("@")[0] : "Subscriber"),
+      status: row.status === "Unsubscribed" ? "Unsubscribed" : "Subscribed",
+      subject: row.device_or_subject || "Daily Technical Advisory & Insights",
+      notes: row.tech_notes || "",
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    const totalSubscribed = subscribers.filter((s) => s.status === "Subscribed").length;
+    const totalUnsubscribed = subscribers.filter((s) => s.status === "Unsubscribed").length;
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: subscribers.length,
+        totalSubscribed,
+        totalUnsubscribed,
+        subscribers,
+      },
+      { headers: CORS_HEADERS }
+    );
+  } catch (err: any) {
+    console.error("[API /api/newsletter GET exception]:", err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500, headers: CORS_HEADERS });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ success: false, error: "ID and status are required" }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500, headers: CORS_HEADERS });
+    }
+
+    return NextResponse.json({ success: true, subscriber: data }, { headers: CORS_HEADERS });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500, headers: CORS_HEADERS });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Subscriber ID is required" }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("tickets").delete().eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500, headers: CORS_HEADERS });
+    }
+
+    return NextResponse.json({ success: true, message: `Subscriber #${id} deleted successfully` }, { headers: CORS_HEADERS });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500, headers: CORS_HEADERS });
+  }
 }
 
 export async function POST(req: Request) {

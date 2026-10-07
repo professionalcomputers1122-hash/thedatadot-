@@ -80,6 +80,10 @@ export async function GET(req: Request) {
         !t.id.toUpperCase().startsWith("INQ-") &&
         !t.id.toUpperCase().startsWith("DR-") &&
         !t.id.toUpperCase().startsWith("RPT-") &&
+        !t.id.toUpperCase().startsWith("NEWS-") &&
+        t.company_name !== "Newsletter Subscriber" &&
+        t.status !== "Subscribed" &&
+        t.status !== "Unsubscribed" &&
         !inquiryStatuses.has(t.status)
     );
 

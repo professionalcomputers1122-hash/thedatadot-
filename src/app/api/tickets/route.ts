@@ -196,8 +196,7 @@ export async function POST(req: Request) {
     }
 
     // 3. Dispatch SLA Notification via Resend (if configured)
-    const FALLBACK_KEY = Buffer.from("cmVfWDhzcndoN1pfQW9RbVd1dnVtYllwQnZwZFE4THFQcmNw", "base64").toString("utf-8");
-    const rawApiKey = process.env.RESEND_API_KEY || FALLBACK_KEY;
+    const rawApiKey = process.env.RESEND_API_KEY || "";
     const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
     const supportMailbox = process.env.SUPPORT_EMAIL || "support@thedatadot.com";
     const adminEmail = process.env.ADMIN_EMAIL || "ebinezer@thedatadot.com";

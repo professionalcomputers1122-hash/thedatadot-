@@ -26,8 +26,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const FALLBACK_KEY = Buffer.from("cmVfWDhzcndoN1pfQW9RbVd1dnVtYllwQnZwZFE4THFQcmNw", "base64").toString("utf-8");
-    const rawApiKey = process.env.RESEND_API_KEY || FALLBACK_KEY;
+    const rawApiKey = process.env.RESEND_API_KEY || "";
     const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
     const fromEmail = process.env.NEWSLETTER_FROM_EMAIL || "newsletter@news.thedatadot.com";
     const adminEmail = process.env.ADMIN_EMAIL || "ebinezer@thedatadot.com";

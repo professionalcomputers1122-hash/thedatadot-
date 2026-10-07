@@ -54,9 +54,7 @@ export async function POST(req: Request) {
     const supportMailbox = process.env.SUPPORT_EMAIL || "support@thedatadot.com";
     const adminEmail = process.env.ADMIN_EMAIL || "ebinezer@thedatadot.com";
     const fromEmail = process.env.RESEND_FROM_EMAIL || "support@thedatadot.com";
-    // Base64 encoded fallback key ensuring production delivery even if Vercel dashboard env var is temporarily unlinked
-    const FALLBACK_KEY = Buffer.from("cmVfWDhzcndoN1pfQW9RbVd1dnVtYllwQnZwZFE4THFQcmNw", "base64").toString("utf-8");
-    const rawApiKey = process.env.RESEND_API_KEY || FALLBACK_KEY;
+    const rawApiKey = process.env.RESEND_API_KEY || "";
     const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
     const technicianEmail = body.technicianEmail || body.technician_email || body.assignedTechEmail;
 
@@ -393,17 +391,17 @@ ${targetMessage}
     }
 
     // Fallback when RESEND_API_KEY is not configured
-    console.log(
-      `[EMAIL SIMULATED] Alert for #${refId} queued for ${supportMailbox} and client ${customerEmail}. RESEND_API_KEY pending.`
+    console.warn(
+      `[EMAIL NOTICE] Alert for #${refId} skipped live delivery. RESEND_API_KEY is not configured.`
     );
 
     return NextResponse.json({
       success: true,
       refId,
-      provider: "simulated",
-      adminMailSent: true,
-      clientMailSent: !!(customerEmail && customerEmail.includes("@")),
-      note: "Email generated. Configure RESEND_API_KEY for live delivery.",
+      provider: "unconfigured",
+      adminMailSent: false,
+      clientMailSent: false,
+      note: "Email generated but not dispatched. Please configure a valid RESEND_API_KEY in your environment variables.",
     });
   } catch (err: any) {
     console.error("Email API Route exception:", err);

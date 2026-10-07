@@ -236,8 +236,7 @@ export async function PATCH(
 
       // Only notify client when the ticket STATUS actually changes (e.g. Intake -> Diagnostics -> Cloning -> Resolved)
       if (statusChanged && customerEmail && customerEmail.includes("@")) {
-        const FALLBACK_KEY = Buffer.from("cmVfWDhzcndoN1pfQW9RbVd1dnVtYllwQnZwZFE4THFQcmNw", "base64").toString("utf-8");
-        const rawApiKey = process.env.RESEND_API_KEY || FALLBACK_KEY;
+        const rawApiKey = process.env.RESEND_API_KEY || "";
         const apiKey = rawApiKey.replace(/^re_re_/, "re_").trim();
         const fromEmail = process.env.RESEND_FROM_EMAIL || "support@thedatadot.com";
         const fromSupportSender = fromEmail ? `The Data Dot Support <${fromEmail}>` : "The Data Dot Support <onboarding@resend.dev>";
